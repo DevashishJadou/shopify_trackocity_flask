@@ -1,0 +1,15 @@
+Flask-PyMongo
+pytest
+coverage
+Flask-SQLAlchemy
+flask-cors
+flask-jwt-extended
+git+https://github.com/idoshr/flask-mongoengine.git@1.0.1
+psycopg2-binary
+marshmallow
+google_auth_oauthlib
+google-ads
+python-dotenv
+razorpay
+google-cloud-logging
+cryptography

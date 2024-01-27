@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "stagging-leadly-client",
+  "private_key_id": "bf0a8649c96d40df50533c94147ad6b310dd7115",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDwLZdHcjDHFzzn\n8zw3sNbQdHTqBVW3rF95b9K1cCUlO//PhFuP51if13TXDmf0+Ff4aGp1/qrN3Zvs\n2vVtTNo3j+UwJT9n0x5S6RNSpiFn1GDIM7vg4f+ZkcJZcbEJiNmqoPFA3JYK3WRj\nMcMJDZi0Q9Qzp3E+eYHi+0h8+YUY9xzjXb9AB5el2CriGaMpDTgWbDzaI6+hlPKv\ndl5jy4KLM1lyJhVs7utRwgBUQfskjLwputDMiDwi5icJ61iarFYNTKN7AMXNCPG6\nUYG5Defff45y1oWvcjUrxnXBoSBg7oA4g+xznGOrL7CErtI0Gzj+mZI0CtjEjiK+\nRK0VPN89AgMBAAECggEABBLJ34jUwfOncUmjSlCB/CwVdYicoQ5X2i/m03Pw9VY0\nqvjUMrcaPi/ByAnzAmkZ2NkwgQrOK8qn49b81Zs5kjqrCOuAzUp7160jSkIOC/xC\nnfKeq5w5oQmjUbAHcCF1i5rKLK7xDoMduj70T1l/LwN9fFjJJ2WZKdfYLWJv+vHh\njrb/xyAO2GEKR6cMYClzug/XI8JCwt5l7d1y1eNtBESD9Ll5JSpL2yyXdGOscEBw\n7NxZ4DJ2ybOpw6svTStOZrKmmQJJfwskhA8J9wkwTi7wl8MaWu0CLIIO/HUPzYQd\nb+aXRC4MHKZjEY3L2iHazsFWXbKXL/S6Py7u28gFIQKBgQD6nMWbMvATyllPxwGO\nV2lyl6L/GNND/AAMyTh++BiiB90qKkcTTzx9xa02GVhcMTac5WJpE8Jw7zMkqns6\nCubQEkeA6Y4GcdWilf7NYMUvk2Z2W/h8+ZQauRoaBWOTPmyTeAuBKe5XBrG522Xu\njmmt18P6VGjv0uAD+HZkQ6bgLQKBgQD1V2UC+L8USDuQ5guFvfyzS/w15sOTWNk7\n+mw8ZGIsA2MH9L38yWnfVO6G+zMh54CwwmGtuk595EAWcwbey/msrFqhb/aaqMk7\nv6kvFn4TTYnjEcFVDf8EGmhM4EY+WP86thl9MLuvqcomHuTWTh/hYYhLDdJNsrUZ\nJn+e6KVVUQKBgCGVDG3Fn6InRVyJYE4ArKKsay0f2H+NrzwHYsiw2iwsPZi+3ZNa\n1NJNwO4060A/YAAaRNuryCx2ATZymdynRVKwgGBn6541dtk4nFJNG19Kszo9DMlC\ncHQ8RaEjA7rhbI8+UNxYEBYdUYeEPN6AuuyOszZCRWWNrnMZwlOhNSVpAoGABhNm\n/f7ZBJCRYRJBYMuGsY4FLfSMDV8a6iBWg9xcjgh7cFwARH1ccNpymccoygMorbfy\noVHG1dlMOQIaPnRAt6UBDZRvP/9EFIW3k+Hzt1ipPIVZC1kwYpKg2J6JPswHbhXK\nZc5KJ5yF1BHZyvDeWz+GF429Eo2FbJ0GdhH+3jECgYBOfrQFf3ea14Sr0BrBqCgQ\nVk8FmJslcCYbvFK1G7I9Ru3/ipodcCLq5mYomrUopPmaHYRJ1vnb2nvhmAiE4feC\nkpPbOgV99FHkRQwitNlLh91MCBGNQlrtPdOV1IR/OWRsuMb3FdGNtRWd0PZdBYWI\n3/X1132Rr5i1i2nBbrc1sg==\n-----END PRIVATE KEY-----\n",
+  "client_email": "logger-trackocity@stagging-leadly-client.iam.gserviceaccount.com",
+  "client_id": "112539360876978188310",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/logger-trackocity%40stagging-leadly-client.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
