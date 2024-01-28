@@ -4,10 +4,10 @@ import json, os
 import razorpay
 from sqlalchemy import MetaData
 
-from db_model.sql_models import RazorpayConfiguration, order_table_dynamic, ordertable
-from connection import db
-# from ...db_model.sql_models import RazorpayConfiguration, order_table_dynamic, ordertable
-# from ...connection import db
+# from db_model.sql_models import RazorpayConfiguration, order_table_dynamic, ordertable
+# from connection import db
+from ...db_model.sql_models import RazorpayConfiguration, order_table_dynamic, ordertable
+from ...connection import db
 
 metadata = MetaData()
 payment_bp = Blueprint('clientpayment', __name__)

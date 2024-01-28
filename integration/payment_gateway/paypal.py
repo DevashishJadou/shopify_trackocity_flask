@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
-from integration.payment_gateway.razorpay import payment_bp
-# from payment_gateway.razorpay import payment_bp
+# from integration.payment_gateway.razorpay import payment_bp
+from payment_gateway.razorpay import payment_bp
 
 _token = 'ECvJ_yBNz_UfMmCvWEbT_2ZWXdzbFFQZ-1Y5K2NGgeHn'
 
