@@ -33,7 +33,10 @@ app.register_blueprint(facebook_bp, url_prefix='/facebook')
 app.register_blueprint(report_bp, url_prefix='/report')
 app.register_blueprint(payment_bp, url_prefix='/clientpayment')
 app.register_blueprint(channel_bp, url_prefix='/clientchannel')
-
+# health-check
+@app.route('/health')
+def health_check():
+    return jsonify({'status': 'health-fine'}), 200
 
 # jwt error handler
 @jwt.expired_token_loader
