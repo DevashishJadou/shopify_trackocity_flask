@@ -1,0 +1,42 @@
+version: 0.2
+ 
+phases:
+  install:
+    commands:
+      - echo Nothing to do in the pre_build phase...
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - REPOSITORY_URI=705653111952.dkr.ecr.ap-south-1.amazonaws.com/trackocity_flask_dev
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=build-$(echo $CODEBUILD_BUILD_ID | awk -F":" '{print $2}')
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
+      - PREV_TASK_DEF_REVISION=$(aws ecs describe-task-definition --task-definition trackocity-flask-dev-task --region ap-south-1 | jq -r '.taskDefinition.revision')
+      - NEW_TASK_DEF_REVISION=$((PREV_TASK_DEF_REVISION + 1))
+      - sed -i "s/trackocity-flask-dev-task:[0-9]*/trackocity-flask-dev-task:${NEW_TASK_DEF_REVISION}/g" ./appspec.yaml
+      - echo Building the Docker image...
+      - docker build -t $REPOSITORY_URI:latest .
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+      - echo Docker build and tagging completed on `date`
+  post_build:
+    commands:
+      - mkdir artifacts
+      - echo Pushing the Docker images... 
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - export IMAGE_URI=$REPOSITORY_URI:$IMAGE_TAG
+      - printf '[{"name":"trackocity-dev-container","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+      - cp imagedefinitions.json artifacts
+      - envsubst < ./taskdef.json > ./newtaskdef.json
+      - rm -rf ./taskdef.json
+      - mv ./newtaskdef.json ./taskdef.json
+      - cp ./taskdef.json artifacts
+      - cp ./appspec.yaml artifacts
+artifacts:
+  files:
+      - '**/*'
+  base-directory: 'artifacts'
