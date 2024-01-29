@@ -3,7 +3,7 @@
     "containerDefinitions": [
         {
             "name": "trackocity-dev-container",
-            "image": "705653111952.dkr.ecr.ap-south-1.amazonaws.com/trackocity_flask_dev:latest",
+            "image": "$IMAGE_URI",
             "cpu": 0,
             "portMappings": [
                 {
