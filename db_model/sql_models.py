@@ -1,6 +1,6 @@
 # sql_models.py
-# from connection import db
-from ..connection import db
+from connection import db
+# from ..connection import db
 from datetime import datetime
 from sqlalchemy import MetaData, Table, Column, Integer, String, DateTime, Text, Numeric
 
@@ -147,3 +147,28 @@ def ordertable(tablename):
 			Column('updated_at', DateTime, default=datetime.now)
 		)
     return order_table
+
+
+def googleads_table(tablename):
+    # Define a table with googleads name and columns
+    metadata = MetaData()
+    googleads_table = Table(
+			tablename,
+			metadata,
+            Column('dated', Date),
+            Column('account', String(32)),
+            Column('account_name', String(64)),
+            Column('campaignid', String(32)),
+			Column('campaign_name', String(128)),
+			Column('adgroupid', String(32)),
+            Column('adgroup_name', String(128)),
+            Column('adid', String(32)),
+            Column('ad_name', String(128)),
+            Column('impression', Integer),
+            Column('clicks', Integer),
+            Column('cost', Numeric),
+			Column('created_at', DateTime, default=datetime.now),
+			Column('updated_at', DateTime, default=datetime.now)
+		)
+    return googleads_table
+

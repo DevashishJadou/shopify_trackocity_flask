@@ -13,10 +13,10 @@ app = create_app()
 
 # Register blueprints
 
-# app.register_blueprint(auth_bp, url_prefix='/auth')
-# app.register_blueprint(external_bp, url_prefix='/external')
-# app.register_blueprint(google_bp, url_prefix='/google')
-# app.register_blueprint(facebook_bp, url_prefix='/facebook')
-# app.register_blueprint(report_bp, url_prefix='/report')
-# app.register_blueprint(payment_bp, url_prefix='/clientpayment')
-# app.register_blueprint(channel_bp, url_prefix='/clientchannel')
+app.register_blueprint(auth_bp, url_prefix='/auth')
+app.register_blueprint(external_bp, url_prefix='/external')
+app.register_blueprint(google_bp, url_prefix='/google')
+app.register_blueprint(facebook_bp, url_prefix='/facebook')
+app.register_blueprint(report_bp, url_prefix='/report')
+app.register_blueprint(payment_bp, url_prefix='/clientpayment')
+app.register_blueprint(channel_bp, url_prefix='/clientchannel')

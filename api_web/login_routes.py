@@ -1,9 +1,9 @@
 # routes.py
 
-from ..db_model.sql_models import UserRegister
-from ..connection import db
-# from db_model.sql_models import UserRegister
-# from connection import db
+# from ..db_model.sql_models import UserRegister
+# from ..connection import db
+from db_model.sql_models import UserRegister
+from connection import db
 # from ..logger  import auth_logger
 
 from flask import Blueprint, request, jsonify, make_response

@@ -3,8 +3,8 @@ from flask_cors import cross_origin
 
 from cryptography.fernet import Fernet
 
-from ...db_model import sql_models
-# from db_model import sql_models
+# from ...db_model import sql_models
+from db_model import sql_models
 
 
 facebook_bp = Blueprint('facebook', __name__)

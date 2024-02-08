@@ -1,14 +1,14 @@
 # reporting_routes
 
-from ..db_model.sql_models import UserRegister
-from ..connection import db
-# from db_model.sql_models import UserRegister
-# from connection import db
+# from ..db_model.sql_models import UserRegister
+# from ..connection import db
+from db_model.sql_models import UserRegister
+from connection import db
 
 from flask import Blueprint, request, jsonify
 
-from .schema import FB
-# from api_web.schema import FB
+# from .schema import FB
+from api_web.schema import FB
 from flask_cors import cross_origin
 
 report_bp = Blueprint('repot', __name__)
