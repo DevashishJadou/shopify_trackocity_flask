@@ -1,13 +1,13 @@
 from flask import Flask
 
-from .api_web.login_routes import auth_bp
-from .external.routes import external_bp
-from .client_auth_bridge.google.google_service_handler import google_bp
-from .client_auth_bridge.facebook.facebook_service_handler import facebook_bp
-from .integration.payment_gateway.razorpay import payment_bp
-from .integration.channel.woocommerce import channel_bp
-from .api_web.reporting_routes import report_bp
-from .connection import create_app
+from api_web.login_routes import auth_bp
+from external.routes import external_bp
+from client_auth_bridge.google.google_service_handler import google_bp
+from client_auth_bridge.facebook.facebook_service_handler import facebook_bp
+from integration.payment_gateway.razorpay import payment_bp
+from integration.channel.woocommerce import channel_bp
+from api_web.reporting_routes import report_bp
+from connection import create_app
 
 app = create_app()
 
