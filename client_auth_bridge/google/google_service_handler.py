@@ -14,16 +14,16 @@ from .auth import authorize, oauth2client
 from .gads_account_access import list_accessible_customer
 from .gads_client import handleException
 
-_CLIENT_URL = "http://localhost:3000"
+_CLIENT_URL = "http://localhost:3000/integration"
 
 google_bp = Blueprint('google', __name__)
-
+sess = {}
 
 @google_bp.route("/authorize")
 def authorize_endpoint():
     auth_info = authorize()
     passthrough_val = auth_info['passthrough_val']
-    session['passthrough_val'] = passthrough_val
+    sess['passthrough_val'] = passthrough_val
     url = auth_info['authorization_url']
     return redirect(url)
 
@@ -32,7 +32,7 @@ def authorize_endpoint():
 @google_bp.route("/oauth2callback")   
 def oauth2callback_endpoint():
     token = request.args.get("token")
-    passthrough_val = session["passthrough_val"]
+    passthrough_val = sess.get("passthrough_val")
     state = request.args.get("state")
     code = request.args.get("code")
     refresh_token = oauth2client(passthrough_val, state, code, token)
@@ -50,9 +50,10 @@ def customers():
         token = session['refresh_token']
     except:
         token = request.args.get("refresh_token")
-    # userid = request.args.get("userid")
+    if not sess.get('userid'):
+        sess['userid'] = headers.get("workSpaceId")
     try:
-        resource_names = list_accessible_customer(token)
+        resource_names = list_accessible_customer(token, sess['userid'])
         return resource_names
     except Exception as ex:
         return handleException(ex)

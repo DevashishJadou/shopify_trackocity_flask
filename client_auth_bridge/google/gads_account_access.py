@@ -6,15 +6,19 @@ from google.ads.googleads.errors import GoogleAdsException
 # from ..connection import db
 
 def list_accessible_customer(token, userid=None):
-    # user = ClientGoogleCredentials.query.filter_by(workspace=userid).first() is not None
+    user = ClientGoogleCredentials.query.filter_by(workspace=userid).first() is not None
 
-    # if not user and token:
-    #     user = ClientGoogleCredentials(workspace=userid, _token=token)
-    #     db.session.add(user)
-    #     db.session.commit()
+    if not user and token:
+        user = ClientGoogleCredentials(workspace=userid, _token=token)
+        tablename = 'googleads_'+userid
+        if not metadata.tables.get(tablename):
+            google_table = googleads_table(tablename)
+            google_table.create(bind=db.engine)
+        db.session.add(user)
+        db.session.commit()
 
-    # if user and not token:
-    #     token = user._token
+    if user and not token:
+        token = user._token
 
     client = create_client(token)
     try:
