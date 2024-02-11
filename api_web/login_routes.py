@@ -79,7 +79,7 @@ def user_registor():
 
     if user:
         # text = f"User already exist: {encrpyt(data['email'])}"
-        text = f"User already exist: {data['email']}"
+        # text = f"User already exist: {data['email']}"
         # auth_logger(log_name, text, "Signin")        
         return jsonify(message='User already exist'), 409
 
@@ -116,13 +116,13 @@ def login_user():
     user = UserRegister.query.filter_by(email=username).first()
 
     if user is None:
-        text = f"User don't exist: email: {encrpyt(data['email'])}"
+        # text = f"User don't exist: email: {encrpyt(data['email'])}"
         # auth_logger(log_name, text, "Signin") 
         return jsonify({"message":'Invalid username or password', "user_id":None}), 404
 
     if not check_password_hash(user._password, str(password)):
         # text = f"Unauthorized: email:{sdata['email']}"
-        text = f"Unauthorized: email:{encrpyt(data['email'])}"
+        # text = f"Unauthorized: email:{encrpyt(data['email'])}"
         # auth_logger(log_name, text, "Signin") 
         return jsonify({"message":'Unauthorized', "user_id":None}), 404
     else:
