@@ -1,19 +1,19 @@
-from db_model.sql_models import UserRegister
-from connection import db
+# from db_model.sql_models import UserRegister
+# from connection import db
 from flask import Blueprint, request, jsonify, session, redirect
-# from ...db_model.sql_models import UserRegister
-# from ...connection import db
+from ...db_model.sql_models import UserRegister
+from ...connection import db
 import random, string
 import os
 
 from flask_cors import cross_origin
 
-from client_auth_bridge.google.auth import authorize, oauth2client
-from client_auth_bridge.google.gads_account_access import list_accessible_customer
-from client_auth_bridge.google.gads_client import handleException
-# from .auth import authorize, oauth2client
-# from .gads_account_access import list_accessible_customer
-# from .gads_client import handleException
+# from client_auth_bridge.google.auth import authorize, oauth2client
+# from client_auth_bridge.google.gads_account_access import list_accessible_customer
+# from client_auth_bridge.google.gads_client import handleException
+from .auth import authorize, oauth2client
+from .gads_account_access import list_accessible_customer
+from .gads_client import handleException
 
 _CLIENT_URL = os.environ.get("_CLIENT_URL")
 

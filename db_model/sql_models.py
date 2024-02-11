@@ -1,6 +1,6 @@
 # sql_models.py
-from connection import db
-# from ..connection import db
+# from connection import db
+from ..connection import db
 from datetime import datetime
 from sqlalchemy import MetaData, Table, Column, Integer, String, DateTime, Text, Numeric
 

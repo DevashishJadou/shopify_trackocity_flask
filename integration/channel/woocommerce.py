@@ -3,10 +3,10 @@ import json, os
 import hmac
 import hashlib
 
-# from ...db_model.sql_models import WooCommerce, order_table_dynamic, ordertable
-# from ...connection import db
-from db_model.sql_models import WooCommerce, order_table_dynamic, ordertable
-from connection import db
+from ...db_model.sql_models import WooCommerce, order_table_dynamic, ordertable
+from ...connection import db
+# from db_model.sql_models import WooCommerce, order_table_dynamic, ordertable
+# from connection import db
 
 from sqlalchemy import MetaData, Table
 

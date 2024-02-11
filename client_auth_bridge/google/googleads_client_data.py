@@ -6,8 +6,8 @@ from google.ads.google_ads.client import GoogleAdsClient
 import os
 from datetime import datetime
 
-from db_model.sql_models import ClientGoogleCredentials
-from connection import db
+from ...db_model.sql_models import ClientGoogleCredentials
+from ...connection import db
 
 users = ClientGoogleCredentials.query.filter_by(active=True)
 

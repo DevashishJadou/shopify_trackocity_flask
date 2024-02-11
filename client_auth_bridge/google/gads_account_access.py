@@ -1,10 +1,10 @@
-# from .gads_client import create_client, handleGoogleAdsException
+from .gads_client import create_client, handleGoogleAdsException
 from google.ads.googleads.errors import GoogleAdsException
-from client_auth_bridge.google.gads_client import create_client, handleGoogleAdsException
-from db_model.sql_models import ClientGoogleCredentials
-from connection import db
-# from ...db_model.sql_models import ClientGoogleCredentials
-# from ...connection import db
+# from client_auth_bridge.google.gads_client import create_client, handleGoogleAdsException
+# from db_model.sql_models import ClientGoogleCredentials
+# from connection import db
+from ...db_model.sql_models import ClientGoogleCredentials
+from ...connection import db
 
 def list_accessible_customer(token, userid=None):
     user = ClientGoogleCredentials.query.filter_by(workspace=userid).first() is not None

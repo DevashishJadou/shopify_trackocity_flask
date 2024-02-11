@@ -6,12 +6,12 @@ import hashlib
 from datetime import datetime
 
 
-# from .woocommerce import channel_bp
-# from ...db_model.sql_models import Shopify, order_table_dynamic, ordertable
-# from ...connection import db
-from integration.channel.woocommerce import channel_bp
-from db_model.sql_models import Shopify, order_table_dynamic, ordertable
-from connection import db
+from .woocommerce import channel_bp
+from ...db_model.sql_models import Shopify, order_table_dynamic, ordertable
+from ...connection import db
+# from integration.channel.woocommerce import channel_bp
+# from db_model.sql_models import Shopify, order_table_dynamic, ordertable
+# from connection import db
 
 from sqlalchemy import MetaData
 
