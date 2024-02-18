@@ -39,6 +39,7 @@ phases:
       - cp ./taskdef.json artifacts
       - cp ./appspec.yaml artifacts
       - cp ./.env artifacts
+      - cp . artifacts
 artifacts:
   files:
       - '**/*'
