@@ -19,6 +19,7 @@ phases:
       - NEW_TASK_DEF_REVISION=$((PREV_TASK_DEF_REVISION + 1))
       - sed -i "s/trackocity-flask-dev-task:[0-9]*/trackocity-flask-dev-task:${NEW_TASK_DEF_REVISION}/g" ./appspec.yaml
       - aws secretsmanager get-secret-value --secret-id flask_ecs | jq -r '.SecretString' | jq -r "to_entries|map(\"\(.key)=\\\"\(.value|tostring)\\\"\")|.[]" > .env
+      - cat .env
       - echo Building the Docker image...
       - docker build -t $REPOSITORY_URI:latest .
       - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
