@@ -32,8 +32,7 @@ result = mongo_collection.find(query)
 # Query MongoDB for documents created in the last hour
 # recent_mongo_docs = mongo_collection.find({"created_at": {"$gt": one_hour_ago_iso}})
 # recent_mongo_docs = mongo_collection.find({"productid":{"$eq":1235689}})
-import pdb
-pdb.set_trace()
+
 
 # Iterate over MongoDB documents and store in PostgreSQL
 for mongo_doc in result:

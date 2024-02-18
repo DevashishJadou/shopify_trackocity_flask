@@ -6,12 +6,14 @@ from google.ads.google_ads.client import GoogleAdsClient
 import os
 from datetime import datetime
 
-from ...db_model.sql_models import ClientGoogleCredentials
+from ...db_model.sql_models import ClientGoogleCredentials, googleads_table
 from ...connection import db
+from sqlalchemy.dialects.postgresql import insert
 
 users = ClientGoogleCredentials.query.filter_by(active=True)
 
 current_time = datetime.now()
+day = current_time.strftime("%Y-%m-%d")
 hour = current_time.hour
 
 for user in users:
@@ -45,12 +47,12 @@ for user in users:
             SELECT
             customer.id AS account_id,
             customer.descriptive_name AS account_name,
-            segments.date,
-            campaign.id,
-            campaign.name,
-            ad_group.id,
-            ad_group.name,
-            ad.id,
+            segments.date as dated,
+            campaign.id as campaign_id,
+            campaign.name as campaign_name,
+            ad_group.id as ad_group_id,
+            ad_group.name as ad_group_name,
+            ad.id as ad_id,
             metrics.impressions,
             metrics.clicks,
             metrics.cost_micros / 1000000.0 AS spend
@@ -68,11 +70,26 @@ for user in users:
 
             
             for row in response:
-                print(f"Campaign ID: {row.campaign.id}, Campaign Name: {row.campaign.name}")
-                print(f"Ad Group ID: {row.ad_group.id}, Ad Group Name: {row.ad_group.name}")
+                # Define the insert statement
+                stmt = insert(googleads_table('googleads_'+user.worksapce)).values(
+                    dated=day,
+                    account=row.get('account_id'),
+                    account_name=row.get('account_name'),
+                    campaignid=row.get('campaign_id'),
+                    campaign_name=row.get('campaign_name'),
+                    adgroupid=row.get('ad_group_id'),
+                    adgroup_name=row.get('ad_group_name'),
+                    adid=row.get('ad_id'),
+                    adname=row.get('ad_name'),
+                    impression=row.get('impressions'),
+                    clicks=row.get('clicks'),
+                    spend=row.get('spend')
+                )
 
-        except RefreshError:
-            print("Authentication token refresh failed. Please check your credentials.")
+            # Specify the ON CONFLICT DO UPDATE behavior
+            do_update_stmt = stmt.on_conflict_do_update(
+                index_elements=['dated','adid'],  # Conflict target
+                set_=dict(impression=stmt.excluded.impression, clicks=stmt.excluded.clicks, spend=stmt.excluded.spend)
+            )
+    db.session.commit()
 
-        except Exception as e:
-            print(f"An error occurred: {e}")

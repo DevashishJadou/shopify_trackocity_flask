@@ -9,6 +9,9 @@ from flask_pymongo import PyMongo
 
 from flask_jwt_extended import JWTManager
 
+# import boto3
+# from botocore.exceptions import ClientError
+
 
 app = Flask(__name__)
 app.url_map._rules_by_endpoint = {}
@@ -35,6 +38,28 @@ def init_app(app):
     db.init_app(app)
     if db is not None:
         db.close()
+
+# def get_secret():
+
+#     secret_name = "flask_ecs"
+#     region_name = "ap-south-1"
+
+#     # Create a Secrets Manager client
+#     session = boto3.session.Session()
+#     client = session.client(
+#         service_name='secretsmanager',
+#         region_name=region_name
+#     )
+
+#     try:
+#         get_secret_value_response = client.get_secret_value(
+#             SecretId=secret_name
+#         )
+#     except ClientError as e:
+#         raise e
+
+#     return get_secret_value_response['SecretString']
+
 
 #initialize
 db.init_app(app)

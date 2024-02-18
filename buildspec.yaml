@@ -18,6 +18,7 @@ phases:
       - PREV_TASK_DEF_REVISION=$(aws ecs describe-task-definition --task-definition trackocity-flask-dev-task --region ap-south-1 | jq -r '.taskDefinition.revision')
       - NEW_TASK_DEF_REVISION=$((PREV_TASK_DEF_REVISION + 1))
       - sed -i "s/trackocity-flask-dev-task:[0-9]*/trackocity-flask-dev-task:${NEW_TASK_DEF_REVISION}/g" ./appspec.yaml
+      - aws secretsmanager get-secret-value --secret-id flask_ecs | jq -r '.SecretString' | jq -r "to_entries|map(\"\(.key)=\\\"\(.value|tostring)\\\"\")|.[]" > .env
       - echo Building the Docker image...
       - docker build -t $REPOSITORY_URI:latest .
       - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
@@ -36,6 +37,7 @@ phases:
       - mv ./newtaskdef.json ./taskdef.json
       - cp ./taskdef.json artifacts
       - cp ./appspec.yaml artifacts
+      - cp ./.env artifacts
 artifacts:
   files:
       - '**/*'

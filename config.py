@@ -4,6 +4,7 @@ from datetime import timedelta
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 SQLALCHEMY_ECHO = True
 SQLALCHEMY_DATABASE_URI = 'postgresql://dbeditor:aPk3ClBYXa@10.0.12.64:5432/template1'
+# SQLALCHEMY_DATABASE_URI = 'postgresql://dbeditor:aPk3ClBYXa@43.205.70.36:5432/template1'
 MONGO_URI = 'mongodb://10.0.12.64:27017/test'
 SECRET_KEY = 'your_secret_key'
 
