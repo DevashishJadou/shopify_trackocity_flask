@@ -14,8 +14,8 @@ app.url_map._rules_by_endpoint = {}
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('_SQLALCHEMY_DATABASE_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = True
-app.config['SQLALCHEMY_ECHO'] = True
-app.config['SECRET_KEY'] = os.getenv('_SECRET_KEY')
+app.config['JWT_SECRET_KEY'] = os.getenv('_JWT_SECRET_KEY')
+app.config['SECRET_KEY'] = os.getenv('_SECRET_KEY_FLASK')
 # app.config.from_pyfile('config.py')
 
 # PostgreSQL connection
