@@ -2,20 +2,21 @@
 from flask import Flask, g
 from flask_sqlalchemy import SQLAlchemy
 
-from flask_mongoengine import MongoEngine
-from mongoengine import connect, disconnect
-
-from flask_pymongo import PyMongo
+from mongoengine import connect
 
 from flask_jwt_extended import JWTManager
 
-# import boto3
+import os
 # from botocore.exceptions import ClientError
-
 
 app = Flask(__name__)
 app.url_map._rules_by_endpoint = {}
-app.config.from_pyfile('config.py')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('_SQLALCHEMY_DATABASE_URI')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ECHO'] = True
+app.config['SQLALCHEMY_ECHO'] = True
+app.config['SECRET_KEY'] = os.getenv('_SECRET_KEY')
+# app.config.from_pyfile('config.py')
 
 # PostgreSQL connection
 db = SQLAlchemy()
@@ -66,7 +67,7 @@ db.init_app(app)
 jwt.init_app(app)
 
 # disconnect()
-db_mongo = connect(host=app.config['MONGO_URI'])
+db_mongo = connect(host=os.environ.get('_MONGO_URI'))
 # db = MongoEngine(app)
 # MongoDB connection
 # mongo = PyMongo(app)
