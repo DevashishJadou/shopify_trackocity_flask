@@ -10,7 +10,7 @@ from sqlalchemy import MetaData
 metadata = MetaData()
 
 def list_accessible_customer(token, userid=None):
-    user = ClientGoogleCredentials.query.filter_by(workspace=userid).first() is not None
+    user = ClientGoogleCredentials.query.filter_by(workspace=userid).first()
 
     if not user and token:
         user = ClientGoogleCredentials(workspace=userid, _token=token)

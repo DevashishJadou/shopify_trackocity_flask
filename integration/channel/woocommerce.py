@@ -63,8 +63,6 @@ def woocommercewebook(workspace):
 	request_data = request.get_data().decode("utf-8")
 	request_data = json.loads(request_data)
 	signature = request.headers.get('X-Wc-Webhook-Signature')
-	print(f"Data: {request_data}")
-	print(f"signature:{signature}")
 
 	tablename ='order_'+workspace
 	orderTable = order_table_dynamic(tablename)

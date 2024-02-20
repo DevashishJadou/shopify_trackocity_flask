@@ -23,7 +23,6 @@ import os
 app = create_app()
 
 CORS(app, resources={r"/*": {"origins": "*"}})
-print("Handling OPTIONS request resources")
 
 # Register blueprints
 app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -53,7 +52,6 @@ def missing_token_callback(error):
 
 @app.after_request
 def after_request(response):
-    print("in after_request")
     if 'Access-Control-Allow-Origin' not in response.headers:
         response.headers.add('Access-Control-Allow-Origin', '*')
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
@@ -67,4 +65,3 @@ def handle_cors_error(e):
 
 if __name__ == '__main__':
     app.run(debug=True)
-    

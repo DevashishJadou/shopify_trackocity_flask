@@ -67,7 +67,6 @@ def razorpay_webhook(workspace):
     request_data = request.get_data()
     client = razorpay.Client(auth=(webhook_key, webhook_secret))
     verify = client.utility.verify_webhook_signature(request_data.decode("utf-8"), signature, client_secret)
-    print(f"Verify:{verify}")
 
 
     if not verify:
@@ -79,7 +78,6 @@ def razorpay_webhook(workspace):
 
     # Parse the JSON data from the request
     data = json.loads(request_data)
-    print(f"Razorpay payload: {data}")
 
     # Process the webhook event based on the event type
     event_type = data.get('event')
