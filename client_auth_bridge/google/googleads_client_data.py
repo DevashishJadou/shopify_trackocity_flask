@@ -86,10 +86,12 @@ for user in users:
                     spend=row.get('spend')
                 )
 
-            # Specify the ON CONFLICT DO UPDATE behavior
-            do_update_stmt = stmt.on_conflict_do_update(
-                index_elements=['dated','adid'],  # Conflict target
-                set_=dict(impression=stmt.excluded.impression, clicks=stmt.excluded.clicks, spend=stmt.excluded.spend)
-            )
+                # Specify the ON CONFLICT DO UPDATE behavior
+                do_update_stmt = stmt.on_conflict_do_update(
+                    index_elements=['dated','adid'],  # Conflict target
+                    set_=dict(impression=stmt.excluded.impression, clicks=stmt.excluded.clicks, spend=stmt.excluded.spend)
+                )
+        except Exception as e:
+            print(f'Error: {e.msg}')
     db.session.commit()
 
