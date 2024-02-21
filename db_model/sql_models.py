@@ -2,6 +2,7 @@
 # from connection import db
 from ..connection import db
 from datetime import datetime
+import uuid
 from sqlalchemy import MetaData, Table, Column, Integer, String, DateTime, Text, Numeric, Date
 from sqlalchemy.schema import UniqueConstraint
 
@@ -156,7 +157,7 @@ def googleads_table(tablename):
             Column('spend', Numeric),
 			Column('created_at', DateTime, default=datetime.now),
 			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now),
-            UniqueConstraint('dated', 'adid', name='unique_google_dated_adid')
+            UniqueConstraint('dated', 'adid', name=uuid.uuid4().hex)
 		)
     return googleads_table
 
@@ -181,7 +182,7 @@ def facebookads_table(tablename):
             Column('spend', Numeric),
 			Column('created_at', DateTime, default=datetime.now),
 			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now),
-            UniqueConstraint('dated', 'adid', name='unique_dated_adid')
+            UniqueConstraint('dated', 'adid', name=uuid.uuid4().hex)
 		)
     return facebookads_table
 

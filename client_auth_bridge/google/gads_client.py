@@ -8,14 +8,14 @@ REFRESH_ERROR = "INVAILD REFRESH TOKEN"
 
 _VERSION = "v14"
 
-def create_client(_id):
+def create_client(token):
 
     try:
         credentials = {
             "developer_token": os.environ.get("_DEVELOPER_TOKEN"),
             "client_id": os.environ.get("_CLIENT_ID"),
             "client_secret": os.environ.get("_CLIENT_SECRET"),
-            "refresh_token": _id,
+            "refresh_token": token,
             "use_proto_plus": "true" 
         }
         return GoogleAdsClient.load_from_dict(credentials, version=_VERSION)
