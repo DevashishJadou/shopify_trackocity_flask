@@ -41,7 +41,7 @@ def decrpyt(data):
 
 def send_verification_email(user_email, token):
     msg = Message('Email Verification', recipients=[user_email])
-    msg.body = f'Please click on the link to verify your email: {_SERVER}/auth/verify/{token}'
+    msg.body = f'Please click on the link to verify your email. This Link is active for 2 days: {_SERVER}/auth/verify/{token}'
     mail.send(msg)
 
 def cros_handle():
@@ -111,10 +111,8 @@ def login_user():
 @auth_bp.route('/verify/<token>')
 def verify_email(token):
     try:
-        email = s.loads(token, salt='email-verify', max_age=3600)  # Token expires in 1 hour
+        email = s.loads(token, salt='email-verify', max_age=72000)  # Token expires in 1 hour
         user = UserRegister.query.filter_by(email=email).first()
-        import pdb
-        pdb.set_trace()
         user.isverify = True
         db.session.commit()
         return redirect(_CLIENT_URL+"/sign-in")
