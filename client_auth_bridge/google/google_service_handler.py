@@ -39,7 +39,7 @@ def oauth2callback_endpoint():
     refresh_token = oauth2client(passthrough_val, state, code, token)
     session['refresh_token'] = refresh_token
     resource_names = customers()
-    return redirect(_CLIENT_URL+"?resource_names="+str(resource_names.json))
+    return redirect(_CLIENT_URL+"/integration?resource_names="+str(resource_names.json))
 
     
 

@@ -11,5 +11,5 @@ google_auth_oauthlib
 google-ads
 python-dotenv
 razorpay
-google-cloud-logging
 cryptography
+Flask-Mail

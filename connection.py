@@ -1,22 +1,30 @@
 # connection.py
 from flask import Flask, g
 from flask_sqlalchemy import SQLAlchemy
+from flask_mail import Mail
 
 from mongoengine import connect
 
 from flask_jwt_extended import JWTManager
 
 import os
-# from botocore.exceptions import ClientError
+
+
 
 app = Flask(__name__)
 app.url_map._rules_by_endpoint = {}
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('_SQLALCHEMY_DATABASE_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = True
-app.config['JWT_SECRET_KEY'] = os.getenv('_JWT_SECRET_KEY')
-app.config['SECRET_KEY'] = os.getenv('_SECRET_KEY_FLASK')
-# app.config.from_pyfile('config.py')
+app.config['JWT_SECRET_KEY'] = os.environ.get('_JWT_SECRET_KEY')
+app.config['SECRET_KEY'] = os.environ.get('_SECRET_KEY_FLASK')
+
+app.config['MAIL_SERVER'] = 'smtp.gmail.com' 
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.environ.get('_MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('_MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('_MAIL_USERNAME')
 
 # PostgreSQL connection
 db = SQLAlchemy()
@@ -40,31 +48,11 @@ def init_app(app):
     if db is not None:
         db.close()
 
-# def get_secret():
-
-#     secret_name = "flask_ecs"
-#     region_name = "ap-south-1"
-
-#     # Create a Secrets Manager client
-#     session = boto3.session.Session()
-#     client = session.client(
-#         service_name='secretsmanager',
-#         region_name=region_name
-#     )
-
-#     try:
-#         get_secret_value_response = client.get_secret_value(
-#             SecretId=secret_name
-#         )
-#     except ClientError as e:
-#         raise e
-
-#     return get_secret_value_response['SecretString']
-
 
 #initialize
 db.init_app(app)
 jwt.init_app(app)
+mail = Mail(app)
 
 # disconnect()
 db_mongo = connect(host=os.environ.get('_MONGO_URI'))

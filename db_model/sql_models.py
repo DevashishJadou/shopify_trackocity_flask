@@ -15,7 +15,8 @@ class UserRegister(db.Model):
     phone = db.Column(db.String(16))
     _password = db.Column(db.String(255))
     workspace = db.Column(db.String(64))
-    created_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    isverify = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
 
 class ClientGoogleCredentials(db.Model):
@@ -48,24 +49,6 @@ class ClientFacebookredentials(db.Model):
     account = db.Column(db.String(64))
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
-
-
-
-# class WooCommerce(db.Model):
-#     __tablename__ = "woo_commerce_order"
-#     id = db.Column(db.Integer, primary_key=True)
-#     workspace = db.Column(db.String(64))
-#     order_date = db.Column(db.DateTime)
-#     transcation_id = db.Column(db.String(128))
-#     first_name = db.Column(db.String(128))
-#     last_name = db.Column(db.String(128))
-#     email = db.Column(db.String(128))
-#     payment_method = db.Column(db.String(64))
-#     total = db.Column(db.Numeric)
-#     customer_ip = db.Column(db.String(32))
-#     customer_user_agent = db.Column(db.Text)
-#     created_at = db.Column(db.DateTime, default=datetime.now)
-#     updated_at = db.Column(db.DateTime, default=datetime.now)
 
 
 class WooCommerce(db.Model):
@@ -172,7 +155,8 @@ def googleads_table(tablename):
             Column('clicks', Integer),
             Column('spend', Numeric),
 			Column('created_at', DateTime, default=datetime.now),
-			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now)
+			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now),
+            UniqueConstraint('dated', 'adid', name='unique_google_dated_adid')
 		)
     return googleads_table
 

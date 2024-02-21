@@ -1,50 +1,31 @@
 # routes.py
 
 from ..db_model.sql_models import UserRegister
-from ..connection import db
+from ..connection import db, mail, app
 # from db_model.sql_models import UserRegister
 # from connection import db
 # from ..logger  import auth_logger
 
-from flask import Blueprint, request, jsonify, make_response
+from flask import Blueprint, request, redirect, jsonify, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, create_refresh_token
 
-import random, string
 from uuid import uuid4
 from datetime import timedelta
-import json
+import os, json
+
 from flask_cors import cross_origin
+from flask_mail import Message
+from itsdangerous import URLSafeTimedSerializer
 
 from cryptography.fernet import Fernet
 
-from google.cloud import logging
-import os
-
+s = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+_SERVER=os.environ.get("_SERVER")
+_CLIENT_URL=os.environ.get("_CLIENT_URL")
 root_dir = os.path.abspath(os.path.dirname(__file__))
-_credential_path = "stagging-trackocity_logger_key.json"
-_CLIENT_SECRET_PATH = os.path.join(root_dir, _credential_path)
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = _CLIENT_SECRET_PATH
 
 auth_bp = Blueprint('auth', __name__)
-
-# Instantiates a client
-logging_client = logging.Client()
-
-def auth_logger(log_name, text, functionality):
-    # The name of the log to write to
-    log_name = "signin"
-    logger = logging_client.logger(log_name)
-
-    log = {
-            "logName": log_name,
-            "resource": {"type": "global"},
-            "textPayload": {text},
-            "labels": {"functionality": {functionality}},
-        }
-    auth_logger.log_struct(log)
-
-    return logger, log_name
 
 
 def encrpyt(data):
@@ -58,6 +39,11 @@ def decrpyt(data):
     return cipher_suite.decrypt(data.encode())
 
 
+def send_verification_email(user_email, token):
+    msg = Message('Email Verification', recipients=[user_email])
+    msg.body = f'Please click on the link to verify your email: {_SERVER}/auth/verify/{token}'
+    mail.send(msg)
+
 def cros_handle():
     response = make_response()
     response.headers.add('Access-Control-Allow-Origin', '*')
@@ -70,17 +56,11 @@ def cros_handle():
 @auth_bp.route('/create', methods=['POST', 'OPTIONS'])
 @cross_origin(origins='*', methods=['POST', 'OPTIONS'], headers=['Content-Type'])
 def user_registor():
-
-    log_name = "signin"
-
     data = json.loads(request.data)
     # Check if the user exists
     user = UserRegister.query.filter_by(email=data['email']).first() is not None
 
-    if user:
-        # text = f"User already exist: {encrpyt(data['email'])}"
-        # text = f"User already exist: {data['email']}"
-        # auth_logger(log_name, text, "Signin")        
+    if user:       
         return jsonify(message='User already exist'), 409
 
     workspace = uuid4().hex
@@ -91,11 +71,10 @@ def user_registor():
     db.session.add(user)
     db.session.commit()
 
-    
-    # text = f"User created: email: {encrpyt(data['email'])}"
-    text = f"User created: email: {data['email']}"
-    # auth_logger(log_name, text, "Signup") 
-    return jsonify(message='User created', user_id=user.workspace), 201
+    token = s.dumps(data['email'], salt='email-verify')
+    send_verification_email(data['email'], token)
+
+    return jsonify(message='Please check your email to verify your account', user_id=user.workspace), 201
 
 
 
@@ -103,10 +82,6 @@ def user_registor():
 @auth_bp.route('/login', methods=['POST', 'OPTIONS'])
 @cross_origin(origins='*', methods=['OPTIONS', 'POST'], headers=['Content-Type'])
 def login_user():
-
-    log_name = "signin"
-    # auth_logger = logging_client.logger(log_name)
-
     data = json.loads(request.data)
 
     username = data.get('username')
@@ -116,21 +91,14 @@ def login_user():
     user = UserRegister.query.filter_by(email=username).first()
 
     if user is None:
-        # text = f"User don't exist: email: {encrpyt(data['email'])}"
-        # auth_logger(log_name, text, "Signin") 
         return jsonify({"message":'Invalid username or password', "user_id":None}), 404
 
     if not check_password_hash(user._password, str(password)):
-        # text = f"Unauthorized: email:{sdata['email']}"
-        # text = f"Unauthorized: email:{encrpyt(data['email'])}"
-        # auth_logger(log_name, text, "Signin") 
-        return jsonify({"message":'Unauthorized', "user_id":None}), 404
+        return jsonify({"message":'Invalid username or password', "user_id":None}), 401
+    if user.isverify is None:
+        return jsonify({"message":'Verify your email from email', "user_id":None}), 401
     else:
         access_token = create_access_token(identity=username, expires_delta=timedelta(hours=1))
-        # refresh_token = create_refresh_token(identity=username)
-        # text = f"Signin: email:{data['email']}"
-        # text = f"Signin: email:{encrpyt(data['email'])}"
-        # auth_logger(log_name, text, "Signin") 
         return jsonify({"message":"Logged In", 
             "tokens": {
                 "access":access_token
@@ -138,3 +106,18 @@ def login_user():
             },
             "user_id":user.workspace
             }), 200
+    
+
+@auth_bp.route('/verify/<token>')
+def verify_email(token):
+    try:
+        email = s.loads(token, salt='email-verify', max_age=3600)  # Token expires in 1 hour
+        user = UserRegister.query.filter_by(email=email).first()
+        import pdb
+        pdb.set_trace()
+        user.isverify = True
+        db.session.commit()
+        return redirect(_CLIENT_URL+"/sign-in")
+    except:
+        db.session.rollback()
+        return 'The verification link is invalid or has expired.'
