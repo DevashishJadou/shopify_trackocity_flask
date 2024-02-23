@@ -20,7 +20,7 @@ def razorpay_params():
     workspace = _body['workspace']
     _woocommerce_client_secret = _body['_client_secret']
 
-    razorpay_register = Woocommerce(workspace=workspace, client_secret=_woocommerce_client_secret)
+    razorpay_register = WooCommerce(workspace=workspace, client_secret=_woocommerce_client_secret)
     tablename = 'order_'+workspace
     if not metadata.tables.get(tablename):
         razorpay_table = ordertable(tablename)

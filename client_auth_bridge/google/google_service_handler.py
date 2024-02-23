@@ -1,9 +1,4 @@
-# from db_model.sql_models import UserRegister
-# from connection import db
 from flask import Blueprint, request, jsonify, session, redirect
-from ...db_model.sql_models import UserRegister
-from ...connection import db
-import random, string
 import os
 
 from flask_cors import cross_origin

@@ -92,11 +92,10 @@ def login_user():
 
     if user is None:
         return jsonify({"message":'Invalid username or password', "user_id":None}), 404
-
     if not check_password_hash(user._password, str(password)):
         return jsonify({"message":'Invalid username or password', "user_id":None}), 401
-    if user.isverify is None:
-        return jsonify({"message":'Verify your email from email', "user_id":None}), 401
+    if user.isverify is None or user.isverify is False:
+        return jsonify({"message":'Please verify your email address by clicking the verification link sent to your email inbox', "user_id":None}), 401
     else:
         access_token = create_access_token(identity=username, expires_delta=timedelta(hours=1))
         return jsonify({"message":"Logged In", 

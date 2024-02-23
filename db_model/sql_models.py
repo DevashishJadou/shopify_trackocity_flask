@@ -25,7 +25,8 @@ class ClientGoogleCredentials(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     workspace = db.Column(db.String(64))
     _token = db.Column(db.String(255))
-    account_name = db.Column(db.String(32))
+    account_name = db.Column(db.String(32)),
+    active = db.Column(db.Boolean, default=True),
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     

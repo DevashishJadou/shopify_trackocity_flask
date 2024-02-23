@@ -5,6 +5,7 @@ from flask import Flask,jsonify
 from .api_web.login_routes import auth_bp
 from .external.routes import external_bp
 from .client_auth_bridge.google.google_service_handler import google_bp
+from .client_auth_bridge.google.googleads_client_data import googleads_bp
 from .client_auth_bridge.facebook.facebook_service_handler import facebook_bp
 from .integration.payment_gateway.razorpay import payment_bp
 from .integration.channel.woocommerce import channel_bp
@@ -32,6 +33,7 @@ app.register_blueprint(facebook_bp, url_prefix='/facebook')
 app.register_blueprint(report_bp, url_prefix='/report')
 app.register_blueprint(payment_bp, url_prefix='/clientpayment')
 app.register_blueprint(channel_bp, url_prefix='/clientchannel')
+
 # health-check
 @app.route('/health')
 def health_check():
