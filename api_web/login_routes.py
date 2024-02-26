@@ -40,7 +40,7 @@ def decrpyt(data):
 
 
 def send_verification_email(user_email, token):
-    msg = Message('Email Verification', recipients=[user_email])
+    msg = Message('Email Verification', sender="integation@trackocity.io", recipients=[user_email])
     msg.body = f'Please click on the link to verify your email. This Link is active for 2 days: {_SERVER}/auth/verify/{token}'
     mail.send(msg)
 
