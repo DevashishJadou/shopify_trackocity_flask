@@ -6,6 +6,7 @@ from google.ads.googleads.errors import GoogleAdsException
 from ...db_model.sql_models import ClientGoogleCredentials, googleads_table
 from ...connection import db
 from sqlalchemy import MetaData
+from flask import jsonify
 
 metadata = MetaData()
 
@@ -34,3 +35,15 @@ def list_accessible_customer(token, userid=None):
 
     except GoogleAdsException as ex:
         handleGoogleAdsException(ex)
+
+
+def clientaccount_googleads(userid, account):
+    user = ClientGoogleCredentials.query.filter_by(workspace=userid).first()
+
+    if user:
+        user.account_name = account
+    else:
+        return jsonify({'status': 'Error'}), 500
+    
+    db.session.commit()
+    return jsonify({'status': 'success'}), 200

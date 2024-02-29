@@ -18,9 +18,6 @@ googleads_bp = Blueprint('googleads', __name__)
 #@cross_origin(origins='*', methods=['POST', 'OPTIONS'], headers=['Content-Type'])
 @googleads_bp.route("/clientdata", methods=['POST'])
 def googleads_clientdata():
-    import pdb
-    pdb.set_trace()
-
     users = ClientGoogleCredentials.query.filter_by(active=True)
 
     current_time = datetime.now()

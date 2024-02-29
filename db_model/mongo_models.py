@@ -18,12 +18,6 @@ class CustomerInfo(me.Document):
     localsession = me.StringField()
     body = me.DictField()
 
-class CustomerInfoext(me.Document):
-    session = me.StringField()
-    productid = me.FloatField()
-    creation_at = me.DateTimeField(default=datetime.now)
-    localsession = me.StringField()
-    body = me.DictField()
 
 
 class Error(me.Document):

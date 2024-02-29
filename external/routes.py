@@ -71,7 +71,7 @@ def user_info():
     if not productid or not session or not creation_at or not body or not localsession:
         return jsonify({'error': 'Missing parameters'}), 400
 
-    new_product = CustomerInfoext(session=session, productid=productid, creation_at=creation_at, localsession=localsession, body=body)
+    new_product = CustomerInfo(session=session, productid=productid, creation_at=creation_at, localsession=localsession, body=body)
     new_product.save()
 
     return jsonify(200), 200

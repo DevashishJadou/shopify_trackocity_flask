@@ -1,8 +1,6 @@
 from flask import Blueprint, request, jsonify
 import requests
 import json, os
-import hmac
-import hashlib
 from datetime import datetime
 
 
@@ -67,8 +65,8 @@ def shopify():
 		orders_data = response.json()
 		orders_data = orders_data['orders']
 		
-		tablename = 'order_hello2'
-		# tablename = 'order_'+workspace
+		# tablename = 'order_hello2'
+		tablename = 'order_'+workspace
 		
 		orderTable = order_table_dynamic(tablename)
 		orderTable.metadata = db.Model.metadata

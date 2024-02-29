@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, session, redirect
+from flask import Blueprint, request, session, redirect
 import os
 
 from flask_cors import cross_origin
@@ -7,7 +7,7 @@ from flask_cors import cross_origin
 # from client_auth_bridge.google.gads_account_access import list_accessible_customer
 # from client_auth_bridge.google.gads_client import handleException
 from .auth import authorize, oauth2client
-from .gads_account_access import list_accessible_customer
+from .gads_account_access import list_accessible_customer, clientaccount_googleads
 from .gads_client import handleException
 
 _CLIENT_URL = os.environ.get("_CLIENT_URL")
@@ -53,3 +53,17 @@ def customers():
         return resource_names
     except Exception as ex:
         return handleException(ex)
+
+
+@google_bp.route("/clientaccount")   
+def clientaccount():
+    headers =  request.headers
+    userid = headers.get("workSpaceId")
+    account = request.args.get("customerId")
+
+    status = clientaccount_googleads(userid, account)
+
+    return status
+
+    
+    
