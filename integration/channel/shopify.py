@@ -22,7 +22,7 @@ def shopifyintegration():
 	data = json.loads(request.get_data().decode("utf-8"))
 	base_url = data['site_url']
 	access_token = data['access_token']
-	workspace = request.headers.get('workspace')
+	workspace = request.headers.get('workspaceId')
 
 	user = Shopify.query.filter_by(workspace=workspace).first()
 	if user:

@@ -15,9 +15,11 @@ metadata = MetaData()
 
 channel_bp = Blueprint('clientchannel', __name__)
 
-def razorpay_params():
+@channel_bp.route('/woocommerceintegration', methods=['POST'])
+def woocommerceintegration():
+    header = request.headers
     _body = request.get_data()
-    workspace = _body['workspace']
+    workspace = header.get('workspaceId')
     _woocommerce_client_secret = _body['_client_secret']
 
     razorpay_register = WooCommerce(workspace=workspace, client_secret=_woocommerce_client_secret)

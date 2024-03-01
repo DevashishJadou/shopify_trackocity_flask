@@ -15,8 +15,9 @@ payment_bp = Blueprint('clientpayment', __name__)
 
 @payment_bp.route('/razorpaycredentials', methods=['POST'])
 def razorpay_params():
+    header = request.headers
     _body = request.get_data()
-    workspace = _body['workspace']
+    workspace = header.get('workspaceId')
     _razorpay_api_secret = _body['razorpay_api_secret']
     _razorpay_api_key = _body['razorpay_api_key']
     _razorpay_client_secret = _body['_razorpay_client_secret']
