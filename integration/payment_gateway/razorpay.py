@@ -82,7 +82,7 @@ def razorpay_webhook(workspace):
 
     # Process the webhook event based on the event type
     event_type = data.get('event')
-    if event_type in ('order.paid', 'payment.captured'):
+    if event_type in ('order.paid', 'payment.captured', 'subscription.completed','refund.processed'):
         # Handle payment captured event
         payload = data.get('payload').get('payment').get('entity')
         payment_id = payload.get('id')
@@ -91,7 +91,9 @@ def razorpay_webhook(workspace):
         email = payload.get('email')
         event_time = datetime.fromtimestamp(data.get('created_at'))
         
-        order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, payment_method='Prepaid', total=amount)
+        order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
+        if order_obj is None:
+            order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, payment_method='Prepaid', total=amount, event_type=event_type)
 
         db.session.add(order_make)
         db.session.commit()

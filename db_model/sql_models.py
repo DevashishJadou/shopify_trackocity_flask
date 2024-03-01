@@ -78,12 +78,13 @@ def order_table_dynamic(tablename):
         __table_args__ = {'extend_existing':True}
         id = db.Column(db.Integer, primary_key=True)
         order_date = db.Column(db.DateTime)
-        transcation_id = db.Column(db.String(128))
+        transcation_id = db.Column(db.String(128), unique=True)
         first_name = db.Column(db.String(128))
         last_name = db.Column(db.String(128))
         email = db.Column(db.String(128))
         payment_method = db.Column(db.String(64))
         total = db.Column(db.Numeric)
+        event_type = db.Column(db.String(64))
         customer_ip = db.Column(db.String(32))
         customer_user_agent = db.Column(db.Text)
 

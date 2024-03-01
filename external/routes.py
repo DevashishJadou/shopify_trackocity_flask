@@ -25,11 +25,7 @@ def user_session():
 
     #Api-key Validation
     securitykey = str(productid)+localsession
-    print(f'securitykey:{securitykey}')
     apikey = request.args.get("apiKey")
-    print(f'apikey:{apikey}, hashKey: {map_hash(securitykey)}')
-
-    print(f'productid:{productid}, creation_at:{creation_at}, usrid:{usrid}, localsession:{localsession}, session:{session}')
 
     if apikey is None or apikey != map_hash(securitykey):
         return jsonify({'error': 'Authenication Failed'}), 401
@@ -58,11 +54,7 @@ def user_info():
 
     #Api-key Validation
     securitykey = str(productid)+localsession
-    print(f'securitykey:{securitykey}')
     apikey = request.args.get("apiKey")
-    print(f'apikey:{apikey}, hashKey: {map_hash(securitykey)}')
-
-    print(f'productid:{productid}, creation_at:{creation_at}, body:{body}, localsession:{localsession}, session:{session}')
 
     if apikey is None or apikey != map_hash(securitykey):
         return jsonify({'error': 'Authenication Failed'}), 401

@@ -82,9 +82,9 @@ def shopify():
 			email = data['customer']['email']
 			payment_method = str(data['payment_gateway_names'])
 
-			order = orderTable.query.filter_by(transcation_id=transcation_id).filter_by(channel='shopify').first()
+			order = orderTable.query.filter_by(transcation_id=transcation_id).first()
 			if not order:
-				order_make = orderTable(order_date=order_date, total=total, transcation_id=transcation_id, first_name=first_name, last_name=last_name, email=email, payment_method=payment_method, customer_ip=customer_ip, customer_user_agent=customer_user_agent, channel='shopify')
+				order_make = orderTable(order_date=order_date, total=total, transcation_id=transcation_id, first_name=first_name, last_name=last_name, email=email, payment_method=payment_method, customer_ip=customer_ip, customer_user_agent=customer_user_agent)
 				db.session.add(order_make)
 
 		db.session.commit()
