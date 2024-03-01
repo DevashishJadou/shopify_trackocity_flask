@@ -34,10 +34,13 @@ def razorpay_params():
     else:
         razorpay_register = RazorpayConfiguration(workspace=workspace, razorpay_api_secret=_razorpay_api_secret, razorpay_api_key=_razorpay_api_key, razorpay_client_secret=_razorpay_client_secret)
         tablename = 'order_'+workspace
-        if not metadata.tables.get(tablename):
-            razorpay_table = ordertable(tablename)
-            razorpay_table.create(bind=db.engine)
-        db.session.add(razorpay_register)
+        try:
+            if not metadata.tables.get(tablename):
+                razorpay_table = ordertable(tablename)
+                razorpay_table.create(bind=db.engine)
+            db.session.add(razorpay_register)
+        except:
+            pass
     db.session.commit()
 
     return jsonify({'status': 'success'}), 200
@@ -98,7 +101,7 @@ def razorpay_webhook(workspace):
         
         order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
         if order_obj is None:
-            order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, payment_method='Prepaid', total=amount, event_type=event_type, created_at=datetime.now)
+            order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, payment_method='Prepaid', total=amount, event_type=event_type)
 
             db.session.add(order_make)
             db.session.commit()

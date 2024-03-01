@@ -19,17 +19,24 @@ def woocommerceintegration():
     _body = json.loads(request.get_data())
     workspace = header.get('workspaceId')
     _woocommerce_client_secret = _body['woocommerce_client_secret']
-
-    razorpay_register = WooCommerce(workspace=workspace, client_secret=_woocommerce_client_secret)
-    tablename = 'order_'+workspace
-    try:
-        if not metadata.tables.get(tablename):
-            razorpay_table = ordertable(tablename)
-            razorpay_table.create(bind=db.engine)
-            db.session.add(razorpay_register)
-            db.session.commit()
-    except:
-        pass
+    
+    user = WooCommerce.query.filter_by(workspace=workspace).first()
+    if user:
+        user.woocommerce_client_secret = _woocommerce_client_secret
+        db.session.commit()
+        return jsonify({'message': 'Inforamtion Updated Succesfully'}), 200
+    
+    else:
+        razorpay_register = WooCommerce(workspace=workspace, client_secret=_woocommerce_client_secret)
+        tablename = 'order_'+workspace
+        try:
+            if not metadata.tables.get(tablename):
+                razorpay_table = ordertable(tablename)
+                razorpay_table.create(bind=db.engine)
+                db.session.add(razorpay_register)
+                db.session.commit()
+        except:
+            pass
     return jsonify({'status': 'success'}), 200
 
 
