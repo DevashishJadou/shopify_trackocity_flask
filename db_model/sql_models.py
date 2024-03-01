@@ -87,6 +87,8 @@ def order_table_dynamic(tablename):
         event_type = db.Column(db.String(64))
         customer_ip = db.Column(db.String(32))
         customer_user_agent = db.Column(db.Text)
+        created_at = db.Column(db.DateTime, default=datetime.now)
+        updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
     return OrderTable
     

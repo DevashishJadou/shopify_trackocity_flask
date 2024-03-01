@@ -53,7 +53,7 @@ def shopify():
 	orders = Shopify.query.filter_by(workspace=userid).filter_by(active=True).all()
 
 	
-	for order in orders
+	for order in orders:
 		# Use the access token to make requests to the Shopify Admin API
 		# orders_endpoint = f'https://www.usemeworks.com/admin/api/2023-10/orders.json'
 		# access_token = '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'
@@ -71,7 +71,7 @@ def shopify():
 			orders_data = orders_data['orders']
 			
 			# tablename = 'order_hello2'
-			tablename = 'order_'+workspace
+			tablename = 'order_'+userid
 			
 			orderTable = order_table_dynamic(tablename)
 			orderTable.metadata = db.Model.metadata

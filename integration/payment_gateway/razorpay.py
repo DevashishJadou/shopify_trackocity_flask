@@ -93,7 +93,7 @@ def razorpay_webhook(workspace):
         
         order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
         if order_obj is None:
-            order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, payment_method='Prepaid', total=amount, event_type=event_type)
+            order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, payment_method='Prepaid', total=amount, event_type=event_type, created_at=datetime.now)
 
             db.session.add(order_make)
             db.session.commit()
