@@ -95,8 +95,8 @@ def razorpay_webhook(workspace):
         if order_obj is None:
             order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, payment_method='Prepaid', total=amount, event_type=event_type)
 
-        db.session.add(order_make)
-        db.session.commit()
+            db.session.add(order_make)
+            db.session.commit()
 
 
     return jsonify({'status': 'success'}), 200

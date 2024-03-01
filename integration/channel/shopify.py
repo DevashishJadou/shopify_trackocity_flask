@@ -48,48 +48,53 @@ def shopifyintegration():
 
 @channel_bp.route('/shopifyorders', methods=['POST'])
 def shopify():
+	header =  request.headers
+	userid = header.get("workSpaceId")
+	orders = Shopify.query.filter_by(workspace=userid).filter_by(active=True).all()
 
-	# order = Shopify.query.filter_by(transcation_id=transcation_id).all()
+	
+	for order in orders
+		# Use the access token to make requests to the Shopify Admin API
+		# orders_endpoint = f'https://www.usemeworks.com/admin/api/2023-10/orders.json'
+		# access_token = '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'
+		orders_endpoint = order.base_url
+		access_token = order.access_key
+		headers = {
+			'Content-Type': 'application/json',
+			'X-Shopify-Access-Token': access_token,
+		}
 
-	# Use the access token to make requests to the Shopify Admin API
-	orders_endpoint = f'https://www.usemeworks.com/admin/api/2023-10/orders.json'
-	access_token = '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'
-	headers = {
-		'Content-Type': 'application/json',
-		'X-Shopify-Access-Token': access_token,
-	}
+		response = requests.get(orders_endpoint, headers=headers)
 
-	response = requests.get(orders_endpoint, headers=headers)
+		if response.status_code == 200:
+			orders_data = response.json()
+			orders_data = orders_data['orders']
+			
+			# tablename = 'order_hello2'
+			tablename = 'order_'+workspace
+			
+			orderTable = order_table_dynamic(tablename)
+			orderTable.metadata = db.Model.metadata
+			
+			for data in orders_data:
+				customer_ip = data['browser_ip']
+				customer_user_agent = data['client_details']['user_agent']
+				order_date = datetime.strptime(data['created_at'], "%Y-%m-%dT%H:%M:%S%z").strftime("%Y-%m-%d %H:%M:%S")
+				transcation_id = str(data['order_number'])
+				total = float(data['total_price'])
+				first_name = data['customer']['first_name']
+				last_name = data['customer']['last_name']
+				email = data['customer']['email']
+				payment_method = str(data['payment_gateway_names'])
 
-	if response.status_code == 200:
-		orders_data = response.json()
-		orders_data = orders_data['orders']
-		
-		# tablename = 'order_hello2'
-		tablename = 'order_'+workspace
-		
-		orderTable = order_table_dynamic(tablename)
-		orderTable.metadata = db.Model.metadata
-		
-		for data in orders_data:
-			customer_ip = data['browser_ip']
-			customer_user_agent = data['client_details']['user_agent']
-			order_date = datetime.strptime(data['created_at'], "%Y-%m-%dT%H:%M:%S%z").strftime("%Y-%m-%d %H:%M:%S")
-			transcation_id = str(data['order_number'])
-			total = float(data['total_price'])
-			first_name = data['customer']['first_name']
-			last_name = data['customer']['last_name']
-			email = data['customer']['email']
-			payment_method = str(data['payment_gateway_names'])
+				order = orderTable.query.filter_by(transcation_id=transcation_id).first()
+				if not order:
+					order_make = orderTable(order_date=order_date, total=total, transcation_id=transcation_id, first_name=first_name, last_name=last_name, email=email, payment_method=payment_method, customer_ip=customer_ip, customer_user_agent=customer_user_agent)
+					db.session.add(order_make)
 
-			order = orderTable.query.filter_by(transcation_id=transcation_id).first()
-			if not order:
-				order_make = orderTable(order_date=order_date, total=total, transcation_id=transcation_id, first_name=first_name, last_name=last_name, email=email, payment_method=payment_method, customer_ip=customer_ip, customer_user_agent=customer_user_agent)
-				db.session.add(order_make)
+			db.session.commit()
 
-		db.session.commit()
-
-		return jsonify({'status': 'success'}), 200
-	else:
-		print(f"Failed to retrieve orders. Status code: {response.status_code}, Response: {response.text}")
-		return jsonify({'status': 'success'}), 400
+		else:
+			print(f"Failed to retrieve orders. Status code: {response.status_code}, Response: {response.text}")
+			return jsonify({'status': 'success'}), 400
+	return jsonify({'status': 'success'}), 200
