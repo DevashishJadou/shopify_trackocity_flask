@@ -33,13 +33,16 @@ def shopifyintegration():
 		return jsonify({'message': 'Inforamtion Updated Succesfully'}), 200
 
 	else:
-		user_make = Shopify(base_url=base_url, access_token=access_token, workspace=workspace)
+		user_make = Shopify(base_url=base_url, access_key=access_token, workspace=workspace)
 		tablename = 'order_'+workspace
-		if not metadata.tables.get(tablename):
-			shopify_table = ordertable(tablename)
-			shopify_table.create(bind=db.engine)
-		db.session.add(user_make)
-		db.session.commit()
+		try:
+			if not metadata.tables.get(tablename):
+				shopify_table = ordertable(tablename)
+				shopify_table.create(bind=db.engine)
+			db.session.add(user_make)
+			db.session.commit()
+		except:
+			pass
 
 	return jsonify({'status': 'success'}), 200
 

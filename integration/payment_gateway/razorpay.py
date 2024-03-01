@@ -16,7 +16,8 @@ payment_bp = Blueprint('clientpayment', __name__)
 @payment_bp.route('/razorpaycredentials', methods=['POST'])
 def razorpay_params():
     header = request.headers
-    _body = request.get_data()
+    _body = json.loads(request.get_data())
+    print(f'body:{_body}')
     workspace = header.get('workspaceId')
     _razorpay_api_secret = _body['razorpay_api_secret']
     _razorpay_api_key = _body['razorpay_api_key']
@@ -26,6 +27,7 @@ def razorpay_params():
     if user:
         user.razorpay_api_secret = _razorpay_api_secret
         user.razorpay_api_key = _razorpay_api_key
+        user.razorpay_client_secret = _razorpay_client_secret
         db.session.commit()
         return jsonify({'message': 'Inforamtion Updated Succesfully'}), 200
 
@@ -37,6 +39,8 @@ def razorpay_params():
             razorpay_table.create(bind=db.engine)
         db.session.add(razorpay_register)
     db.session.commit()
+
+    return jsonify({'status': 'success'}), 200
 
 
 @payment_bp.route('/<workspace>/razorpaywebhook', methods=['POST'])

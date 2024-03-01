@@ -1,7 +1,5 @@
 from flask import Blueprint, request, jsonify
 import json, os
-import hmac
-import hashlib
 
 from ...db_model.sql_models import WooCommerce, order_table_dynamic, ordertable
 from ...connection import db
@@ -18,17 +16,21 @@ channel_bp = Blueprint('clientchannel', __name__)
 @channel_bp.route('/woocommerceintegration', methods=['POST'])
 def woocommerceintegration():
     header = request.headers
-    _body = request.get_data()
+    _body = json.loads(request.get_data())
     workspace = header.get('workspaceId')
-    _woocommerce_client_secret = _body['_client_secret']
+    _woocommerce_client_secret = _body['woocommerce_client_secret']
 
     razorpay_register = WooCommerce(workspace=workspace, client_secret=_woocommerce_client_secret)
     tablename = 'order_'+workspace
-    if not metadata.tables.get(tablename):
-        razorpay_table = ordertable(tablename)
-        razorpay_table.create(bind=db.engine)
-    db.session.add(razorpay_register)
-    db.session.commit()
+    try:
+        if not metadata.tables.get(tablename):
+            razorpay_table = ordertable(tablename)
+            razorpay_table.create(bind=db.engine)
+            db.session.add(razorpay_register)
+            db.session.commit()
+    except:
+        pass
+    return jsonify({'status': 'success'}), 200
 
 
 @channel_bp.route('/<workspace>/woocommercewebhook', methods=['POST'])
