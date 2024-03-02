@@ -1,19 +1,21 @@
 from flask import Blueprint, request, jsonify
 import json, os
 from datetime import datetime
+from flask_cors import cross_origin
 
 import razorpay
 from sqlalchemy import MetaData
 
 # from db_model.sql_models import RazorpayConfiguration, order_table_dynamic, ordertable
 # from connection import db
-from ...db_model.sql_models import RazorpayConfiguration, order_table_dynamic, ordertable
+from ...db_model.sql_models import UserRegister, RazorpayConfiguration, order_table_dynamic, ordertable
 from ...connection import db
 
 metadata = MetaData()
 payment_bp = Blueprint('clientpayment', __name__)
 
 @payment_bp.route('/razorpaycredentials', methods=['POST'])
+@cross_origin()
 def razorpay_params():
     header = request.headers
     _body = json.loads(request.get_data())
@@ -64,9 +66,11 @@ def razorpay_webhook(workspace):
     # "notes":{"order_signature":"55cefa46e2b7622026471e1393130056447cf9f4eb19b0b86811bbec21ddf026",
     # "sio_order_item_id":5659823},"created_at":1701769359}}},"created_at":1701769395}
 
+    user = UserRegister.query.filter_by(workspace=workspace).first()
+    if not user.isactive:
+        jsonify({'status': 'Unauthorized'}), 403
 
     signature = request.headers.get('X-Razorpay-Signature')
-
     razorpay_client = RazorpayConfiguration.query.filter_by(workspace=workspace).first()
 
     webhook_secret = razorpay_client.razorpay_api_secret

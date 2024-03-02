@@ -1,7 +1,8 @@
-from flask import Blueprint, request, jsonify
+from flask import request, jsonify
 import requests
 import json, os
 from datetime import datetime
+from flask_cors import cross_origin
 
 
 from .woocommerce import channel_bp
@@ -18,6 +19,7 @@ metadata = MetaData()
 # channel_bp = Blueprint('clientchannel', __name__)
 
 @channel_bp.route('/shopifyintegration', methods=['POST'])
+@cross_origin()
 def shopifyintegration():
 	data = json.loads(request.get_data().decode("utf-8"))
 	base_url = data['site_url']

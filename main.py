@@ -1,11 +1,10 @@
 # run.py
 
-from flask import Flask,jsonify
+from flask import Flask,jsonify,request,redirect
 
 from .api_web.login_routes import auth_bp
 from .external.routes import external_bp
 from .client_auth_bridge.google.google_service_handler import google_bp
-from .client_auth_bridge.google.googleads_client_data import googleads_bp
 from .client_auth_bridge.facebook.facebook_service_handler import facebook_bp
 from .integration.payment_gateway.razorpay import payment_bp
 from .integration.channel.woocommerce import channel_bp
@@ -13,6 +12,8 @@ from .integration.channel.shopify import channel_bp
 from .api_web.reporting_routes import report_bp
 from .connection import create_app, jwt
 from flask_cors import CORS
+from .db_model.sql_models import UserRegister
+from datetime import datetime
 import os
 
 # os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
@@ -39,6 +40,7 @@ app.register_blueprint(channel_bp, url_prefix='/clientchannel')
 def health_check():
     return jsonify({'status': 'health-fine'}), 200
 
+
 # jwt error handler
 @jwt.expired_token_loader
 def expired_token_callback(jwt_header, jwt_data):
@@ -51,6 +53,16 @@ def invalid_token_callback(error):
 @jwt.unauthorized_loader
 def missing_token_callback(error):
     return jsonify({"message": "Request doesn't contain valid token", "error": "authorization_header"}), 401
+
+@app.before_request
+def before_request():
+    headers = request.headers
+    userid = headers.get('workspaceId', None)
+    if userid:
+        user = UserRegister.query.filter_by(workspace=userid).first()
+        if datetime.now() > user.plan_till or user.active is False:
+            user.isactive = False
+            return redirect("https://trackocity.io")
 
 @app.after_request
 def after_request(response):

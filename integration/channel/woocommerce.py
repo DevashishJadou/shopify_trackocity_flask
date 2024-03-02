@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 import json, os
+from flask_cors import cross_origin
 
 from ...db_model.sql_models import WooCommerce, order_table_dynamic, ordertable
 from ...connection import db
@@ -14,6 +15,7 @@ metadata = MetaData()
 channel_bp = Blueprint('clientchannel', __name__)
 
 @channel_bp.route('/woocommerceintegration', methods=['POST'])
+@cross_origin()
 def woocommerceintegration():
     header = request.headers
     _body = json.loads(request.get_data())

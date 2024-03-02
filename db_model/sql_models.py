@@ -17,6 +17,8 @@ class UserRegister(db.Model):
     _password = db.Column(db.String(255))
     workspace = db.Column(db.String(64))
     isverify = db.Column(db.Boolean, default=False)
+    isactive = db.Column(db.Boolean, default=False)
+    plan_till = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 
