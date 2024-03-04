@@ -41,11 +41,12 @@ def razorpay_params():
                 razorpay_table = ordertable(tablename)
                 razorpay_table.create(bind=db.engine)
             db.session.add(razorpay_register)
-        except:
-            pass
+        except Exception as e:
+            print(f'Razorpay client secret: {e.msg}')
+            return jsonify({'error': 'Something went Wrong'}), 500
     db.session.commit()
 
-    return jsonify({'status': 'success'}), 200
+    return jsonify({'message': 'success'}), 200
 
 
 @payment_bp.route('/<workspace>/razorpaywebhook', methods=['POST'])

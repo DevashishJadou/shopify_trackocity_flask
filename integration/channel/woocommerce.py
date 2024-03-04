@@ -37,9 +37,10 @@ def woocommerceintegration():
                 razorpay_table.create(bind=db.engine)
                 db.session.add(razorpay_register)
                 db.session.commit()
-        except:
-            pass
-    return jsonify({'status': 'success'}), 200
+        except Exception as e:
+            print(f'Woocommerce client secret: {e.msg}')
+            return jsonify({'error': 'Something went Wrong'}), 500
+    return jsonify({'message': 'success'}), 200
 
 
 @channel_bp.route('/<workspace>/woocommercewebhook', methods=['POST'])

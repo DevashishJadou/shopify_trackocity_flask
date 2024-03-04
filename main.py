@@ -11,15 +11,17 @@ from .integration.channel.woocommerce import channel_bp
 from .integration.channel.shopify import channel_bp
 from .api_web.reporting_routes import report_bp
 from .connection import create_app, jwt
-from flask_cors import CORS
 from .db_model.sql_models import UserRegister
 from datetime import datetime
+
+from flask_cors import CORS
+from flask_jwt_extended import verify_jwt_in_request
+from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 import os
 
 # os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 # Set-ExecutionPolicy Unrestricted -Scope Process
 
-# from flask_jwt_extended import jwt_required, create_access_token, get_jwt_identity, jwt_expired_token_loader
 
 
 app = create_app()
@@ -54,11 +56,17 @@ def invalid_token_callback(error):
 def missing_token_callback(error):
     return jsonify({"message": "Request doesn't contain valid token", "error": "authorization_header"}), 401
 
+@app.errorhandler(ExpiredSignatureError)
+@app.errorhandler(InvalidTokenError)
+def handle_invalid_token_error(error):
+    return jsonify({'message': 'Invalid JWT Token or Token has expired'}), 401
+
 @app.before_request
 def before_request():
     headers = request.headers
     userid = headers.get('workspaceId', None)
     if userid:
+        verify_jwt_in_request()
         user = UserRegister.query.filter_by(workspace=userid).first()
         if datetime.now() > user.plan_till or user.isactive is False:
             user.isactive = False

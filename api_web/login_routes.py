@@ -97,7 +97,7 @@ def login_user():
     if user.isverify is None or user.isverify is False:
         return jsonify({"message":'Please verify your email address by clicking the verification link sent to your email inbox', "user_id":None}), 401
     else:
-        access_token = create_access_token(identity=username, expires_delta=timedelta(hours=1))
+        access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
         return jsonify({"message":"Logged In", 
             "tokens": {
                 "access":access_token

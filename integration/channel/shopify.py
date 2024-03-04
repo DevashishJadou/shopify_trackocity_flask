@@ -43,10 +43,11 @@ def shopifyintegration():
 				shopify_table.create(bind=db.engine)
 			db.session.add(user_make)
 			db.session.commit()
-		except:
-			pass
+		except Exception as e:
+			print(f'Shopify client secret: {e.msg}')
+			return jsonify({'error': 'Something went Wrong'}), 500
 
-	return jsonify({'status': 'success'}), 200
+	return jsonify({'message': 'success'}), 200
 
 
 
