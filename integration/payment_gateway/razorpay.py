@@ -39,8 +39,11 @@ def razorpay_params():
         try:
             if not metadata.tables.get(tablename):
                 razorpay_table = ordertable(tablename)
-                razorpay_table.create(bind=db.engine)
-            db.session.add(razorpay_register)
+                try:
+                    razorpay_table.create(bind=db.engine)
+                    db.session.add(razorpay_register)
+                except:
+                    pass
         except Exception as e:
             print(f'Razorpay client secret: {e.msg}')
             return jsonify({'error': 'Something went Wrong'}), 500

@@ -40,8 +40,11 @@ def shopifyintegration():
 		try:
 			if not metadata.tables.get(tablename):
 				shopify_table = ordertable(tablename)
-				shopify_table.create(bind=db.engine)
-			db.session.add(user_make)
+				try:
+					shopify_table.create(bind=db.engine)
+					db.session.add(user_make)
+				except:
+					pass
 			db.session.commit()
 		except Exception as e:
 			print(f'Shopify client secret: {e.msg}')

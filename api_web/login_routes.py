@@ -98,10 +98,11 @@ def login_user():
         return jsonify({"message":'Please verify your email address by clicking the verification link sent to your email inbox', "user_id":None}), 401
     else:
         access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
+        refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=1))
         return jsonify({"message":"Logged In", 
             "tokens": {
-                "access":access_token
-                # "refresh": refresh_token
+                "access":access_token,
+                "refresh": refresh_token
             },
             "user_id":user.workspace
             }), 200
