@@ -78,7 +78,7 @@ def before_request():
         user = UserRegister.query.filter_by(workspace=userid).first()
         if datetime.now() > user.plan_till or user.isactive is False:
             user.isactive = False
-            return redirect("https://trackocity.io")
+            return redirect("https://trackocity.io/")
 
 @app.after_request
 def after_request(response):
