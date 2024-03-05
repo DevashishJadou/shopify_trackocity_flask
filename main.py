@@ -15,7 +15,7 @@ from .db_model.sql_models import UserRegister
 from datetime import datetime
 
 from flask_cors import CORS
-from flask_jwt_extended import verify_jwt_in_request, jwt_refresh_token_required, create_access_token
+from flask_jwt_extended import verify_jwt_in_request, jwt_required, create_access_token
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 import os
 
@@ -62,7 +62,7 @@ def handle_invalid_token_error(error):
     return jsonify({'message': 'Invalid JWT Token or Token has expired'}), 401
 
 @app.route('/refresh', methods=['POST'])
-@jwt_refresh_token_required
+@jwt_required(refresh=True)
 def refresh():
     headers = request.headers
     userid = headers.get('workspaceId', None)
