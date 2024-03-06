@@ -12,7 +12,7 @@ from .integration.channel.shopify import channel_bp
 from .api_web.reporting_routes import report_bp
 from .connection import create_app, jwt
 from .db_model.sql_models import UserRegister
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask_cors import CORS
 from flask_jwt_extended import verify_jwt_in_request, jwt_required, create_access_token
@@ -66,19 +66,20 @@ def handle_invalid_token_error(error):
 def refresh():
     headers = request.headers
     userid = headers.get('workspaceId', None)
-    new_access_token = create_access_token(identity=userid)
-    return jsonify(access_token=new_access_token), 200
+    new_access_token = create_access_token(identity=userid, expires_delta=timedelta(hours=6))
+    return jsonify(access=new_access_token), 200
 
 @app.before_request
 def before_request():
     headers = request.headers
     userid = headers.get('workspaceId', None)
-    if userid:
-        verify_jwt_in_request()
-        user = UserRegister.query.filter_by(workspace=userid).first()
-        if datetime.now() > user.plan_till or user.isactive is False:
-            user.isactive = False
-            return redirect("https://trackocity.io/")
+    if request.endpoint != 'refresh':
+        if userid:
+            verify_jwt_in_request()
+            user = UserRegister.query.filter_by(workspace=userid).first()
+            if datetime.now() > user.plan_till or user.isactive is False:
+                user.isactive = False
+                return jsonify({"message": "Subscription Expired"}), 403
 
 @app.after_request
 def after_request(response):
