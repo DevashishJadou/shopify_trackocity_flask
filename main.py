@@ -14,7 +14,7 @@ from .connection import create_app, jwt
 from .db_model.sql_models import UserRegister
 from datetime import datetime, timedelta
 
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 from flask_jwt_extended import verify_jwt_in_request, jwt_required, create_access_token
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 import os
@@ -63,11 +63,13 @@ def handle_invalid_token_error(error):
 
 @app.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
+@cross_origin()
 def refresh():
     headers = request.headers
     userid = headers.get('workspaceId', None)
     new_access_token = create_access_token(identity=userid, expires_delta=timedelta(hours=6))
-    return jsonify(access=new_access_token), 200
+    return jsonify("tokens": {
+                "access":new_access_token}), 200
 
 @app.before_request
 def before_request():

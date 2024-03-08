@@ -119,3 +119,35 @@ def verify_email(token):
     except:
         db.session.rollback()
         return 'The verification link is invalid or has expired.'
+    
+
+
+@auth_bp.route('/profile', methods=['POST', 'OPTIONS'])
+@cross_origin(origins='*', methods=['OPTIONS', 'POST'], headers=['Content-Type'])
+def profile_user():
+    headers = request.header
+    userid = headers.get('workspaceId')
+    data = json.loads(request.data)
+
+    email = data.get('email')
+    password = data.get('phone')
+
+    # Check if the user exists
+    user = UserRegister.query.filter_by(workspace=userid).first()
+
+    if user is None:
+        return jsonify({"message":'Invalid username or password', "user_id":None}), 404
+    if not check_password_hash(user._password, str(password)):
+        return jsonify({"message":'Invalid username or password', "user_id":None}), 401
+    if user.isverify is None or user.isverify is False:
+        return jsonify({"message":'Please verify your email address by clicking the verification link sent to your email inbox', "user_id":None}), 401
+    else:
+        access_token = create_access_token(identity=userid, expires_delta=timedelta(hours=6))
+        refresh_token = create_refresh_token(identity=userid, expires_delta=timedelta(days=1))
+        return jsonify({"message":"Logged In", 
+            "tokens": {
+                "access":access_token,
+                "refresh": refresh_token
+            },
+            "user_id":user.workspace
+            }), 200
