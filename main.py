@@ -68,8 +68,8 @@ def refresh():
     headers = request.headers
     userid = headers.get('workspaceId', None)
     new_access_token = create_access_token(identity=userid, expires_delta=timedelta(hours=6))
-    return jsonify("tokens": {
-                "access":new_access_token}), 200
+    return jsonify({"tokens": {
+                "access":new_access_token}}), 200
 
 @app.before_request
 def before_request():
