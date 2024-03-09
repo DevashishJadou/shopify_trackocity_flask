@@ -18,12 +18,10 @@ facebook_bp = Blueprint('facebook', __name__)
 @facebook_bp.route("/clientcredentials", methods=['POST', 'OPTIONS'])
 @cross_origin(origins='*', methods=['POST'], headers=['Content-Type'])
 def authorize_endpoint():
-    import pdb
-    pdb.set_trace()
     print(f'request:{request}')
     data = json.loads(request.data)
     headers = request.headers
-    workspace = headers['workspace']
+    workspace = headers['workspaceId']
 
     # Create a Fernet cipher object with the key
     _key = os.environ.get("_Key")
@@ -38,11 +36,12 @@ def authorize_endpoint():
     else:
         cipher_access_key = cipher_suite.encrypt(data['accessToken'].encode())
         cipher_email = cipher_suite.encrypt(data['email'].encode())
-        workspace = headers['workspace']
+        workspace = headers['workspaceId']
         userid = data['userid']
         expireon = data['expireon']
         account = data['accountid']
-        user_make = ClientFacebookredentials(account=account, email=cipher_email, userid=userid, expireon=expireon, _token=cipher_access_key, workspace=workspace)
+        account_name = data['accountname']
+        user_make = ClientFacebookredentials(account=account, account_name=account_name, email=cipher_email, userid=userid, expireon=expireon, _token=cipher_access_key, workspace=workspace)
         tablename = 'facebookads_'+workspace
         if not metadata.tables.get(tablename):
             facebook_table = facebookads_table(tablename)
