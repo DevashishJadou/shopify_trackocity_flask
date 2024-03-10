@@ -51,6 +51,7 @@ class ClientFacebookredentials(db.Model):
     userid = db.Column(db.String(32))
     expireon = db.Column(db.DateTime)
     account = db.Column(db.String(64))
+    account_name = db.Column(db.String(128))
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 

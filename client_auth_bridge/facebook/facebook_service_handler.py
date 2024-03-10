@@ -24,23 +24,26 @@ def authorize_endpoint():
     workspace = headers['workspaceId']
 
     # Create a Fernet cipher object with the key
-    _key = os.environ.get("_Key")
+    _key = os.environ.get("_KEY")
     cipher_suite = Fernet(_key)
     account = data['accountid']
+    account_name = data['accountname']
+    userid = data['userid']
+    cipher_access_key = cipher_suite.encrypt(data['accessToken'].encode())
+    cipher_email = cipher_suite.encrypt(data['email'].encode())
+    expireon = data['expireon']
 
     user = ClientFacebookredentials.query.filter_by(workspace=workspace).first()
     if user:
         user.account = account
+        user.account_name = account_name
+        user.userid = userid
+        user.accessToken = cipher_access_key
+        user.email = cipher_email
+        user.expireon = expireon
         db.session.commit()
         return jsonify({'message': 'Inforamtion Updated Succesfully'}), 200
     else:
-        cipher_access_key = cipher_suite.encrypt(data['accessToken'].encode())
-        cipher_email = cipher_suite.encrypt(data['email'].encode())
-        workspace = headers['workspaceId']
-        userid = data['userid']
-        expireon = data['expireon']
-        account = data['accountid']
-        account_name = data['accountname']
         user_make = ClientFacebookredentials(account=account, account_name=account_name, email=cipher_email, userid=userid, expireon=expireon, _token=cipher_access_key, workspace=workspace)
         tablename = 'facebookads_'+workspace
         if not metadata.tables.get(tablename):
