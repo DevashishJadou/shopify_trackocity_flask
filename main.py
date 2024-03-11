@@ -10,6 +10,7 @@ from .integration.payment_gateway.razorpay import payment_bp
 from .integration.channel.woocommerce import channel_bp
 from .integration.channel.shopify import channel_bp
 from .api_web.reporting_routes import report_bp
+from .api_web.integration_routes import intgration_cd
 from .connection import create_app, jwt
 from .db_model.sql_models import UserRegister
 from datetime import datetime, timedelta
@@ -23,13 +24,13 @@ import os
 # Set-ExecutionPolicy Unrestricted -Scope Process
 
 
-
 app = create_app()
 
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Register blueprints
 app.register_blueprint(auth_bp, url_prefix='/auth')
+app.register_blueprint(intgration_cd, url_prefix='/integration')
 app.register_blueprint(external_bp, url_prefix='/external')
 app.register_blueprint(google_bp, url_prefix='/google')
 app.register_blueprint(facebook_bp, url_prefix='/facebook')
