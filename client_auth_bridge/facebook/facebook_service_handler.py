@@ -32,11 +32,8 @@ def authorize_endpoint():
     cipher_access_key = cipher_suite.encrypt(data['accessToken'].encode()).decode()
     tokk = data['accessToken']
     # cipher_access_key=data['accessToken']
-    print(f'Token:{tokk}')
-    print(f'cipher_access_key:{cipher_access_key}')
-    print(f'Decode:{cipher_suite.decrypt(cipher_access_key)}')
-    cipher_email = cipher_suite.encrypt(data['email'].encode())
-    # cipher_email=data['email']
+    # cipher_email = cipher_suite.encrypt(data['email'].encode())
+    cipher_email=data['email']
     expireon = data['expireon']
 
     user = ClientFacebookredentials.query.filter_by(workspace=workspace).first()
