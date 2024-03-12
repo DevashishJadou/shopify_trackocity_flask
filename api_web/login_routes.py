@@ -46,7 +46,7 @@ def send_verification_email(user_email, token):
 
 def send_forgetpassword_email(user_email, token):
     msg = Message('Reset Password', sender="integation@trackocity.io", recipients=[user_email])
-    msg.body = f'Click the link to reset your password: {_CLIENT_URL}/resetpassword?refreshtoken={token}'
+    msg.body = f'Click the link to reset your password: {_CLIENT_URL}/resetpassword?{token}'
     mail.send(msg)
 
 def cros_handle():

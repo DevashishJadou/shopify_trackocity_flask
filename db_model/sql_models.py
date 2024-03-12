@@ -47,7 +47,7 @@ class ClientFacebookredentials(db.Model):
     __tablename__ = "client_facebook_credentials"
     id = db.Column(db.Integer, primary_key=True)
     workspace = db.Column(db.String(64))
-    _token = db.Column(db.String(255))
+    accesstoken = db.Column(db.Text)
     email = db.Column(db.String(128))
     userid = db.Column(db.String(32))
     expireon = db.Column(db.DateTime)

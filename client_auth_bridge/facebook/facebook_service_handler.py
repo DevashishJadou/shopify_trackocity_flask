@@ -29,8 +29,14 @@ def authorize_endpoint():
     account = data['accountid']
     account_name = data['accountname']
     userid = data['userid']
-    cipher_access_key = cipher_suite.encrypt(data['accessToken'].encode())
+    cipher_access_key = cipher_suite.encrypt(data['accessToken'].encode()).decode()
+    tokk = data['accessToken']
+    # cipher_access_key=data['accessToken']
+    print(f'Token:{tokk}')
+    print(f'cipher_access_key:{cipher_access_key}')
+    print(f'Decode:{cipher_suite.decrypt(cipher_access_key)}')
     cipher_email = cipher_suite.encrypt(data['email'].encode())
+    # cipher_email=data['email']
     expireon = data['expireon']
 
     user = ClientFacebookredentials.query.filter_by(workspace=workspace).first()
@@ -44,7 +50,7 @@ def authorize_endpoint():
         db.session.commit()
         return jsonify({'message': 'Inforamtion Updated Succesfully'}), 200
     else:
-        user_make = ClientFacebookredentials(account=account, account_name=account_name, email=cipher_email, userid=userid, expireon=expireon, _token=cipher_access_key, workspace=workspace)
+        user_make = ClientFacebookredentials(account=account, account_name=account_name, email=cipher_email, userid=userid, expireon=expireon, accesstoken=cipher_access_key, workspace=workspace)
         tablename = 'facebookads_'+workspace
         if not metadata.tables.get(tablename):
             facebook_table = facebookads_table(tablename)

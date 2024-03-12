@@ -53,14 +53,17 @@ def expired_token_callback(jwt_header, jwt_data):
 def invalid_token_callback(error):
     return jsonify({"message": "Signature Verification Failed", "error": "invalid_token"}), 401
 
+
 @jwt.unauthorized_loader
 def missing_token_callback(error):
     return jsonify({"message": "Request doesn't contain valid token", "error": "authorization_header"}), 401
+
 
 @app.errorhandler(ExpiredSignatureError)
 @app.errorhandler(InvalidTokenError)
 def handle_invalid_token_error(error):
     return jsonify({'message': 'Invalid JWT Token or Token has expired'}), 401
+
 
 @app.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
