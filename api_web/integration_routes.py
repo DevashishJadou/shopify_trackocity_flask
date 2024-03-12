@@ -18,6 +18,6 @@ def code_productid():
     user = UserRegister.query.filter_by(workspace=workspace).first()
 
     if user:
-        return jsonify({"producid":user.productid}), 200
+        return jsonify({"productid":user.productid}), 200
     else:
         return jsonify({"message":"Workspace don't found"}), 400
