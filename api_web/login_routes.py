@@ -147,7 +147,7 @@ def forget_password():
 
 @auth_bp.route('/resetpassword', methods=['GET', 'POST', 'OPTIONS'])
 @cross_origin()
-def reset_password(token):
+def reset_password():
     data = json.loads(request.data)
     token = data.get('refreshtoken')
     try:
