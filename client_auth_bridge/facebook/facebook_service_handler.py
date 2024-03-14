@@ -18,7 +18,6 @@ facebook_bp = Blueprint('facebook', __name__)
 @facebook_bp.route("/clientcredentials", methods=['POST', 'OPTIONS'])
 @cross_origin(origins='*', methods=['POST'], headers=['Content-Type'])
 def authorize_endpoint():
-    print(f'request:{request}')
     data = json.loads(request.data)
     headers = request.headers
     workspace = headers['workspaceId']
@@ -30,10 +29,9 @@ def authorize_endpoint():
     account_name = data['accountname']
     userid = data['userid']
     cipher_access_key = cipher_suite.encrypt(data['accessToken'].encode()).decode()
-    tokk = data['accessToken']
     # cipher_access_key=data['accessToken']
-    # cipher_email = cipher_suite.encrypt(data['email'].encode())
-    cipher_email=data['email']
+    cipher_email = cipher_suite.encrypt(data['email'].encode()).decode()
+    # cipher_email=data['email']
     expireon = data['expireon']
 
     user = ClientFacebookredentials.query.filter_by(workspace=workspace).first()
@@ -41,7 +39,7 @@ def authorize_endpoint():
         user.account = account
         user.account_name = account_name
         user.userid = userid
-        user.accessToken = cipher_access_key
+        user.accesstoken = cipher_access_key
         user.email = cipher_email
         user.expireon = expireon
         db.session.commit()
