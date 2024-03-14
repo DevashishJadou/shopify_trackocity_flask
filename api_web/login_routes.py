@@ -157,7 +157,9 @@ def reset_password():
   
     if request.method == 'POST':
         user = UserRegister.query.filter_by(email=email).first()
-        user.password = generate_password_hash(str(data.get('newpassword')))
+        user._password = generate_password_hash(str(data.get('newpassword')))
+        user.isactive = True
+        db.session.commit()
         return jsonify({"message":"Your password has been reset"}),200
 
 
