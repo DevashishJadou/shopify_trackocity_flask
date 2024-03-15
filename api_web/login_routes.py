@@ -6,7 +6,7 @@ from ..connection import db, mail, app
 # from connection import db
 # from ..logger  import auth_logger
 
-from flask import Blueprint, request, redirect, jsonify, make_response, url_for
+from flask import Blueprint, request, redirect, jsonify, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, create_refresh_token
 
@@ -98,9 +98,9 @@ def login_user():
     if user is None:
         return jsonify({"message":'Invalid username or password', "user_id":None}), 404
     if not check_password_hash(user._password, str(password)):
-        return jsonify({"message":'Invalid username or password', "user_id":None}), 401
+        return jsonify({"message":'Invalid username or password', "user_id":None}), 406
     if user.isverify is None or user.isverify is False:
-        return jsonify({"message":'Please verify your email address by clicking the verification link sent to your email inbox', "user_id":None}), 401
+        return jsonify({"message":'Please verify your email address by clicking the verification link sent to your email inbox', "user_id":None}), 406
     else:
         access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
         refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=1))
@@ -183,9 +183,9 @@ def profile_user():
     if user is None:
         return jsonify({"message":'Invalid username or password', "user_id":None}), 404
     if not check_password_hash(user._password, str(password)):
-        return jsonify({"message":'Invalid username or password', "user_id":None}), 401
+        return jsonify({"message":'Invalid username or password', "user_id":None}), 406
     if user.isverify is None or user.isverify is False:
-        return jsonify({"message":'Please verify your email address by clicking the verification link sent to your email inbox', "user_id":None}), 401
+        return jsonify({"message":'Please verify your email address by clicking the verification link sent to your email inbox', "user_id":None}), 406
     else:
         access_token = create_access_token(identity=userid, expires_delta=timedelta(hours=6))
         refresh_token = create_refresh_token(identity=userid, expires_delta=timedelta(days=1))
