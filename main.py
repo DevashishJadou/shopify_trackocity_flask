@@ -34,7 +34,7 @@ app.register_blueprint(intgration_cd, url_prefix='/integration')
 app.register_blueprint(external_bp, url_prefix='/external')
 app.register_blueprint(google_bp, url_prefix='/google')
 app.register_blueprint(facebook_bp, url_prefix='/facebook')
-app.register_blueprint(report_bp, url_prefix='/report')
+app.register_blueprint(report_bp, url_prefix='/reporting')
 app.register_blueprint(payment_bp, url_prefix='/clientpayment')
 app.register_blueprint(channel_bp, url_prefix='/clientchannel')
 
@@ -96,9 +96,10 @@ def after_request(response):
         response.headers.add('Access-Control-Allow-Credentials', True)
     return response
 
+
 @app.errorhandler(403)  # CORS-related errors often have HTTP status code 403
 def handle_cors_error(e):
     return jsonify(error="CORS error: {}".format(e.description)), 403
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
