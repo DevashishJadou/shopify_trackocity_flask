@@ -187,8 +187,8 @@ def profile_user():
     if user.isverify is None or user.isverify is False:
         return jsonify({"message":'Please verify your email address by clicking the verification link sent to your email inbox', "user_id":None}), 406
     else:
-        access_token = create_access_token(identity=userid, expires_delta=timedelta(hours=6))
-        refresh_token = create_refresh_token(identity=userid, expires_delta=timedelta(days=1))
+        access_token = create_access_token(identity=userid, expires_delta=timedelta(hours=240))
+        refresh_token = create_refresh_token(identity=userid, expires_delta=timedelta(days=15))
         return jsonify({"message":"Logged In", 
             "tokens": {
                 "access":access_token,
