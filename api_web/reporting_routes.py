@@ -63,8 +63,8 @@ def get_data():
 				"impression": 0,
 				"clicks": 0,
 				"spend" : 0.0,
-				"order" : 0,
-				"total" : 0.0
+				"sales" : 0,
+				"revenue" : 0.0
 			}
 
 		if ad_set_id not in fbdata[campaign_id]["ad_sets"]:
@@ -75,8 +75,8 @@ def get_data():
 				"impression": 0,
 				"clicks": 0,
 				"spend" : 0.0,
-				"order" : 0,
-				"total" : 0.0
+				"sales" : 0,
+				"revenue" : 0.0
 			}
 
 		fbdata[campaign_id]["ad_sets"][ad_set_id]["ads"].append({
@@ -85,21 +85,21 @@ def get_data():
 			"impressions": row[6],
 			"clicks": row[7],
 			"spend": float(row[8]),
-			"order": row[9],
-			"total": float(row[10])
+			"sales": row[9],
+			"revenue": float(row[10])
 		})
 		
 		fbdata[campaign_id]["impression"] = fbdata[campaign_id]["impression"] + row[6]
 		fbdata[campaign_id]["clicks"] = fbdata[campaign_id]["clicks"] + row[7]
 		fbdata[campaign_id]["spend"] = fbdata[campaign_id]["spend"] + float(row[8])
-		fbdata[campaign_id]["order"] = fbdata[campaign_id]["order"] + row[9]
-		fbdata[campaign_id]["total"] = fbdata[campaign_id]["total"] + float(row[10])
+		fbdata[campaign_id]["sales"] = fbdata[campaign_id]["sales"] + row[9]
+		fbdata[campaign_id]["revenue"] = fbdata[campaign_id]["revenue"] + float(row[10])
 
 		fbdata[campaign_id]["ad_sets"][ad_set_id]["impression"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["impression"] + row[6]
 		fbdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] + row[7]
 		fbdata[campaign_id]["ad_sets"][ad_set_id]["spend"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["spend"] + float(row[8])
-		fbdata[campaign_id]["ad_sets"][ad_set_id]["order"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["order"] + row[9]
-		fbdata[campaign_id]["ad_sets"][ad_set_id]["total"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["total"] + float(row[10])
+		fbdata[campaign_id]["ad_sets"][ad_set_id]["sales"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["sales"] + row[9]
+		fbdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] + float(row[10])
 
 
 	# Convert the nested structure to a list of dates with campaigns
