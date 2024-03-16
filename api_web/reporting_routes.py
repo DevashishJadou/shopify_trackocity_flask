@@ -38,28 +38,27 @@ def get_all_user():
 def get_data():
 
 	headers = request.headers
+	body = json.loads(request.data)
+	startdate = body.get('startdate')
+	enddate = body.get('enddate')
 	userid = headers.get('workspaceId')
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
-	sql_query = db.text("select * from table_lastattribute(:workspace, :productid)")
+	sql_query = db.text("select * from table_lastattribute(:workspace, :productid, :startdate, :enddate)")
 
-	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid})
+	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
 	data = result.fetchall()
 
 	fbdata = {}
 	for row in data:
-		date = row[0].strftime("%Y-%m-%d")
-		campaign_id = row[1]
-		ad_set_id = row[3]
-		ad_id = row[5]
+		campaign_id = row[0]
+		ad_set_id = row[2]
+		ad_id = row[4]
 
-		if date not in fbdata:
-			fbdata[date] = {"date": date, "campaigns": {}}
-
-		if campaign_id not in fbdata[date]["campaigns"]:
-			fbdata[date]["campaigns"][campaign_id] = {
+		if campaign_id not in fbdata:
+			fbdata[campaign_id] = {
 				"campaign_id": campaign_id,
-				"campaign_name": row[2],
+				"campaign_name": row[1],
 				"ad_sets": {},
 				"impression": 0,
 				"clicks": 0,
@@ -68,10 +67,10 @@ def get_data():
 				"total" : 0.0
 			}
 
-		if ad_set_id not in fbdata[date]["campaigns"][campaign_id]["ad_sets"]:
-			fbdata[date]["campaigns"][campaign_id]["ad_sets"][ad_set_id] = {
+		if ad_set_id not in fbdata[campaign_id]["ad_sets"]:
+			fbdata[campaign_id]["ad_sets"][ad_set_id] = {
 				"ad_set_id": ad_set_id,
-				"ad_set_name": row[4],
+				"ad_set_name": row[3],
 				"ads": [],
 				"impression": 0,
 				"clicks": 0,
@@ -80,38 +79,40 @@ def get_data():
 				"total" : 0.0
 			}
 
-		fbdata[date]["campaigns"][campaign_id]["ad_sets"][ad_set_id]["ads"].append({
+		fbdata[campaign_id]["ad_sets"][ad_set_id]["ads"].append({
 			"ad_id": ad_id,
-			"ad_name": row[6],
-			"impressions": row[7],
-			"clicks": row[8],
-			"spend": float(row[9]),
-			"order": row[10],
-			"total": float(row[11])
+			"ad_name": row[5],
+			"impressions": row[6],
+			"clicks": row[7],
+			"spend": float(row[8]),
+			"order": row[9],
+			"total": float(row[10])
 		})
 		
-		fbdata[date]["campaigns"][campaign_id]["impression"] = fbdata[date]["campaigns"][campaign_id]["impression"] + row[7]
-		fbdata[date]["campaigns"][campaign_id]["clicks"] = fbdata[date]["campaigns"][campaign_id]["clicks"] + row[8]
-		fbdata[date]["campaigns"][campaign_id]["spend"] = fbdata[date]["campaigns"][campaign_id]["spend"] + float(row[9])
-		fbdata[date]["campaigns"][campaign_id]["order"] = fbdata[date]["campaigns"][campaign_id]["order"] + row[10]
-		fbdata[date]["campaigns"][campaign_id]["total"] = fbdata[date]["campaigns"][campaign_id]["total"] + float(row[11])
+		fbdata[campaign_id]["impression"] = fbdata[campaign_id]["impression"] + row[6]
+		fbdata[campaign_id]["clicks"] = fbdata[campaign_id]["clicks"] + row[7]
+		fbdata[campaign_id]["spend"] = fbdata[campaign_id]["spend"] + float(row[8])
+		fbdata[campaign_id]["order"] = fbdata[campaign_id]["order"] + row[9]
+		fbdata[campaign_id]["total"] = fbdata[campaign_id]["total"] + float(row[10])
 
-		fbdata[date]["campaigns"][campaign_id]["ad_sets"][ad_set_id]["impression"] = fbdata[date]["campaigns"][campaign_id]["ad_sets"][ad_set_id]["impression"] + row[7]
-		fbdata[date]["campaigns"][campaign_id]["ad_sets"][ad_set_id]["clicks"] = fbdata[date]["campaigns"][campaign_id]["ad_sets"][ad_set_id]["clicks"] + row[8]
-		fbdata[date]["campaigns"][campaign_id]["ad_sets"][ad_set_id]["spend"] = fbdata[date]["campaigns"][campaign_id]["ad_sets"][ad_set_id]["spend"] + float(row[9])
-		fbdata[date]["campaigns"][campaign_id]["ad_sets"][ad_set_id]["order"] = fbdata[date]["campaigns"][campaign_id]["ad_sets"][ad_set_id]["order"] + row[10]
-		fbdata[date]["campaigns"][campaign_id]["ad_sets"][ad_set_id]["total"] = fbdata[date]["campaigns"][campaign_id]["ad_sets"][ad_set_id]["total"] + float(row[11])
+		fbdata[campaign_id]["ad_sets"][ad_set_id]["impression"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["impression"] + row[6]
+		fbdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] + row[7]
+		fbdata[campaign_id]["ad_sets"][ad_set_id]["spend"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["spend"] + float(row[8])
+		fbdata[campaign_id]["ad_sets"][ad_set_id]["order"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["order"] + row[9]
+		fbdata[campaign_id]["ad_sets"][ad_set_id]["total"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["total"] + float(row[10])
 
 
 	# Convert the nested structure to a list of dates with campaigns
-	date_list = fbdata
-	for date_entry in date_list:
-		date_list[date_entry]["campaigns"] = list(date_list[date_entry]["campaigns"].values())
-		for campaign in date_list[date_entry]["campaigns"]:
-			campaign["ad_sets"] = list(campaign["ad_sets"].values())
+	campaign_list = fbdata
+	for date_entry in campaign_list:
+		campaign_list[date_entry]['campaign_id'] = campaign_list[date_entry]["campaign_id"]
+		campaign_list[date_entry]['campaign_name'] = campaign_list[date_entry]["campaign_name"]
+		campaign_list[date_entry]["ad_sets"] = list(campaign_list[date_entry]["ad_sets"].values())
+
 
 	# Convert to JSON
-	json_data = json.dumps(date_list)
+	# json_data = json.dumps(campaign_list)
+	json_data = campaign_list
 
 
 	return jsonify(json_data)
