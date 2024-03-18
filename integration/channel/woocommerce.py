@@ -77,6 +77,11 @@ def woocommercewebook(workspace):
 	# 	"currency_symbol":"\\u20b9","_links":{"self":[{"href":"https:\\/\\/sannidhyabaweja.com\\/wp-json\\/wc\\/v3\\/orders\\/5935"}],
 	# 	"collection":[{"href":"https:\\/\\/sannidhyabaweja.com\\/wp-json\\/wc\\/v3\\/orders"}],
 	# 	"customer":[{"href":"https:\\/\\/sannidhyabaweja.com\\/wp-json\\/wc\\/v3\\/customers\\/1"}]}}
+	
+	user = WooCommerce.query.filter_by(workspace=workspace).first()
+	if not user.isactive:
+		return jsonify({'error': 'Unathorized'}), 403
+
 	request_data = request.get_data().decode("utf-8")
 	request_data = json.loads(request_data)
 	signature = request.headers.get('X-Wc-Webhook-Signature')

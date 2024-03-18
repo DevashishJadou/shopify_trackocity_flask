@@ -11,7 +11,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, create_refresh_token
 
 from uuid import uuid4
-from datetime import timedelta
+from datetime import timedelta, datetime
 import os, json, random
 
 from flask_cors import cross_origin
@@ -71,8 +71,9 @@ def user_registor():
     workspace = uuid4().hex
     _hassed_password = generate_password_hash(str(data.get('password')))
     productid = random.randint(100000000, 999999999)
+    plantill = datetime.now() + timedelta(days=14)
 
-    user = UserRegister(complete_name=data['name'], email=data['email'], phone=data['phone'], _password=_hassed_password, workspace=workspace, productid=productid)
+    user = UserRegister(complete_name=data['name'], email=data['email'], phone=data['phone'], _password=_hassed_password, workspace=workspace, productid=productid, plan_till=plantill)
     db.session.add(user)
     db.session.commit()
 
