@@ -38,8 +38,7 @@ def get_all_user():
 def get_data():
 
 	headers = request.headers
-	print(f'Request Data: {request.data}, type: {type(request.data)}')
-	body = json.loads(request.data)
+	body = request.args
 	startdate = body.get('startdate')
 	enddate = body.get('enddate')
 	attribute = body.get('attribute')
