@@ -41,15 +41,19 @@ def get_data():
 	body = json.loads(request.data)
 	startdate = body.get('startdate')
 	enddate = body.get('enddate')
+	attribute = body.get('attribute')
 	userid = headers.get('workspaceId')
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
-	sql_query = db.text("select * from table_lastattribute(:workspace, :productid, :startdate, :enddate)")
+	if attribute == 'first':
+		sql_query = db.text("select * from table_firstattribute(:workspace, :productid, :startdate, :enddate)")
+	else:	
+		sql_query = db.text("select * from table_lastattribute(:workspace, :productid, :startdate, :enddate)")
 
 	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
 	data = result.fetchall()
 
-	fbdata = {}
+	fbdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0}
 	for row in data:
 		campaign_id = row[0]
 		ad_set_id = row[2]
@@ -88,6 +92,12 @@ def get_data():
 			"sales": row[9],
 			"revenue": float(row[10])
 		})
+
+		fbdata["impression"] = fbdata["impression"] + row[6]
+		fbdata["clicks"] = fbdata["clicks"] + row[7]
+		fbdata["spend"] = fbdata["spend"] + float(row[8])
+		fbdata["sales"] = fbdata["sales"] + row[9]
+		fbdata["revenue"] = fbdata["revenue"] + float(row[10])
 		
 		fbdata[campaign_id]["impression"] = fbdata[campaign_id]["impression"] + row[6]
 		fbdata[campaign_id]["clicks"] = fbdata[campaign_id]["clicks"] + row[7]
@@ -105,6 +115,8 @@ def get_data():
 	# Convert the nested structure to a list of dates with campaigns
 	campaign_list = fbdata
 	for date_entry in campaign_list:
+		if date_entry in ("impression", "clicks", "spend", "sales", "revenue"):
+			continue
 		campaign_list[date_entry]['campaign_id'] = campaign_list[date_entry]["campaign_id"]
 		campaign_list[date_entry]['campaign_name'] = campaign_list[date_entry]["campaign_name"]
 		campaign_list[date_entry]["ad_sets"] = list(campaign_list[date_entry]["ad_sets"].values())
