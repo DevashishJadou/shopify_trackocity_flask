@@ -53,7 +53,8 @@ def get_data():
 	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
 	data = result.fetchall()
 
-	fbdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0}
+	fbdata = {}
+	fbadsdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0}
 	for row in data:
 		campaign_id = row[0]
 		ad_set_id = row[2]
@@ -93,11 +94,11 @@ def get_data():
 			"revenue": float(row[10])
 		})
 
-		fbdata["impression"] = fbdata["impression"] + row[6]
-		fbdata["clicks"] = fbdata["clicks"] + row[7]
-		fbdata["spend"] = fbdata["spend"] + float(row[8])
-		fbdata["sales"] = fbdata["sales"] + row[9]
-		fbdata["revenue"] = fbdata["revenue"] + float(row[10])
+		fbadsdata["impression"] = fbadsdata["impression"] + row[6]
+		fbadsdata["clicks"] = fbadsdata["clicks"] + row[7]
+		fbadsdata["spend"] = fbadsdata["spend"] + float(row[8])
+		fbadsdata["sales"] = fbadsdata["sales"] + row[9]
+		fbadsdata["revenue"] = fbadsdata["revenue"] + float(row[10])
 		
 		fbdata[campaign_id]["impression"] = fbdata[campaign_id]["impression"] + row[6]
 		fbdata[campaign_id]["clicks"] = fbdata[campaign_id]["clicks"] + row[7]
@@ -113,18 +114,14 @@ def get_data():
 
 
 	# Convert the nested structure to a list of dates with campaigns
-	campaign_list = fbdata
+	campaign_list = list(fbdata.values())
 	for date_entry in campaign_list:
-		if date_entry in ("impression", "clicks", "spend", "sales", "revenue"):
-			continue
-		campaign_list[date_entry]['campaign_id'] = campaign_list[date_entry]["campaign_id"]
-		campaign_list[date_entry]['campaign_name'] = campaign_list[date_entry]["campaign_name"]
-		campaign_list[date_entry]["ad_sets"] = list(campaign_list[date_entry]["ad_sets"].values())
+		date_entry["ad_sets"] = list(date_entry["ad_sets"].values())
 
-
+	fbadsdata["campaign"] = campaign_list
 	# Convert to JSON
-	# json_data = json.dumps(campaign_list)
-	json_data = campaign_list
+	# json_data = json.dumps(campaign_list)n
+	json_data = fbadsdata
 
 
 	return jsonify(json_data)
