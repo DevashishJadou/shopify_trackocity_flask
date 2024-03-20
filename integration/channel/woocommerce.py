@@ -4,6 +4,7 @@ from flask_cors import cross_origin
 
 from ...db_model.sql_models import WooCommerce, order_table_dynamic, ordertable
 from ...connection import db
+from ...dbrule import dup_order_rule
 # from db_model.sql_models import WooCommerce, order_table_dynamic, ordertable
 # from connection import db
 
@@ -37,6 +38,7 @@ def woocommerceintegration():
                 try:
                     razorpay_table.create(bind=db.engine)
                     db.session.add(razorpay_register)
+                    dup_order_rule(tablename)
                 except:
                      pass
             db.session.commit()

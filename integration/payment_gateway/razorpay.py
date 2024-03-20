@@ -10,6 +10,7 @@ from sqlalchemy import MetaData
 # from connection import db
 from ...db_model.sql_models import UserRegister, RazorpayConfiguration, order_table_dynamic, ordertable
 from ...connection import db
+from ...dbrule import dup_order_rule
 
 metadata = MetaData()
 payment_bp = Blueprint('clientpayment', __name__)
@@ -42,6 +43,7 @@ def razorpay_params():
                 try:
                     razorpay_table.create(bind=db.engine)
                     db.session.add(razorpay_register)
+                    dup_order_rule(tablename)
                 except:
                     pass
         except Exception as e:

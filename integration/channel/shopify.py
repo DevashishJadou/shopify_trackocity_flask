@@ -8,6 +8,7 @@ from flask_cors import cross_origin
 from .woocommerce import channel_bp
 from ...db_model.sql_models import Shopify, order_table_dynamic, ordertable
 from ...connection import db
+from ...dbrule import dup_order_rule
 # from integration.channel.woocommerce import channel_bp
 # from db_model.sql_models import Shopify, order_table_dynamic, ordertable
 # from connection import db
@@ -43,6 +44,7 @@ def shopifyintegration():
 				try:
 					shopify_table.create(bind=db.engine)
 					db.session.add(user_make)
+					dup_order_rule(tablename)
 				except:
 					pass
 			db.session.commit()

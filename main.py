@@ -79,7 +79,7 @@ def refresh():
 def before_request():
     headers = request.headers
     userid = headers.get('workspaceId', None)
-    if request.endpoint != 'refresh':
+    if request.endpoint == 'refresh':
         if userid:
             verify_jwt_in_request()
             user = UserRegister.query.filter_by(workspace=userid).first()
