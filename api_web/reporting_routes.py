@@ -43,12 +43,13 @@ def get_data():
 	enddate = body.get('enddate')
 	attribute = body.get('attribute')
 	userid = headers.get('workspaceId')
+	timezone = '5.5 hours'
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
 	if attribute == 'first':
-		sql_query = db.text("select * from table_firstattribute(:workspace, :productid, :startdate, :enddate)")
+		sql_query = db.text("select * from table_firstattribute(:workspace, :productid, :startdate, :enddate, :timezone)")
 	else:	
-		sql_query = db.text("select * from table_lastattribute(:workspace, :productid, :startdate, :enddate)")
+		sql_query = db.text("select * from table_lastattribute(:workspace, :productid, :startdate, :enddate, :timezone)")
 
 	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
 	data = result.fetchall()
