@@ -85,11 +85,11 @@ def razorpay_webhook(workspace):
 
     request_data = request.get_data()
     client = razorpay.Client(auth=(webhook_key, webhook_secret))
-    verify = client.utility.verify_webhook_signature(request_data.decode("utf-8"), signature, client_secret)
+    # verify = client.utility.verify_webhook_signature(request_data.decode("utf-8"), signature, client_secret)
 
 
-    if not verify:
-        return jsonify({'error': 'Invalid signature'}), 400
+    # if not verify:
+    #     return jsonify({'error': 'Invalid signature'}), 400
     
     tablename = 'order_'+workspace
     orderTable = order_table_dynamic(tablename)
