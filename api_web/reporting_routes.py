@@ -35,7 +35,7 @@ def get_all_user():
 
 @report_bp.route('/fbtable', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
-def get_data():
+def get_reporttabledata():
 
 	headers = request.headers
 	body = request.args
@@ -51,7 +51,7 @@ def get_data():
 	else:	
 		sql_query = db.text("select * from table_lastattribute(:workspace, :productid, :startdate, :enddate, :timezone)")
 
-	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
+	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'timezone':timezone})
 	data = result.fetchall()
 
 	fbdata = {}
@@ -126,3 +126,29 @@ def get_data():
 
 
 	return jsonify(json_data)
+
+
+
+@report_bp.route('/graphsales', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def get_reportgraphdata():
+
+	headers = request.headers
+	body = request.args
+	startdate = body.get('startdate')
+	enddate = body.get('enddate')
+	userid = headers.get('workspaceId')
+	timezone = '5.5 hours'
+	user = UserRegister.query.filter_by(workspace=userid).first()
+
+	sql_query = db.text("select * from report_graphsales(:workspace, :startdate, :enddate, :timezone)")
+
+	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'timezone':timezone})
+	data = result.fetchall()
+
+	sale_data = {}
+	for row in data:
+		key = row[0].strftime("%Y-%m-%d")
+		sale_data[key] = [{"revenue":float(row[1]), "sales": int(row[2])}]
+
+	return jsonify(sale_data)
