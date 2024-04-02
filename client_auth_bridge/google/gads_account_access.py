@@ -12,6 +12,20 @@ metadata = MetaData()
 
 def list_accessible_customer(token, userid=None):
     user = ClientGoogleCredentials.query.filter_by(workspace=userid).first()
+    query = """
+            SELECT
+                customer_client.client_customer,
+                customer_client.level,
+                customer_client.manager,
+                customer_client.descriptive_name,
+                customer_client.currency_code,
+                customer_client.time_zone,
+                customer_client.id
+            FROM
+                customer_client
+            WHERE
+                customer_client.level <= 1
+        """
 
     if not user and token:
         user = ClientGoogleCredentials(workspace=userid, _token=token)
@@ -27,10 +41,24 @@ def list_accessible_customer(token, userid=None):
 
     client = create_client(token)
     try:
+        google_ads_service = client.get_service("GoogleAdsService")
         customer_service = client.get_service("CustomerService")
 
         accessible_customers = customer_service.list_accessible_customers()
-        resource_names = [resource_name for resource_name in accessible_customers.resource_names]
+        resource_names=[]
+        # resource_names = [resource_name for resource_name in accessible_customers.resource_names]
+
+        for customer_resource_names in accessible_customers.resource_names:
+            customer_id = customer_resource_names.split('/')[-1]
+            try:
+                response = google_ads_service.search_stream(customer_id=customer_id, query=query)
+                for batch in response:
+                    for row in batch.results:
+                        client_customer = row.customer_client.client_customer
+                        descriptive_name = row.customer_client.descriptive_name
+                        resource_names.append(descriptive_name+'/'+client_customer.split('/')[-1])
+            except Exception as ex:
+                pass
         return resource_names
 
     except GoogleAdsException as ex:
