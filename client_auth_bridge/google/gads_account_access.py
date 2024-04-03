@@ -56,7 +56,7 @@ def list_accessible_customer(token, userid=None):
                     for row in batch.results:
                         client_customer = row.customer_client.client_customer
                         descriptive_name = row.customer_client.descriptive_name
-                        resource_names.append(descriptive_name+'/'+client_customer.split('/')[-1])
+                        resource_names.append(descriptive_name+' / '+client_customer.split('/')[-1])
             except Exception as ex:
                 pass
         return resource_names
