@@ -55,8 +55,8 @@ def customers():
         return handleException(ex)
 
 
-@google_bp.route("/clientaccount")
-@cross_origin()
+@google_bp.route("/clientaccount", methods=['POST', 'OPTIONS'])
+@cross_origin(origins='*', methods=['OPTIONS', 'POST'], headers=['Content-Type'])
 def clientaccount():
     headers =  request.headers
     userid = headers.get("workSpaceId")
