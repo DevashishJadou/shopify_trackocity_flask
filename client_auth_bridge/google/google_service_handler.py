@@ -55,11 +55,12 @@ def customers():
         return handleException(ex)
 
 
-@google_bp.route("/clientaccount")   
+@google_bp.route("/clientaccount")
+@cross_origin()
 def clientaccount():
     headers =  request.headers
     userid = headers.get("workSpaceId")
-    account = request.args.get("customerId")
+    account = request.args.get("customerId").split('/')[-1]
     token = request.args.get("refresh_token")
     status = clientaccount_googleads(userid, account, token)
 
