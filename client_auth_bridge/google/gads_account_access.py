@@ -10,8 +10,8 @@ from flask import jsonify
 
 metadata = MetaData()
 
-def list_accessible_customer(token, userid=None):
-    user = ClientGoogleCredentials.query.filter_by(workspace=userid).first()
+def list_accessible_customer(token):
+
     query = """
             SELECT
                 customer_client.client_customer,
@@ -27,19 +27,6 @@ def list_accessible_customer(token, userid=None):
                 customer_client.level <= 1
         """
 
-    if not user and token:
-        user = ClientGoogleCredentials(workspace=userid, _token=token)
-        tablename = 'googleads_'+userid
-        if not metadata.tables.get(tablename):
-            google_table = googleads_table(tablename)
-            google_table.create(bind=db.engine)
-        db.session.add(user)
-        db.session.commit()
-
-    if user and not token:
-        token = user._token
-
-
     client = create_client(token)
     try:
         google_ads_service = client.get_service("GoogleAdsService")
@@ -47,8 +34,7 @@ def list_accessible_customer(token, userid=None):
 
         accessible_customers = customer_service.list_accessible_customers()
         resource_names=[]
-        # resource_names = [resource_name for resource_name in accessible_customers.resource_names]
-
+        
         for customer_resource_names in accessible_customers.resource_names:
             customer_id = customer_resource_names.split('/')[-1]
             try:
@@ -72,8 +58,14 @@ def clientaccount_googleads(userid, account, token):
     if user:
         user.account_name = account
         user._token = token
-    else:
-        return jsonify({'status': 'Error'}), 500
-    
+
+    if not user and token:
+        user = ClientGoogleCredentials(workspace=userid, _token=token, account_name=account)
+        tablename = 'googleads_'+userid
+        if not metadata.tables.get(tablename):
+            google_table = googleads_table(tablename)
+            google_table.create(bind=db.engine)
+        db.session.add(user)
+   
     db.session.commit()
     return jsonify({'status': 'success'}), 200

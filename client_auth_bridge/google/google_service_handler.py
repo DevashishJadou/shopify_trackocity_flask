@@ -41,15 +41,12 @@ def oauth2callback_endpoint():
 @google_bp.route("/customers")
 @cross_origin()
 def customers():
-    headers =  request.headers
     try:
         token = session['refresh_token']
     except:
         token = request.args.get("refresh_token")
-    if not sess.get('userid'):
-        sess['userid'] = headers.get("workSpaceId")
     try:
-        resource_names = list_accessible_customer(token, sess['userid'])
+        resource_names = list_accessible_customer(token)
         return resource_names
     except Exception as ex:
         return handleException(ex)
