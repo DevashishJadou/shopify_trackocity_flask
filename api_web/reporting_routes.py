@@ -35,7 +35,7 @@ def get_all_user():
 
 @report_bp.route('/fbtable', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
-def get_reporttabledata():
+def get_reporttabledatafacebook():
 
 	headers = request.headers
 	body = request.args
@@ -47,9 +47,9 @@ def get_reporttabledata():
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
 	if attribute == 'first':
-		sql_query = db.text("select * from table_firstattribute(:workspace, :productid, :startdate, :enddate, :timezone)")
+		sql_query = db.text("select * from table_facebookfirstattribute(:workspace, :productid, :startdate, :enddate, :timezone)")
 	else:	
-		sql_query = db.text("select * from table_lastattribute(:workspace, :productid, :startdate, :enddate, :timezone)")
+		sql_query = db.text("select * from table_facebooklastattribute(:workspace, :productid, :startdate, :enddate, :timezone)")
 
 	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'timezone':timezone})
 	data = result.fetchall()
@@ -123,6 +123,102 @@ def get_reporttabledata():
 	# Convert to JSON
 	# json_data = json.dumps(campaign_list)n
 	json_data = fbadsdata
+
+
+	return jsonify(json_data)
+
+
+
+@report_bp.route('/ggtable', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def get_reporttabledatagoogle():
+
+	headers = request.headers
+	body = request.args
+	startdate = body.get('startdate')
+	enddate = body.get('enddate')
+	attribute = body.get('attribute')
+	userid = headers.get('workspaceId')
+	timezone = '5.5 hours'
+	user = UserRegister.query.filter_by(workspace=userid).first()
+
+	if attribute == 'first':
+		sql_query = db.text("select * from table_googlefirstattribute(:workspace, :productid, :startdate, :enddate, :timezone)")
+	else:	
+		sql_query = db.text("select * from table_googlelastattribute(:workspace, :productid, :startdate, :enddate, :timezone)")
+
+	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'timezone':timezone})
+	data = result.fetchall()
+
+	ggdata = {}
+	ggadsdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0}
+	for row in data:
+		campaign_id = row[0]
+		ad_set_id = row[2]
+		ad_id = row[4]
+
+		if campaign_id not in ggdata:
+			ggdata[campaign_id] = {
+				"campaign_id": campaign_id,
+				"campaign_name": row[1],
+				"ad_sets": {},
+				"impression": 0,
+				"clicks": 0,
+				"spend" : 0.0,
+				"sales" : 0,
+				"revenue" : 0.0
+			}
+
+		if ad_set_id not in ggdata[campaign_id]["ad_sets"]:
+			ggdata[campaign_id]["ad_sets"][ad_set_id] = {
+				"ad_set_id": ad_set_id,
+				"ad_set_name": row[3],
+				"ads": [],
+				"impression": 0,
+				"clicks": 0,
+				"spend" : 0.0,
+				"sales" : 0,
+				"revenue" : 0.0
+			}
+
+		ggdata[campaign_id]["ad_sets"][ad_set_id]["ads"].append({
+			"ad_id": ad_id,
+			"ad_name": row[5],
+			"impressions": row[6],
+			"clicks": row[7],
+			"spend": float(row[8]),
+			"sales": row[9],
+			"revenue": float(row[10])
+		})
+
+		ggadsdata["impression"] = ggadsdata["impression"] + row[6]
+		ggadsdata["clicks"] = ggadsdata["clicks"] + row[7]
+		ggadsdata["spend"] = ggadsdata["spend"] + float(row[8])
+		ggadsdata["sales"] = ggadsdata["sales"] + row[9]
+		ggadsdata["revenue"] = ggadsdata["revenue"] + float(row[10])
+		
+		ggdata[campaign_id]["impression"] = ggdata[campaign_id]["impression"] + row[6]
+		ggdata[campaign_id]["clicks"] = ggdata[campaign_id]["clicks"] + row[7]
+		ggdata[campaign_id]["spend"] = ggdata[campaign_id]["spend"] + float(row[8])
+		ggdata[campaign_id]["sales"] = ggdata[campaign_id]["sales"] + row[9]
+		ggdata[campaign_id]["revenue"] = ggdata[campaign_id]["revenue"] + float(row[10])
+
+		ggdata[campaign_id]["ad_sets"][ad_set_id]["impression"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["impression"] + row[6]
+		ggdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] + row[7]
+		ggdata[campaign_id]["ad_sets"][ad_set_id]["spend"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["spend"] + float(row[8])
+		ggdata[campaign_id]["ad_sets"][ad_set_id]["sales"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["sales"] + row[9]
+		ggdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] + float(row[10])
+
+
+	# Convert the nested structure to a list of dates with campaigns
+	campaign_list = list(ggdata.values())
+	for date_entry in campaign_list:
+		date_entry["ad_sets"] = list(date_entry["ad_sets"].values())
+
+	ggadsdata["campaign"] = campaign_list
+	# Convert to JSON
+	# json_data = json.dumps(campaign_list)n
+	json_data = ggadsdata
 
 
 	return jsonify(json_data)
