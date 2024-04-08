@@ -39,6 +39,7 @@ def list_accessible_customer(token, userid=None):
     if user and not token:
         token = user._token
 
+
     client = create_client(token)
     try:
         google_ads_service = client.get_service("GoogleAdsService")
@@ -65,11 +66,12 @@ def list_accessible_customer(token, userid=None):
         handleGoogleAdsException(ex)
 
 
-def clientaccount_googleads(userid, account):
+def clientaccount_googleads(userid, account, token):
     user = ClientGoogleCredentials.query.filter_by(workspace=userid).first()
 
     if user:
         user.account_name = account
+        user._token = token
     else:
         return jsonify({'status': 'Error'}), 500
     
