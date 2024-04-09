@@ -242,9 +242,43 @@ def get_reportgraphdata():
 	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'timezone':timezone})
 	data = result.fetchall()
 
-	sale_data = {}
+	sale_data = {'revenue':0.0, 'sales':0, 'roi':0.0, 'aov':0.0, 'cpa':0.0, 'data':{}}
 	for row in data:
 		key = row[0].strftime("%Y-%m-%d")
-		sale_data[key] = [{"revenue":float(row[1]), "sales": int(row[2])}]
+		sale_data['data'][key] = [{"revenue":float(row[1]), "sales": int(row[2])}]
+		sale_data['revenue'] = sale_data['revenue'] + float(row[1])
+		sale_data['sales'] = sale_data['sales'] + int(row[2])
+
+	return jsonify(sale_data)
+
+
+
+@report_bp.route('/dashboardgraphsales', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def get_dashboardgraphdata():
+
+	headers = request.headers
+	body = request.args
+	startdate = body.get('startdate')
+	enddate = body.get('enddate')
+	userid = headers.get('workspaceId')
+	timezone = '5.5 hours'
+	user = UserRegister.query.filter_by(workspace=userid).first()
+
+	sql_query = db.text("select * from dashboard_graphsales(:workspace, :startdate, :enddate, :timezone)")
+
+	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'timezone':timezone})
+	data = result.fetchall()
+
+	sale_data = {'revenue':0.0, 'sales':0, 'spend':0.0, 'data':{}}
+	for row in data:
+		key = row[0].strftime("%Y-%m-%d")
+		sale_data['data'][key] = [{"revenue":float(row[1]), "sales": int(row[2]), 'spend':float(row[3]), 'roi':float(row[4]), 'aov':float(row[5]), 'cpa':float(row[6])}]
+		sale_data['revenue'] = sale_data['revenue'] + float(row[1])
+		sale_data['sales'] = sale_data['sales'] + int(row[2])
+		sale_data['spend'] = sale_data['sales'] + float(row[3])
+	sale_data['roi'] = sale_data['revenue']/sale_data['spend']
+	sale_data['aov'] = sale_data['revenue']/sale_data['sales']
+	sale_data['cpa'] = sale_data['spend']/sale_data['sales']
 
 	return jsonify(sale_data)
