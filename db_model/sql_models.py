@@ -21,6 +21,7 @@ class UserRegister(db.Model):
     isactive = db.Column(db.Boolean, default=False)
     plan_till = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.now)
+    timezone = db.Column(db.String(16))
 
 
 class ClientGoogleCredentials(db.Model):

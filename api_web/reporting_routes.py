@@ -234,8 +234,9 @@ def get_reportgraphdata():
 	startdate = body.get('startdate')
 	enddate = body.get('enddate')
 	userid = headers.get('workspaceId')
-	timezone = '5.5 hours'
+	
 	user = UserRegister.query.filter_by(workspace=userid).first()
+	timezone = user.timezone
 
 	sql_query = db.text("select * from report_graphsales(:workspace, :startdate, :enddate, :timezone)")
 
