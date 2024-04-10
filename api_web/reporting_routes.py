@@ -270,15 +270,30 @@ def get_dashboardgraphdata():
 	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'timezone':timezone})
 	data = result.fetchall()
 
-	sale_data = {'revenue':0.0, 'sales':0, 'spend':0.0, 'data':{}}
+	sale_data = {'revenue':{"data":[], "total":0.0}, 'sales':{"data":[],"total":0.0}, 'spend':{"data":[],"total":0.0}, 'roi':{"data":[],"total":0.0}, 'aov':{"data":[],"total":0.0}, 'cpa':{"data":[],"total":0.0}}
 	for row in data:
-		key = row[0].strftime("%Y-%m-%d")
-		sale_data['data'][key] = [{"revenue":float(row[1]), "sales": int(row[2]), 'spend':float(row[3]), 'roi':float(row[4]), 'aov':float(row[5]), 'cpa':float(row[6])}]
-		sale_data['revenue'] = sale_data['revenue'] + float(row[1])
-		sale_data['sales'] = sale_data['sales'] + int(row[2])
-		sale_data['spend'] = sale_data['sales'] + float(row[3])
-	sale_data['roi'] = sale_data['revenue']/sale_data['spend']
-	sale_data['aov'] = sale_data['revenue']/sale_data['sales']
-	sale_data['cpa'] = sale_data['spend']/sale_data['sales']
+		date_str = row[0].strftime("%Y-%m-%d")
+		revenue = float(row[1])
+		sales = int(row[2])
+		spend = float(row[3])
+		roi = float(row[4])
+		aov = float(row[5])
+		cpa = float(row[6])
+
+		sale_data["revenue"]["data"].append({"value": revenue, "date": date_str})
+		sale_data["sales"]["data"].append({"value": sales, "date": date_str})
+		sale_data["spend"]["data"].append({"value": spend, "date": date_str})
+		sale_data["roi"]["data"].append({"value": roi * 100, "date": date_str})
+		sale_data["aov"]["data"].append({"value": aov, "date": date_str})
+		sale_data["cpa"]["data"].append({"value": cpa, "date": date_str})
+
+		sale_data["revenue"]['total'] += revenue
+		sale_data["sales"]['total'] += sales
+		sale_data["spend"]['total'] += spend
+
+	sale_data["roi"]['total'] = round(sale_data["revenue"]['total']/sale_data["spend"]['total'],2)
+	sale_data["aov"]['total'] = round(sale_data["revenue"]['total']/sale_data["sales"]['total'], 2)
+	sale_data["cpa"]['total'] = round(sale_data["spend"]['total']/sale_data["sales"]['total'], 2)
+	sale_data["spend"]['total'] = round(sale_data["spend"]['total'], 2)
 
 	return jsonify(sale_data)

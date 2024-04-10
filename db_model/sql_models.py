@@ -29,9 +29,10 @@ class ClientGoogleCredentials(db.Model):
     workspace = db.Column(db.String(64))
     _token = db.Column(db.String(255))
     account_name = db.Column(db.String(32)),
-    active = db.Column(db.Boolean, default=True),
+    active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    manager_account = db.Column(db.String(32))
     
 
 class RazorpayConfiguration(db.Model):

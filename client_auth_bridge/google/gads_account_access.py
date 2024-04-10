@@ -77,7 +77,7 @@ def clientaccount_googleads(userid, account, token):
     response = google_ads_service.search_stream(customer_id=account, query=query)
     for batch in response:
         for row in batch.results:
-            manager_id = row.resource_names.split('/')[2]
+            manager_id = row.customer_client.resource_name.split('/')[1]
 
     if user:
         user.account_name = account
@@ -85,7 +85,7 @@ def clientaccount_googleads(userid, account, token):
         user.manager_account = manager_id 
 
     if not user and token:
-        user = ClientGoogleCredentials(workspace=userid, _token=token, account_name=account)
+        user = ClientGoogleCredentials(workspace=userid, _token=token, account_name=account, manager_account=manager_id)
         tablename = 'googleads_'+userid
         if not metadata.tables.get(tablename):
             google_table = googleads_table(tablename)
