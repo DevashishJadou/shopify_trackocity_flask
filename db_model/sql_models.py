@@ -119,8 +119,6 @@ def order_table_dynamic(tablename):
 
 
     
-    
-
 
 def ordertable(tablename):
     # Define a table with order name and columns
@@ -131,13 +129,13 @@ def ordertable(tablename):
 			Column('id', Integer, primary_key=True),
             Column('channel', String(32)),
 			Column('order_date', DateTime),
-			Column('transcation_id', String(128)),
+			Column('transcation_id', String(128), unique=True),
 			Column('first_name', String(128)),
 			Column('last_name', String(128)),
 			Column('email', String(128)),
 			Column('payment_method', String(64)),
             Column('total', Numeric),
-			Column('customer_ip', String(32)),
+			Column('customer_ip', String(64)),
 			Column('customer_user_agent', Text),
 			Column('created_at', DateTime, default=datetime.now),
 			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now)

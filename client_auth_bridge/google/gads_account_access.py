@@ -14,6 +14,7 @@ def list_accessible_customer(token):
 
     query = """
             SELECT
+                customer_client.resource_name,
                 customer_client.client_customer,
                 customer_client.level,
                 customer_client.manager,
@@ -25,6 +26,7 @@ def list_accessible_customer(token):
                 customer_client
             WHERE
                 customer_client.level <= 1
+                and customer_client.test_account = False
         """
 
     client = create_client(token)
@@ -55,9 +57,32 @@ def list_accessible_customer(token):
 def clientaccount_googleads(userid, account, token):
     user = ClientGoogleCredentials.query.filter_by(workspace=userid).first()
 
+    query = """
+            SELECT
+            	customer_client.resource_name,
+                customer_client.client_customer,
+                customer_client.level,
+                customer_client.manager,
+                customer_client.descriptive_name,
+                customer_client.currency_code,
+                customer_client.time_zone,
+                customer_client.id
+            FROM
+                customer_client
+            WHERE
+                customer_client.level <= 1
+        """
+    client = create_client(token)
+    google_ads_service = client.get_service("GoogleAdsService")
+    response = google_ads_service.search_stream(customer_id=account, query=query)
+    for batch in response:
+        for row in batch.results:
+            manager_id = row.resource_names.split('/')[2]
+
     if user:
         user.account_name = account
         user._token = token
+        user.manager_account = manager_id 
 
     if not user and token:
         user = ClientGoogleCredentials(workspace=userid, _token=token, account_name=account)
