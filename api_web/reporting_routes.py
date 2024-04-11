@@ -139,15 +139,15 @@ def get_reporttabledatagoogle():
 	enddate = body.get('enddate')
 	attribute = body.get('attribute')
 	userid = headers.get('workspaceId')
-	timezone = '5.5 hours'
+	
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
 	if attribute == 'first':
-		sql_query = db.text("select * from table_googlefirstattribute(:workspace, :productid, :startdate, :enddate, :timezone)")
+		sql_query = db.text("select * from table_googlefirstattribute(:workspace, :productid, :startdate, :enddate)")
 	else:	
-		sql_query = db.text("select * from table_googlelastattribute(:workspace, :productid, :startdate, :enddate, :timezone)")
+		sql_query = db.text("select * from table_googlelastattribute(:workspace, :productid, :startdate, :enddate)")
 
-	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'timezone':timezone})
+	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
 	data = result.fetchall()
 
 	ggdata = {}
@@ -236,11 +236,10 @@ def get_reportgraphdata():
 	userid = headers.get('workspaceId')
 	
 	user = UserRegister.query.filter_by(workspace=userid).first()
-	timezone = user.timezone
 
-	sql_query = db.text("select * from report_graphsales(:workspace, :startdate, :enddate, :timezone)")
+	sql_query = db.text("select * from report_graphsales(:workspace, :startdate, :enddate)")
 
-	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'timezone':timezone})
+	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
 	data = result.fetchall()
 
 	sale_data = {'revenue':0.0, 'sales':0, 'roi':0.0, 'aov':0.0, 'cpa':0.0, 'data':{}}
@@ -263,12 +262,11 @@ def get_dashboardgraphdata():
 	startdate = body.get('startdate')
 	enddate = body.get('enddate')
 	userid = headers.get('workspaceId')
-	timezone = '5.5 hours'
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
-	sql_query = db.text("select * from dashboard_graphsales(:workspace, :startdate, :enddate, :timezone)")
+	sql_query = db.text("select * from dashboard_graphsales(:workspace, :startdate, :enddate)")
 
-	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'timezone':timezone})
+	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
 	data = result.fetchall()
 
 	sale_data = {'revenue':{"data":[], "total":0.0}, 'sales':{"data":[],"total":0.0}, 'spend':{"data":[],"total":0.0}, 'roi':{"data":[],"total":0.0}, 'aov':{"data":[],"total":0.0}, 'cpa':{"data":[],"total":0.0}}

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 import json, os
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask_cors import cross_origin
 
 import razorpay
@@ -104,10 +104,10 @@ def razorpay_webhook(workspace):
         # Handle payment captured event
         payload = data.get('payload').get('payment').get('entity')
         payment_id = payload.get('id')
-        amount = payload.get('amount')
+        amount = payload.get('amount')/100.0
         currency = payload.get('currency')
         email = payload.get('email')
-        event_time = datetime.fromtimestamp(data.get('created_at'))
+        event_time = datetime.fromtimestamp(data.get('created_at')) + timedelta(hours=user.timezone)
         
         order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
         if order_obj is None:
