@@ -43,15 +43,14 @@ def get_reporttabledatafacebook():
 	enddate = body.get('enddate')
 	attribute = body.get('attribute')
 	userid = headers.get('workspaceId')
-	timezone = '5.5 hours'
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
 	if attribute == 'first':
-		sql_query = db.text("select * from table_facebookfirstattribute(:workspace, :productid, :startdate, :enddate, :timezone)")
+		sql_query = db.text("select * from table_facebookfirstattribute(:workspace, :productid, :startdate, :enddate)")
 	else:	
-		sql_query = db.text("select * from table_facebooklastattribute(:workspace, :productid, :startdate, :enddate, :timezone)")
+		sql_query = db.text("select * from table_facebooklastattribute(:workspace, :productid, :startdate, :enddate)")
 
-	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'timezone':timezone})
+	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
 	data = result.fetchall()
 
 	fbdata = {}
