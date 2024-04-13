@@ -163,6 +163,9 @@ def googleads_table(tablename):
             Column('impression', Integer),
             Column('clicks', Integer),
             Column('spend', Numeric),
+            Column('purchase', Integer),
+            Column('purchase_value', Numeric),
+            Column('purchase_roas', Numeric),
 			Column('created_at', DateTime, default=datetime.now),
 			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now),
             UniqueConstraint('dated', 'adid', name=uuid.uuid4().hex)
@@ -188,6 +191,8 @@ def facebookads_table(tablename):
             Column('impression', Integer),
             Column('clicks', Integer),
             Column('spend', Numeric),
+            Column('purchase_roas', Numeric),
+            Column('purchase', Integer),
 			Column('created_at', DateTime, default=datetime.now),
 			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now),
             UniqueConstraint('dated', 'adid', name=uuid.uuid4().hex)

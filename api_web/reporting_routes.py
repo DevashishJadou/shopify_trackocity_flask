@@ -289,9 +289,9 @@ def get_dashboardgraphdata():
 		sale_data["sales"]['total'] += sales
 		sale_data["spend"]['total'] += spend
 
-	sale_data["roi"]['total'] = round(sale_data["revenue"]['total']/sale_data["spend"]['total'],2)
-	sale_data["aov"]['total'] = round(sale_data["revenue"]['total']/sale_data["sales"]['total'], 2)
-	sale_data["cpa"]['total'] = round(sale_data["spend"]['total']/sale_data["sales"]['total'], 2)
+	sale_data["roi"]['total'] = round(sale_data["revenue"]['total']/max(sale_data["spend"]['total'],1),2)
+	sale_data["aov"]['total'] = round(sale_data["revenue"]['total']/max(sale_data["sales"]['total'],1), 2)
+	sale_data["cpa"]['total'] = round(sale_data["spend"]['total']/max(sale_data["sales"]['total'],1), 2)
 	sale_data["spend"]['total'] = round(sale_data["spend"]['total'], 2)
 
 	return jsonify(sale_data)
