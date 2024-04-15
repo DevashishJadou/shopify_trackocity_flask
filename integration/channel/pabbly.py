@@ -3,59 +3,42 @@ import json, os
 from datetime import datetime, timedelta
 from flask_cors import cross_origin
 
-import razorpay
 from sqlalchemy import MetaData
 
-# from db_model.sql_models import RazorpayConfiguration, order_table_dynamic, ordertable
-# from connection import db
-from ...db_model.sql_models import UserRegister, RazorpayConfiguration, order_table_dynamic, ordertable
+from ...db_model.sql_models import UserRegister, order_table_dynamic, ordertable
+from .woocommerce import channel_bp
 from ...connection import db
 from ...dbrule import dup_order_rule
 
 metadata = MetaData()
-payment_bp = Blueprint('clientpayment', __name__)
 
-@payment_bp.route('/razorpaycredentials', methods=['POST'])
+@channel_bp.route('/pabblycredentials', methods=['POST'])
 @cross_origin()
-def razorpay_params():
+def pabbly_integration():
     header = request.headers
     _body = json.loads(request.get_data())
     print(f'body:{_body}')
     workspace = header.get('workspaceId')
-    _razorpay_api_secret = _body['razorpay_api_secret']
-    _razorpay_api_key = _body['razorpay_api_key']
-    _razorpay_client_secret = _body['_razorpay_client_secret']
 
-    user = RazorpayConfiguration.query.filter_by(workspace=workspace).first()
-    if user:
-        user.razorpay_api_secret = _razorpay_api_secret
-        user.razorpay_api_key = _razorpay_api_key
-        user.razorpay_client_secret = _razorpay_client_secret
-        db.session.commit()
-        return jsonify({'message': 'Inforamtion Updated Succesfully'}), 200
-
-    else:
-        razorpay_register = RazorpayConfiguration(workspace=workspace, razorpay_api_secret=_razorpay_api_secret, razorpay_api_key=_razorpay_api_key, razorpay_client_secret=_razorpay_client_secret, active=True)
-        tablename = 'order_'+workspace
-        try:
-            if not metadata.tables.get(tablename):
-                razorpay_table = ordertable(tablename)
-                try:
-                    razorpay_table.create(bind=db.engine)
-                    db.session.add(razorpay_register)
-                    dup_order_rule(tablename)
-                except:
-                    pass
-        except Exception as e:
-            print(f'Razorpay client secret: {e.msg}')
-            return jsonify({'error': 'Something went Wrong'}), 500
+    tablename = 'order_'+workspace
+    try:
+        if not metadata.tables.get(tablename):
+            pabbly_table = ordertable(tablename)
+            try:
+                pabbly_table.create(bind=db.engine)
+                dup_order_rule(tablename)
+            except:
+                pass
+    except Exception as e:
+        print(f'Pabbly integration: {e.msg}')
+        return jsonify({'error': 'Something went Wrong'}), 500
     db.session.commit()
 
     return jsonify({'message': 'success'}), 200
 
 
-@payment_bp.route('/<workspace>/razorpaywebhook', methods=['POST'])
-def razorpay_webhook(workspace):
+@channel_bp.route('/<workspace>/pabblyorderendpoint', methods=['POST'])
+def pabbly_webhook(workspace):
     # {"entity":"event","account_id":"acc_IXN05ypMrY0Yrn","event":"order.paid","contains":["payment","order"],
     # "payload":{"payment":{"entity":{"id":"pay_N8cPI5YAONeJKz","entity":"payment","amount":39900,"currency":"INR",
     # "base_amount":39900,"status":"captured","order_id":"order_N8cP7QVPZ4J9so","invoice_id":null,
@@ -76,16 +59,9 @@ def razorpay_webhook(workspace):
     if not user.isactive:
         jsonify({'status': 'Unauthorized'}), 403
 
-    signature = request.headers.get('X-Razorpay-Signature')
-    razorpay_client = RazorpayConfiguration.query.filter_by(workspace=workspace).first()
-
-    webhook_secret = razorpay_client.razorpay_api_secret
-    webhook_key = razorpay_client.razorpay_api_key
-    client_secret = razorpay_client.razorpay_client_secret
+    signature = request.headers.get('Authorization')
 
     request_data = request.get_data()
-    client = razorpay.Client(auth=(webhook_key, webhook_secret))
-    # verify = client.utility.verify_webhook_signature(request_data.decode("utf-8"), signature, client_secret)
 
 
     # if not verify:
@@ -100,7 +76,7 @@ def razorpay_webhook(workspace):
 
     # Process the webhook event based on the event type
     event_type = data.get('event')
-    if razorpay_client.active and event_type in ('order.paid', 'payment.captured', 'subscription.completed','refund.processed'):
+    if event_type in ('order.paid', 'payment.captured', 'subscription.completed','refund.processed'):
         # Handle payment captured event
         payload = data.get('payload').get('payment').get('entity')
         payment_id = payload.get('id')

@@ -122,6 +122,8 @@ def verify_email(token):
         email = s.loads(token, salt='email-verify', max_age=72000)  # Token expires in 1 hour
         user = UserRegister.query.filter_by(email=email).first()
         user.isverify = True
+        if user.plan_till and user.plan_till > datetime.now():
+            user.isactive = True
         db.session.commit()
         return redirect(_CLIENT_URL+"/sign-in")
     except:

@@ -241,7 +241,7 @@ def get_reportgraphdata():
 	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
 	data = result.fetchall()
 
-	sale_data = {'revenue':0.0, 'sales':0, 'roi':0.0, 'aov':0.0, 'cpa':0.0, 'data':{}}
+	sale_data = {'revenue':0.0, 'sales':0, 'data':{}}
 	for row in data:
 		key = row[0].strftime("%Y-%m-%d")
 		sale_data['data'][key] = [{"revenue":float(row[1]), "sales": int(row[2])}]
@@ -271,17 +271,17 @@ def get_dashboardgraphdata():
 	sale_data = {'revenue':{"data":[], "total":0.0}, 'sales':{"data":[],"total":0.0}, 'spend':{"data":[],"total":0.0}, 'roi':{"data":[],"total":0.0}, 'aov':{"data":[],"total":0.0}, 'cpa':{"data":[],"total":0.0}}
 	for row in data:
 		date_str = row[0].strftime("%Y-%m-%d")
-		revenue = float(row[1])
+		revenue = round(float(row[1]),2)
 		sales = int(row[2])
-		spend = float(row[3])
-		roi = float(row[4])
-		aov = float(row[5])
-		cpa = float(row[6])
+		spend = round(float(row[3]), 2)
+		roi = round(float(row[4]), 2)
+		aov = round(float(row[5]), 2)
+		cpa = round(float(row[6]), 2)
 
 		sale_data["revenue"]["data"].append({"value": revenue, "date": date_str})
 		sale_data["sales"]["data"].append({"value": sales, "date": date_str})
 		sale_data["spend"]["data"].append({"value": spend, "date": date_str})
-		sale_data["roi"]["data"].append({"value": roi * 100, "date": date_str})
+		sale_data["roi"]["data"].append({"value": roi, "date": date_str})
 		sale_data["aov"]["data"].append({"value": aov, "date": date_str})
 		sale_data["cpa"]["data"].append({"value": cpa, "date": date_str})
 

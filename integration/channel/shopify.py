@@ -36,7 +36,7 @@ def shopifyintegration():
 		return jsonify({'message': 'Inforamtion Updated Succesfully'}), 200
 
 	else:
-		user_make = Shopify(base_url=base_url, access_key=access_token, workspace=workspace)
+		user_make = Shopify(base_url=base_url, access_key=access_token, workspace=workspace, active=True)
 		tablename = 'order_'+workspace
 		try:
 			if not metadata.tables.get(tablename):

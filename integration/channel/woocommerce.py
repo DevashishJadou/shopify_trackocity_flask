@@ -30,7 +30,7 @@ def woocommerceintegration():
         return jsonify({'message': 'Inforamtion Updated Succesfully'}), 200
     
     else:
-        razorpay_register = WooCommerce(workspace=workspace, client_secret=_woocommerce_client_secret)
+        razorpay_register = WooCommerce(workspace=workspace, client_secret=_woocommerce_client_secret, active=True)
         tablename = 'order_'+workspace
         try:
             if not metadata.tables.get(tablename):
@@ -81,7 +81,7 @@ def woocommercewebook(workspace):
 	# 	"customer":[{"href":"https:\\/\\/sannidhyabaweja.com\\/wp-json\\/wc\\/v3\\/customers\\/1"}]}}
 	
 	user = WooCommerce.query.filter_by(workspace=workspace).first()
-	if not user.isactive:
+	if not user.active:
 		return jsonify({'error': 'Unathorized'}), 403
 
 	request_data = request.get_data().decode("utf-8")

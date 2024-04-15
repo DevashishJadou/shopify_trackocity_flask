@@ -43,6 +43,7 @@ class RazorpayConfiguration(db.Model):
     razorpay_api_secret = db.Column(db.String(128))
     razorpay_api_key = db.Column(db.String(128))
     razorpay_client_secret = db.Column(db.String(64))
+    active = db.Column(db.Boolean, default=False)
 
 
 class ClientFacebookredentials(db.Model):
@@ -64,6 +65,7 @@ class WooCommerce(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     workspace = db.Column(db.String(64))
     client_secret = db.Column(db.String(128))
+    active = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
@@ -74,6 +76,7 @@ class Shopify(db.Model):
     workspace = db.Column(db.String(64))
     base_url = db.Column(db.String(256))
     access_key = db.Column(db.String(128))
+    active = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
