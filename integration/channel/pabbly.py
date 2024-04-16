@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from flask_cors import cross_origin
 
 from sqlalchemy import MetaData
+import hashlib
 
 from ...db_model.sql_models import UserRegister, order_table_dynamic, ordertable
 from .woocommerce import channel_bp
@@ -11,6 +12,14 @@ from ...connection import db
 from ...dbrule import dup_order_rule
 
 metadata = MetaData()
+
+@channel_bp.route('/pabblyread', methods=['GET'])
+@cross_origin()
+def pabbly_sent_sign():
+    header = request.headers
+    workspace = header.get('workspaceId')
+    signature = workspace + "trackocity"
+    return hashlib.sha256(signature.encode('utf-8')).hexdigest()
 
 @channel_bp.route('/pabblycredentials', methods=['POST'])
 @cross_origin()
@@ -60,18 +69,20 @@ def pabbly_webhook(workspace):
         jsonify({'status': 'Unauthorized'}), 403
 
     signature = request.headers.get('Authorization')
+    signature = hashlib.sha256(signature.encode('utf-8')).hexdigest()
+    key = workspace + "trackocity"
+    verify = signature == key
 
-    request_data = request.get_data()
-
-
-    # if not verify:
-    #     return jsonify({'error': 'Invalid signature'}), 400
+    if not verify:
+        return jsonify({'error': 'Invalid Authorization'}), 400
     
+        
     tablename = 'order_'+workspace
     orderTable = order_table_dynamic(tablename)
     orderTable.metadata = db.Model.metadata
 
     # Parse the JSON data from the request
+    request_data = request.get_data()
     data = json.loads(request_data)
 
     # Process the webhook event based on the event type

@@ -9,6 +9,7 @@ from .client_auth_bridge.facebook.facebook_service_handler import facebook_bp
 from .integration.payment_gateway.razorpay import payment_bp
 from .integration.channel.woocommerce import channel_bp
 from .integration.channel.shopify import channel_bp
+from .integration.channel.pabbly import channel_bp
 from .api_web.reporting_routes import report_bp
 from .api_web.integration_routes import intgration_cd
 from .connection import create_app, jwt
