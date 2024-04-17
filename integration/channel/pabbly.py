@@ -69,7 +69,7 @@ def pabbly_webhook(workspace):
         jsonify({'status': 'Unauthorized'}), 403
 
     signature = request.headers.get('Authorization')
-    signature = hashlib.sha256(signature.encode('utf-8')).hexdigest()
+    signature = signature
     key = workspace + "trackocity"
     verify = signature == hashlib.sha256(key.encode('utf-8')).hexdigest()
 
