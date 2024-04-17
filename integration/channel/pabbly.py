@@ -71,7 +71,7 @@ def pabbly_webhook(workspace):
     signature = request.headers.get('Authorization')
     signature = hashlib.sha256(signature.encode('utf-8')).hexdigest()
     key = workspace + "trackocity"
-    verify = signature == key
+    verify = signature == hashlib.sha256(key.encode('utf-8')).hexdigest()
 
     if not verify:
         return jsonify({'error': 'Invalid Authorization'}), 400
@@ -84,6 +84,7 @@ def pabbly_webhook(workspace):
     # Parse the JSON data from the request
     request_data = request.get_data()
     data = json.loads(request_data)
+    print(f"pabbly data: {data}")
 
     # Process the webhook event based on the event type
     event_type = data.get('event')

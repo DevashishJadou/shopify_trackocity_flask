@@ -94,6 +94,7 @@ def order_table_dynamic(tablename):
         payment_method = db.Column(db.String(64))
         total = db.Column(db.Numeric)
         event_type = db.Column(db.String(64))
+        cart_id = db.Column(db.String(64))
         customer_ip = db.Column(db.String(32))
         customer_user_agent = db.Column(db.Text)
         created_at = db.Column(db.DateTime, default=datetime.now)
