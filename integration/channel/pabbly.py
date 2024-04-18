@@ -86,23 +86,24 @@ def pabbly_webhook(workspace):
     data = json.loads(request_data)
     print(f"pabbly data: {data}")
 
-    # Process the webhook event based on the event type
-    event_type = data.get('event')
-    if event_type in ('order.paid', 'payment.captured', 'subscription.completed','refund.processed'):
-        # Handle payment captured event
-        payload = data.get('payload').get('payment').get('entity')
-        payment_id = payload.get('id')
-        amount = payload.get('amount')/100.0
-        currency = payload.get('currency')
-        email = payload.get('email')
-        event_time = datetime.fromtimestamp(data.get('created_at')) + timedelta(hours=float(user.timezone))
+  
+    # Handle payment captured event
+    first_name = data.get('first_name')
+    last_name = data.get('last_name')
+    order_status = data.get('order_status')
+    payment_id = data.get('order_number')
+    amount = data.get('total')
+    currency = data.get('currency')
+    email = data.get('email')
+    payment_method = data.get('payment_method')
+    event_time = datetime.fromtimestamp(data.get('order_date'))
         
-        order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
-        if order_obj is None:
-            order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, payment_method='Prepaid', total=amount, event_type=event_type)
+    order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
+    if order_obj is None:
+        order_make = orderTable(order_date=event_time, transcation_id=payment_id, first_name=first_name, last_name=last_name, email=email, payment_method=payment_method, total=amount, order_status=order_status)
 
-            db.session.add(order_make)
-            db.session.commit()
+        db.session.add(order_make)
+    db.session.commit()
 
 
     return jsonify({'status': 'success'}), 200

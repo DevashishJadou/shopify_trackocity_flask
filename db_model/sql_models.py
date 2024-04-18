@@ -93,6 +93,7 @@ def order_table_dynamic(tablename):
         email = db.Column(db.String(128))
         payment_method = db.Column(db.String(64))
         total = db.Column(db.Numeric)
+        order_status = db.Column(db.String(32))
         event_type = db.Column(db.String(64))
         cart_id = db.Column(db.String(64))
         customer_ip = db.Column(db.String(32))
@@ -141,6 +142,7 @@ def ordertable(tablename):
 			Column('email', String(128)),
 			Column('payment_method', String(64)),
             Column('total', Numeric),
+            Column('order_status', String(32)),
 			Column('customer_ip', String(64)),
 			Column('customer_user_agent', Text),
 			Column('created_at', DateTime, default=datetime.now),
