@@ -96,7 +96,7 @@ def pabbly_webhook(workspace):
     currency = data.get('currency')
     email = data.get('email')
     payment_method = data.get('payment_method')
-    event_time = datetime.fromtimestamp(data.get('order_date'))
+    event_time = datetime.strptime(data.get('order_date'), "%Y-%m-%dT%H:%M:%S%z").strftime("%Y-%m-%d %H:%M:%S")
         
     order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
     if order_obj is None:
