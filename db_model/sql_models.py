@@ -91,6 +91,7 @@ def order_table_dynamic(tablename):
         first_name = db.Column(db.String(128))
         last_name = db.Column(db.String(128))
         email = db.Column(db.String(128))
+        phone = db.Column(db.String(32))
         payment_method = db.Column(db.String(64))
         total = db.Column(db.Numeric)
         order_status = db.Column(db.String(32))
@@ -140,6 +141,7 @@ def ordertable(tablename):
 			Column('first_name', String(128)),
 			Column('last_name', String(128)),
 			Column('email', String(128)),
+            Column('phone', String(32)),
 			Column('payment_method', String(64)),
             Column('total', Numeric),
             Column('order_status', String(32)),
