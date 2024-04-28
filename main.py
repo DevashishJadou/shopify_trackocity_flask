@@ -17,6 +17,7 @@ from .db_model.sql_models import UserRegister
 from datetime import datetime, timedelta
 
 from flask_cors import CORS, cross_origin
+from flask_cors import CORS
 from flask_jwt_extended import verify_jwt_in_request, jwt_required, create_access_token
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 import os
@@ -27,7 +28,8 @@ import os
 
 app = create_app()
 
-CORS(app, resources={r"/*": {"origins": "*"}})
+# CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app)
 
 # Register blueprints
 app.register_blueprint(auth_bp, url_prefix='/auth')

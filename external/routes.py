@@ -14,7 +14,7 @@ def map_hash(field):
     return hashlib.sha256(field.encode('utf-8')).hexdigest()
 
 @external_bp.route('/gusid', methods=['OPTIONS', 'POST'])
-@cross_origin(origins='*', methods=['OPTIONS', 'POST'], headers=['Content-Type'])
+@cross_origin(origins='*', methods=['OPTIONS', 'POST'], allow_headers=['Content-Type'])
 def user_session():
     # Get parameters from the request
     productid = request.json.get('productId')
@@ -43,7 +43,7 @@ def user_session():
 
 
 @external_bp.route('/info', methods=['OPTIONS', 'POST'])
-@cross_origin(origins='*', methods=['OPTIONS', 'POST'], headers=['Content-Type'])
+@cross_origin(origins='*', methods=['OPTIONS', 'POST'], allow_headers=['Content-Type'])
 def user_info():
     # Get parameters from the request
     productid = request.json.get('productId')
@@ -71,7 +71,7 @@ def user_info():
 
 
 @external_bp.route('/error', methods=['OPTIONS', 'POST'])
-@cross_origin(origins='*', methods=['OPTIONS', 'POST'], headers=['Content-Type'])
+@cross_origin(origins='*', methods=['OPTIONS', 'POST'], allow_headers=['Content-Type'])
 def error():
     # Get parameters from the request
     productid = request.json.get('productId')
