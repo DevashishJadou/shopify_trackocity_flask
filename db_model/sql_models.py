@@ -17,11 +17,14 @@ class UserRegister(db.Model):
     _password = db.Column(db.String(255))
     workspace = db.Column(db.String(64), unique=True)
     productid = db.Column(db.String(16), unique=True)
+    timezone = db.Column(db.Numeric)
+    company = db.Column(db.String(64))
+    currency = db.Column(db.String(8))
     isverify = db.Column(db.Boolean, default=False)
     isactive = db.Column(db.Boolean, default=False)
     plan_till = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.now)
-    timezone = db.Column(db.Numeric)
+    
 
 
 class ClientGoogleCredentials(db.Model):
