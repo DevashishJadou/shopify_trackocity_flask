@@ -5,6 +5,7 @@ from flask_cors import cross_origin
 
 from sqlalchemy import MetaData
 import hashlib
+from dateutil import parser
 
 from ...db_model.sql_models import UserRegister, order_table_dynamic, ordertable
 from .woocommerce import channel_bp
@@ -46,6 +47,18 @@ def pabbly_integration():
     return jsonify({'message': 'success'}), 200
 
 
+def parse_date(date_str):
+    try:
+        # First attempt to parse the date normally
+        return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        try:
+            normalized_date_str = date_str.replace(" : ", ":").replace(": ", ":").replace(" :", ":")
+            return datetime.strptime(normalized_date_str, "%Y-%m-%d %H:%M:%S")
+        except ValueError as e:
+            print(f"Error parsing date: {date_str} - {e}")
+            return None
+
 @channel_bp.route('/<workspace>/pabblyorderendpoint', methods=['POST'])
 def pabbly_webhook(workspace):
     # {"entity":"event","account_id":"acc_IXN05ypMrY0Yrn","event":"order.paid","contains":["payment","order"],
@@ -69,7 +82,6 @@ def pabbly_webhook(workspace):
         jsonify({'status': 'Unauthorized'}), 403
 
     signature = request.headers.get('Authorization')
-    signature = signature
     key = workspace + "trackocity"
     verify = signature == hashlib.sha256(key.encode('utf-8')).hexdigest()
 
@@ -96,7 +108,7 @@ def pabbly_webhook(workspace):
     currency = data.get('currency')
     email = data.get('email')
     payment_method = data.get('payment_method')
-    event_time = datetime.strptime(data.get('order_date'), "%Y-%m-%d %H:%M:%S%")
+    event_time = parse_date(data.get('order_date')).strftime("%Y-%m-%d %H:%M:%S")
         
     order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
     if order_obj is None:
