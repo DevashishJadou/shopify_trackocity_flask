@@ -168,7 +168,7 @@ def reset_password():
 
 
 @auth_bp.route('/getprofile', methods=['GET', 'OPTIONS'])
-@cross_origin(origins='*', methods=['OPTIONS', 'POST'], headers=['Content-Type'])
+@cross_origin(origins='*', methods=['OPTIONS', 'GET'], headers=['Content-Type'])
 def profile_user():
     headers = request.headers
     userid = headers.get('workspaceId')
@@ -181,6 +181,8 @@ def profile_user():
     data['timezone'] = user.timezone
     data['company'] = user.company
     data['currency'] = user.currency
+
+    db.session.commit()
 
     return jsonify(data), 200
     
