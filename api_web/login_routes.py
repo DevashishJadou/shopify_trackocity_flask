@@ -168,7 +168,7 @@ def reset_password():
 
 
 @auth_bp.route('/getprofile', methods=['GET', 'OPTIONS'])
-@cross_origin(origins='*', methods=['OPTIONS', 'GET'], headers=['Content-Type'])
+@cross_origin()
 def profile_user():
     headers = request.headers
     userid = headers.get('workspaceId')
@@ -190,7 +190,7 @@ def profile_user():
 
 
 @auth_bp.route('/updateprofile', methods=['PUT', 'OPTIONS'])
-@cross_origin(origins='*', methods=['OPTIONS', 'PUT'], headers=['Content-Type'])
+@cross_origin()
 def profile_user_change():
     headers = request.headers
     userid = headers.get('workspaceId')
