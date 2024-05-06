@@ -5,7 +5,6 @@ from flask_cors import cross_origin
 
 from sqlalchemy import MetaData
 import hashlib
-from dateutil import parser
 
 from ...db_model.sql_models import UserRegister, order_table_dynamic, ordertable
 from .woocommerce import channel_bp
