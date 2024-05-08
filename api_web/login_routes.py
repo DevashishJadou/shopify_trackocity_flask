@@ -182,7 +182,6 @@ def profile_user():
     data['company'] = user.company
     data['currency'] = user.currency
 
-    db.session.commit()
 
     return jsonify(data), 200
     
@@ -206,4 +205,6 @@ def profile_user_change():
         user.company = data.get('company')
         user.timezone = data.get('timezone')
 
-        return jsonify({"message":"Profile Updated"}), 200
+        db.session.commit()
+        
+    return jsonify({"message":"Profile Updated"}), 200

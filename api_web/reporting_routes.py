@@ -45,12 +45,9 @@ def get_reporttabledatafacebook():
 	userid = headers.get('workspaceId')
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
-	if attribute == 'first':
-		sql_query = db.text("select * from table_facebookfirstattribute(:workspace, :productid, :startdate, :enddate)")
-	else:	
-		sql_query = db.text("select * from table_facebooklastattribute(:workspace, :productid, :startdate, :enddate)")
-
-	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
+	sort = 'ASC' if attribute == 'first' else 'DESC'
+	sql_query = db.text("select * from table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort)")
+	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
 	data = result.fetchall()
 
 	fbdata = {}
@@ -141,12 +138,9 @@ def get_reporttabledatagoogle():
 	
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
-	if attribute == 'first':
-		sql_query = db.text("select * from table_googlefirstattribute(:workspace, :productid, :startdate, :enddate)")
-	else:	
-		sql_query = db.text("select * from table_googlelastattribute(:workspace, :productid, :startdate, :enddate)")
-
-	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
+	sort = 'ASC' if attribute == 'first' else 'DESC'
+	sql_query = db.text("select * from table_googleattribute(:workspace, :productid, :startdate, :enddate, :sort)")
+	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
 	data = result.fetchall()
 
 	ggdata = {}
