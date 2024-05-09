@@ -1,18 +1,17 @@
 # reporting_routes
 
-from ..db_model.sql_models import UserRegister
-from ..connection import db
-# from db_model.sql_models import UserRegister
-# from connection import db
+from ..db_model.sql_models import UserRegister, order_table_dynamic
+from ..db_model.mongo_models import CustomerInfo
+from ..connection import db, db_mongo
 
 from flask import Blueprint, request, jsonify
-
 from .schema import FB
-# from api_web.schema import FB
 from flask_cors import cross_origin
 import json
 
-report_bp = Blueprint('repoting', __name__)
+from datetime import datetime, timedelta
+
+report_bp = Blueprint('reporting', __name__)
 
 
 @report_bp.route('/alluser', methods=['GET', 'OPTIONS'])
@@ -289,3 +288,67 @@ def get_dashboardgraphdata():
 	sale_data["spend"]['total'] = round(sale_data["spend"]['total'], 2)
 
 	return jsonify(sale_data)
+
+
+
+@report_bp.route('/dashboardtraffic', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def get_dashboardtraffic():
+	headers = request.headers
+	_body = request.args
+	startdate = datetime.strptime(_body.get('startdate'), "%Y-%m-%d")
+	enddate = datetime.strptime(_body.get('enddate'), "%Y-%m-%d") + timedelta(days=1)
+	userid = headers.get('workspaceId')
+	user = UserRegister.query.filter_by(workspace=userid).first()
+
+	data={}
+
+	page_view = CustomerInfo.objects(
+		**{"body__customerInfo": {}},
+		productid=float(user.productid),
+		creation_at__gte=startdate,
+   		creation_at__lte=enddate
+	).count()
+	data['page_view'] = page_view
+
+	
+	localsess_pipeline = [
+    {'$match': {
+        'productid': float(user.productid),
+        'creation_at': {'$gte': startdate, '$lte': enddate}
+    }},
+    {'$group': {
+        '_id': '$localsession'
+    }},
+    {'$count': 'distinct_localsession_count'}
+	]
+	usr = list(CustomerInfo.objects.aggregate(*localsess_pipeline))
+	data['user'] = usr[0]['distinct_localsession_count']
+
+
+	sess_pipeline = [
+    {'$match': {
+        'productid': float(user.productid),
+        'creation_at': {'$gte': startdate, '$lte': enddate},
+        'body.customerInfo': {}
+    }},
+    {'$group': {
+        '_id': '$session'  # Group by 'localsession' to get distinct values
+    }},
+    {'$count': 'distinct_session_count'}  # Counts the number of distinct groups
+	]
+	unique_usr = list(CustomerInfo.objects.aggregate(*sess_pipeline))
+	data['unique_user'] = unique_usr[0]['distinct_session_count']
+
+	
+	tablename = 'order_' + userid
+	orderTable = order_table_dynamic(tablename)
+	db.Model.metadata.reflect(db.engine)
+	conversion = orderTable.query.filter(
+        orderTable.order_date >= startdate,
+        orderTable.order_date <= enddate
+    ).count()
+	data['cr'] = round(conversion*100.0/data['user'],2)
+
+
+	return jsonify(data), 200
