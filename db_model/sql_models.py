@@ -83,7 +83,7 @@ class Shopify(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
-class Payment(db.model):
+class Payment(db.Model):
     __tablename__ = "payment_request"
     id = db.Column(db.Integer, primary_key=True)
     workspace = db.Column(db.String(32))
@@ -92,7 +92,6 @@ class Payment(db.model):
     total = db.Column(db.Numeric)
     link = db.Column(db.String(128))
     status = db.Column(db.String(16))
-    transaction_id = db.Column(db.String(32))
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
