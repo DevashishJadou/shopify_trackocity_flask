@@ -50,7 +50,13 @@ def user_info():
     localsession = request.json.get('clickId')
     session = request.headers.get('sessionId')
 
-    body['navigatordetails']['ipaddress'] = request.remote_addr
+    try:
+        x_forwarded_for = request.headers.get('X-Forwarded-For')
+        print(f'x_forwarded_for:{x_forwarded_for}')
+        client_ip = x_forwarded_for.split(',')[0].strip() if x_forwarded_for else request.remote_addr
+        body['navigatordetails']['ipaddress'] = client_ip
+    except:
+        pass
 
     #Api-key Validation
     securitykey = str(productid)+localsession
