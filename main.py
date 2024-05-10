@@ -87,7 +87,7 @@ def before_request():
             verify_jwt_in_request()
             user = UserRegister.query.filter_by(workspace=userid).first()
             if datetime.now() > user.plan_till or user.isactive is False:
-                payment_order_creation(user.complete_name, user.email, user.phone, user.currency)
+                response = payment_order_creation(user.complete_name, user.email, user.phone, user.currency)
                 user.isactive = False
                 return jsonify({"message": "Subscription Expired"}), 403
 
@@ -108,13 +108,13 @@ def handle_cors_error(e):
 
 def payment_order_creation(name, email, phone='1212121212', currency='INR', proudct='standard'):
     url = "https://connect.pabbly.com/workflow/sendwebhookdata/IjU3NjUwNTZhMDYzNTA0MzQ1MjZhNTUzYzUxMzYi_pc"
-    payload = {'status': 'pending',
+    payload = json.dumps({'status': 'pending',
     'currency': currency,
     'name': name,
     'email': email,
     'phone': phone,
     'product': proudct,
-    'total': '1'}
+    'total': '1'})
 
     headers = {
     'Content-Type': 'application/json'
