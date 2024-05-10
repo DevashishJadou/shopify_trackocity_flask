@@ -37,8 +37,6 @@ def user_session():
     new_product = Fingerprint(visitorid=usrid, session=session, productid=productid, creation_at=creation_at, localsession=localsession)
     new_product.save()
 
-    print(new_product)
-
     return jsonify(200), 200
 
 
@@ -51,6 +49,8 @@ def user_info():
     body = request.json.get('jsonBody')
     localsession = request.json.get('clickId')
     session = request.headers.get('sessionId')
+
+    body['navigatordetails']['ipaddress'] = request.remote_addr
 
     #Api-key Validation
     securitykey = str(productid)+localsession
@@ -77,8 +77,6 @@ def error():
     productid = request.json.get('productId')
     errormsg = request.json.get('error')
     session = request.headers.get('sessionId')
-
-    print(f'productid:{productid}, error:{errormsg} ,session:{session}')
 
     new_product = Error(session=session, productid=productid, error=error)
     new_product.save()

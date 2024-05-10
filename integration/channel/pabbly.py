@@ -19,7 +19,7 @@ def pabbly_sent_sign():
     header = request.headers
     workspace = header.get('workspaceId')
     signature = workspace + "trackocity"
-    return hashlib.sha256(signature.encode('utf-8')).hexdigest()
+    return jsonify({'key': hashlib.sha256(signature.encode('utf-8')).hexdigest()}), 200
 
 @channel_bp.route('/pabblycredentials', methods=['POST'])
 @cross_origin()

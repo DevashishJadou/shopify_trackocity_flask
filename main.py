@@ -20,7 +20,7 @@ from flask_cors import CORS, cross_origin
 from flask_cors import CORS
 from flask_jwt_extended import verify_jwt_in_request, jwt_required, create_access_token
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
-import os
+import os, json , requests
 
 # os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 # Set-ExecutionPolicy Unrestricted -Scope Process
@@ -87,6 +87,7 @@ def before_request():
             verify_jwt_in_request()
             user = UserRegister.query.filter_by(workspace=userid).first()
             if datetime.now() > user.plan_till or user.isactive is False:
+                payment_order_creation(user.complete_name, user.email, user.phone, user.currency)
                 user.isactive = False
                 return jsonify({"message": "Subscription Expired"}), 403
 
@@ -103,6 +104,23 @@ def after_request(response):
 @app.errorhandler(403)  # CORS-related errors often have HTTP status code 403
 def handle_cors_error(e):
     return jsonify(error="CORS error: {}".format(e.description)), 403
+
+
+def payment_order_creation(name, email, phone='1212121212', currency='INR', proudct='standard'):
+    url = "https://connect.pabbly.com/workflow/sendwebhookdata/IjU3NjUwNTZhMDYzNTA0MzQ1MjZhNTUzYzUxMzYi_pc"
+    payload = {'status': 'pending',
+    'currency': currency,
+    'name': name,
+    'email': email,
+    'phone': phone,
+    'product': proudct,
+    'total': '1'}
+
+    headers = {
+    'Content-Type': 'application/json'
+    }
+    response = requests.request("POST", url, headers=headers, data=payload)
+    return response
 
 if __name__ == '__main__':
     app.run()
