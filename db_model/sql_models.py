@@ -94,7 +94,7 @@ class Payment(db.Model):
     link = db.Column(db.String(128))
     status = db.Column(db.String(16))
     transaction_id = db.Column(db.String(64))
-    exiperon = db.Column(db.DateTime)
+    expireon = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
