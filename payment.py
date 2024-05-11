@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 import json, os
+from zoneinfo import ZoneInfo
 from datetime import datetime, timedelta
 from flask_cors import cross_origin
 
@@ -18,10 +19,12 @@ def razorpay_params():
     total = data.get('total')
     link = data.get('link')
     email = data.get('email')
+    expireon = datetime.fromtimestamp(data.get('expireon'), tz=ZoneInfo("Asia/Kolkata"))
 
-    payment = Payment(workspace=name, order_id=order_id, total=total, link=link, email=email, status='pending')
+    payment = Payment(workspace=name, order_id=order_id, total=total, link=link, email=email, status='pending', expireon=expireon)
     db.session.add(payment)
     db.session.commit()
+    return jsonify({'status': 'success'}), 200
 
 
 @trackocitypayment_bp.route('/payment_confirmation', methods=['POST'])
@@ -45,20 +48,21 @@ def razorpay_webhook():
         currency = payload.get('currency')
         email = payload.get('email')
         
-        user = UserRegister.query.filter_by(email=data['email']).first() is not None
+        user = UserRegister.query.filter_by(email=email).first()
         
         if user:
-          user.isactive = True
-          plan_till = datetime.strptime(user.plan_till, "%Y-%m-%d %H:%M:%S")
-          user.plan_till = max(datetime.now(), plan_till) + timedelta(days=30)
+            user.isactive = True
+            plan_till = user.plan_till
+            user.plan_till = max(datetime.now(), plan_till) + timedelta(days=30)
 
-          order_obj = Payment.query.filter_by(order_id=order_id).first()
-          if order_obj:
-              order_obj.transaction_id = payment_id
-              order_obj.status = 'complete'
-          else:
-              order_make = Payment(transcation_id=payment_id, email=email, total=amount, status='complete')
-              db.session.add(order_make)
+            order_obj = Payment.query.filter_by(order_id=order_id).first()
+            if order_obj:
+                order_obj.transaction_id = payment_id
+                order_obj.currency = currency
+                order_obj.status = 'complete'
+            else:
+                order_make = Payment(transaction_id=payment_id, email=email, total=amount, currency=currency, status='complete')
+                db.session.add(order_make)
         
         db.session.commit()
 
