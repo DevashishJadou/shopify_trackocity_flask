@@ -157,6 +157,7 @@ def ordertable(tablename):
 			Column('last_name', String(128)),
 			Column('email', String(128)),
             Column('phone', String(32)),
+            Column('cart_id', String(64)),
 			Column('payment_method', String(64)),
             Column('total', Numeric),
             Column('order_status', String(32)),

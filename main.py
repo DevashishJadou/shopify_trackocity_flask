@@ -12,6 +12,7 @@ from .integration.channel.shopify import channel_bp
 from .integration.channel.pabbly import channel_bp
 from .api_web.reporting_routes import report_bp
 from .api_web.integration_routes import intgration_cd
+from .payment import trackocitypayment_bp
 from .connection import create_app, jwt
 from .db_model.sql_models import UserRegister
 from datetime import datetime, timedelta
@@ -40,6 +41,7 @@ app.register_blueprint(facebook_bp, url_prefix='/facebook')
 app.register_blueprint(report_bp, url_prefix='/reporting')
 app.register_blueprint(payment_bp, url_prefix='/clientpayment')
 app.register_blueprint(channel_bp, url_prefix='/clientchannel')
+app.register_blueprint(trackocitypayment_bp, url_prefix='/trackocitypayment')
 
 # health-check
 @app.route('/health')
@@ -109,7 +111,7 @@ def handle_cors_error(e):
 def payment_order_creation(name, email, phone='1212121212', currency='INR', proudct='standard'):
     url = "https://connect.pabbly.com/workflow/sendwebhookdata/IjU3NjUwNTZhMDYzNTA0MzQ1MjZhNTUzYzUxMzYi_pc"
     payload = json.dumps({'status': 'pending',
-    'currency': currency,
+    'currency': currency if currency else 'INR',
     'name': name,
     'email': email,
     'phone': phone,
