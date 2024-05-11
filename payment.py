@@ -19,7 +19,7 @@ def razorpay_params():
     link = data.get('link')
     email = data.get('email')
 
-    payment = Payment(name=name, order_id=order_id, total=total, link=link, email=email, status='pending')
+    payment = Payment(username=name, order_id=order_id, total=total, link=link, email=email, status='pending')
     db.session.add(payment)
     db.session.commit()
 
@@ -35,6 +35,7 @@ def razorpay_webhook():
 
     # Process the webhook event based on the event type
     event_type = data.get('event')
+    print(f'event_payment_link:{event_type}')
     if event_type in ('order.paid', 'payment.captured', 'subscription.completed','refund.processed'):
         # Handle payment captured event
         payload = data.get('payload').get('payment').get('entity')

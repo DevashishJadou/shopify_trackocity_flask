@@ -114,7 +114,7 @@ def payment_order_creation(name, email, phone='1212121212', currency='INR', prou
     'currency': currency if currency else 'INR',
     'name': name,
     'email': email,
-    'phone': phone,
+    'phone': phone if phone else '1212121212',
     'product': proudct,
     'total': '1'})
 
