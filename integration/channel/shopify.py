@@ -81,7 +81,6 @@ def shopify():
 			orders_data = response.json()
 			orders_data = orders_data['orders']
 			
-			# tablename = 'order_hello2'
 			tablename = 'order_'+userid
 			
 			orderTable = order_table_dynamic(tablename)

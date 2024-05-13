@@ -323,7 +323,10 @@ def get_dashboardtraffic():
     {'$count': 'distinct_localsession_count'}
 	]
 	usr = list(CustomerInfo.objects.aggregate(*localsess_pipeline))
-	data['user'] = usr[0]['distinct_localsession_count']
+	try:
+		data['user'] = usr[0]['distinct_localsession_count']
+	except:
+		data['user'] = 0
 
 
 	sess_pipeline = [
@@ -338,7 +341,10 @@ def get_dashboardtraffic():
     {'$count': 'distinct_session_count'}  # Counts the number of distinct groups
 	]
 	unique_usr = list(CustomerInfo.objects.aggregate(*sess_pipeline))
-	data['unique_user'] = unique_usr[0]['distinct_session_count']
+	try:
+		data['unique_user'] = unique_usr[0]['distinct_session_count']
+	except:
+		data['unique_user'] = 0
 
 	
 	tablename = 'order_' + userid
@@ -348,7 +354,10 @@ def get_dashboardtraffic():
         orderTable.order_date >= startdate,
         orderTable.order_date <= enddate
     ).count()
-	data['cr'] = round(conversion*100.0/data['user'],2)
+	if data['user'] == 0:
+		data['cr'] = 0.0
+	else:
+		data['cr'] = round(conversion*100.0/data['user'],2)
 
 
 	return jsonify(data), 200
