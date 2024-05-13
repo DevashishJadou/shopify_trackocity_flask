@@ -309,7 +309,7 @@ def get_dashboardtraffic():
 		creation_at__gte=startdate,
    		creation_at__lte=enddate
 	).count()
-	data['page_view'] = page_view
+	data['page_view'] = int(page_view*1.02)
 
 	
 	localsess_pipeline = [

@@ -14,8 +14,8 @@ from .api_web.reporting_routes import report_bp
 from .api_web.integration_routes import intgration_cd
 from .payment import trackocitypayment_bp
 from .connection import create_app, jwt
-from .db_model.sql_models import UserRegister
-from datetime import datetime, timedelta
+from .db_model.sql_models import UserRegister, Payment
+from datetime import datetime, timedelta, time
 
 from flask_cors import CORS, cross_origin
 from flask_cors import CORS
@@ -91,7 +91,9 @@ def before_request():
             if datetime.now() > user.plan_till or user.isactive is False:
                 response = payment_order_creation(user.complete_name, user.email, user.phone, user.currency)
                 user.isactive = False
-                return jsonify({"message": "Subscription Expired"}), 403
+                return jsonify({"payment_link":response,"message": "Subscription Expired"}), 403
+            if datetime.now() + timedelta(days=3) > user.plan_till and user.isactive:
+                payment_order_creation(user.complete_name, user.email, user.phone, user.currency)
 
 @app.after_request
 def after_request(response):
@@ -108,21 +110,28 @@ def handle_cors_error(e):
     return jsonify(error="CORS error: {}".format(e.description)), 403
 
 
-def payment_order_creation(name, email, phone='1212121212', currency='INR', proudct='standard'):
+def payment_order_creation(name, email, phone='1212121212', currency='INR', product='standard'):
+    payment = Payment.query.filter(Payment.expireon>datetime.now(),Payment.email==email).first()
+    if payment:
+        return payment.link
     url = "https://connect.pabbly.com/workflow/sendwebhookdata/IjU3NjUwNTZhMDYzNTA0MzQ1MjZhNTUzYzUxMzYi_pc"
     payload = json.dumps({'status': 'pending',
     'currency': currency if currency else 'INR',
     'name': name,
     'email': email,
     'phone': phone if phone else '1212121212',
-    'product': proudct,
+    'product': product,
     'total': '1'})
 
     headers = {
     'Content-Type': 'application/json'
     }
-    response = requests.request("POST", url, headers=headers, data=payload)
-    return response
+    requests.request("POST", url, headers=headers, data=payload)
+    time.sleep(5)
+    payment = Payment.query.filter(Payment.expireon>datetime.now(),Payment.email==email).first()
+    if payment:
+        return payment.link
+
 
 if __name__ == '__main__':
     app.run()
