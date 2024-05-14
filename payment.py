@@ -21,7 +21,7 @@ def razorpay_params():
     email = data.get('email')
     expireon = datetime.fromtimestamp(data.get('expireon'), tz=ZoneInfo("Asia/Kolkata"))
 
-    payment = Payment(workspace=name, order_id=order_id, total=total, link=link, email=email, status='pending', expireon=expireon)
+    payment = Payment(completename=name, order_id=order_id, total=total, link=link, email=email, status='pending', expireon=expireon)
     db.session.add(payment)
     db.session.commit()
     return jsonify({'status': 'success'}), 200

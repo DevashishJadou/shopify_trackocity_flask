@@ -1,6 +1,6 @@
 # reporting_routes
 
-from ..db_model.sql_models import UserRegister, order_table_dynamic
+from ..db_model.sql_models import UserRegister, order_table_dynamic, ClientFacebookredentials, ClientGoogleCredentials
 from ..db_model.mongo_models import CustomerInfo
 from ..connection import db, db_mongo
 
@@ -288,6 +288,90 @@ def get_dashboardgraphdata():
 	sale_data["spend"]['total'] = round(sale_data["spend"]['total'], 2)
 
 	return jsonify(sale_data)
+
+
+def channel_matrix(userid, productid, startdate, enddate, fbflag, ggflag):
+	sort = 'DESC'
+	fbadsdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0, "aov":0.0, "cpa":0.0, "roi":0.0, "profit":0.0, "cpc":0.0}
+	if fbflag:
+		sql_query_fb = db.text("select * from table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort)")
+		result = db.session.execute(sql_query_fb, {'workspace': userid, 'productid':productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
+		data = result.fetchall()
+
+		metric={}
+		for row in data:
+			fbadsdata["impression"] = fbadsdata["impression"] + int(row[6])
+			fbadsdata["clicks"] = fbadsdata["clicks"] + int(row[7])
+			fbadsdata["spend"] = fbadsdata["spend"] + float(row[8])
+			fbadsdata["sales"] = fbadsdata["sales"] + int(row[9])
+			fbadsdata["revenue"] = fbadsdata["revenue"] + float(row[10])
+		fbadsdata["spend"] = round(fbadsdata["spend"],2)	
+		fbadsdata["aov"] = round(fbadsdata["revenue"]/max(fbadsdata["sales"],1),2)
+		fbadsdata["cpa"] = round(fbadsdata["spend"]/max(fbadsdata["sales"],1),2)
+		fbadsdata["roi"] = round(fbadsdata["revenue"]/max(fbadsdata["spend"],1),2)
+		fbadsdata["profit"] = round(fbadsdata["revenue"] - fbadsdata["spend"],2)
+		fbadsdata["cpc"] = round(fbadsdata["spend"]/max(fbadsdata["clicks"],1),2)
+	metric['meta'] = fbadsdata
+
+	ggdsdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0, "aov":0.0, "cpa":0.0, "roi":0.0, "profit":0.0, "cpc":0.0}
+	if ggflag:
+		sql_query_fb = db.text("select * from table_googleattribute(:workspace, :productid, :startdate, :enddate, :sort)")
+		result = db.session.execute(sql_query_fb, {'workspace': userid, 'productid':productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
+		data = result.fetchall()
+
+		for row in data:
+			ggdsdata["impression"] = ggdsdata["impression"] + int(row[6])
+			ggdsdata["clicks"] = ggdsdata["clicks"] + int(row[7])
+			ggdsdata["spend"] = ggdsdata["spend"] + float(row[8])
+			ggdsdata["sales"] = ggdsdata["sales"] + int(row[9])
+			ggdsdata["revenue"] = ggdsdata["revenue"] + float(row[10])
+		ggdsdata["spend"] = round(ggdsdata["spend"],2)
+		ggdsdata["aov"] = round(ggdsdata["revenue"]/max(ggdsdata["sales"],1),2)
+		ggdsdata["cpa"] = round(ggdsdata["spend"]/max(ggdsdata["sales"],1),2)
+		ggdsdata["roi"] = round(ggdsdata["revenue"]/max(ggdsdata["spend"],1),2)
+		ggdsdata["profit"] = round(ggdsdata["revenue"] - ggdsdata["spend"],2)
+		ggdsdata["cpc"] = round(ggdsdata["spend"]/max(ggdsdata["clicks"],1),2)
+	metric['google'] = ggdsdata
+
+	adspend = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0, "aov":0.0, "cpa":0.0, "roi":0.0, "profit":0.0, "cpc":0.0}
+	adspend['impression'] = fbadsdata["impression"] + ggdsdata["impression"]
+	adspend['clicks'] = fbadsdata["clicks"] + ggdsdata["clicks"]
+	adspend['spend'] = fbadsdata["spend"] + ggdsdata["spend"]
+	adspend['sales'] = fbadsdata["sales"] + ggdsdata["sales"]
+	adspend['revenue'] = fbadsdata["revenue"] + ggdsdata["revenue"]
+	adspend['aov'] = fbadsdata["aov"] + ggdsdata["aov"]
+	adspend['cpa'] = fbadsdata["cpa"] + ggdsdata["cpa"]
+	adspend['roi'] = fbadsdata["roi"] + ggdsdata["roi"]
+	adspend['profit'] = fbadsdata["profit"] + ggdsdata["profit"]
+	adspend['cpc'] = fbadsdata["cpc"] + ggdsdata["cpc"]
+	metric['adspend'] = adspend
+	
+
+	return metric
+
+
+@report_bp.route('/dashboardmetric', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def get_dashboardmetric():
+	headers = request.headers
+	_body = request.args
+	startdate = _body.get('startdate')
+	enddate = _body.get('enddate')
+	userid = headers.get('workspaceId')
+	user = UserRegister.query.filter_by(workspace=userid).first()
+
+	fbflag = False
+	ggflag = False
+	fb = ClientFacebookredentials.query.filter_by(workspace=userid).first()
+	if fb:
+		fbflag = True
+	gg = ClientGoogleCredentials.query.filter_by(workspace=userid).first()
+	if gg:
+		ggflag = True
+
+	result = channel_matrix(userid, user.productid, startdate, enddate, fbflag, ggflag)
+
+	return jsonify(result)
 
 
 
