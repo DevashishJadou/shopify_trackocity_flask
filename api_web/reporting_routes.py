@@ -346,6 +346,39 @@ def get_dashboardtraffic():
 	except:
 		data['unique_user'] = 0
 
+	if user.product_type == 'growth':
+		bounce_pipeline = [
+			{
+				'$match': {
+					'productid': float(user.productid),
+					'creation_at': {'$gte': startdate, '$lte': enddate}
+				}
+			},
+			{
+				'$group': {
+					'_id': '$localsession',
+					'count': {'$sum': 1}  # Count occurrences of each localsession
+				}
+			},
+			{
+				'$match': {
+					'count': 1  # Filter to keep only those groups where count is exactly 1
+				}
+			},
+			{
+				'$count': 'unique_localsession_count'
+			}
+		]
+
+		session = data['user'] if data['user'] !=0 else 1
+		try:
+			bounce = list(CustomerInfo.objects.aggregate(*bounce_pipeline))
+			data['bounce_rate'] = round(bounce[0]['unique_localsession_count']*100/session,2)
+		except:
+			data['bounce_rate'] = 0.0
+
+		data['page_view_per_session'] = round(data['page_view']/session, 2)
+
 	
 	tablename = 'order_' + userid
 	orderTable = order_table_dynamic(tablename)
@@ -361,3 +394,7 @@ def get_dashboardtraffic():
 
 
 	return jsonify(data), 200
+
+
+
+

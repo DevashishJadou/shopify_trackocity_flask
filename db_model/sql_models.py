@@ -23,6 +23,7 @@ class UserRegister(db.Model):
     isverify = db.Column(db.Boolean, default=False)
     isactive = db.Column(db.Boolean, default=False)
     plan_till = db.Column(db.DateTime)
+    product_type = db.Column(db.String(16))
     created_at = db.Column(db.DateTime, default=datetime.now)
     
 
@@ -86,7 +87,7 @@ class Shopify(db.Model):
 class Payment(db.Model):
     __tablename__ = "payment_request"
     id = db.Column(db.Integer, primary_key=True)
-    workspace = db.Column(db.String(32))
+    completename = db.Column(db.String(32))
     email = db.Column(db.String(128))
     order_id = db.Column(db.String(32))
     currency = db.Column(db.String(8))
