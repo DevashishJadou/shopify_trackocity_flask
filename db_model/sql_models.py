@@ -100,6 +100,12 @@ class Payment(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
 
+class EmailChange(db.Model):
+    __tablename__ = "change_email_vaildation"
+    workspace = db.Column(db.String(32), primary_key=True)
+    otp = db.Column(db.String(4))
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
 def order_table_dynamic(tablename):
     class OrderTable(db.Model):
         __tablename__ = tablename

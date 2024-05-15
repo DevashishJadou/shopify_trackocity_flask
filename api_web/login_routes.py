@@ -1,6 +1,6 @@
 # routes.py
 
-from ..db_model.sql_models import UserRegister
+from ..db_model.sql_models import UserRegister, EmailChange
 from ..connection import db, mail, app
 # from db_model.sql_models import UserRegister
 # from connection import db
@@ -199,12 +199,89 @@ def profile_user_change():
     user = UserRegister.query.filter_by(workspace=userid).first()
 
     if user:
-        user.email = data.get('email')
         user.phone = data.get('phone')
         user.name = data.get('name')
+        user.currency = data.get('currency')
         user.company = data.get('company')
         user.timezone = data.get('timezone')
 
         db.session.commit()
         
     return jsonify({"message":"Profile Updated"}), 200
+
+
+def generate_otp(length=4):
+    """Generate a random OTP of given length."""
+    import string
+    digits = string.digits
+    return ''.join(random.choice(digits) for _ in range(length))
+
+def send_verification_email(to_email, otp, validity_minutes=30):
+    subject = "OTP - Email Verification"
+    body = f"""
+    Dear User,
+
+    The OTP to change your email is {otp}.
+    In case you have not requested the OTP, please ignore this email. The OTP is valid for {validity_minutes} minutes only.
+
+    Regards,
+    Trackocity Team
+
+    
+    Note: This is a system generated message, please do not reply to it.
+    """
+    msg = Message(subject, recipients=[to_email], body=body)
+    mail.send(msg)
+    print(f"Email sent successfully to {to_email}")
+
+def validate_otp(input_otp, stored_otp, stored_timestamp, validity_minutes=30):
+    current_time = datetime.now()
+    if input_otp != stored_otp:
+        return False, "Invalid OTP."
+    if current_time > stored_timestamp.replace(tzinfo=None) + timedelta(minutes=validity_minutes):
+        return False, "OTP has expired."
+    return True, "OTP is valid."
+
+# Route to generate and send OTP
+@auth_bp.route('/send_otp', methods=['POST'])
+def send_otp():
+    data = request.json
+    to_email = data.get('email')
+    headers = request.headers
+    userid = headers.get('workspaceId')
+    otp = generate_otp()
+    timestamp = datetime.now()
+
+    changemail = EmailChange.query.filter_by(workspace=userid).first()
+    if changemail:
+        changemail.otp = otp
+        changemail.created_at = timestamp
+    else:
+       emailchange = EmailChange(workspace=userid, otp=otp, created_at=timestamp)
+       db.session.add(emailchange)
+    db.session.commit()
+
+    send_verification_email(to_email, otp)
+    return jsonify({'message': 'OTP sent successfully'}), 200
+
+# Route to validate OTP
+@auth_bp.route('/validate_otp', methods=['PUT'])
+def validate_otp_route():
+    data = request.json
+    input_otp = data.get('otp')
+    email = data.get('otp')
+    headers = request.headers
+    userid = headers.get('workspaceId')
+    changemail = EmailChange.query.filter_by(workspace=userid).first()
+    if changemail:
+        stored_otp = changemail.otp
+        stored_timestamp = changemail.created_at
+        # Validate the OTP
+        is_valid, message = validate_otp(input_otp, stored_otp, stored_timestamp)
+
+        if is_valid:
+            usr = UserRegister.query.filter_by(workspace=userid).first()
+            usr.email = email
+            message = message + ". Email is update"
+            db.session.commit()
+        return jsonify({'message': message, 'is_valid': is_valid}), 200
