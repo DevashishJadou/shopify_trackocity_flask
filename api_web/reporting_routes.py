@@ -311,6 +311,7 @@ def channel_matrix(userid, productid, startdate, enddate, fbflag, ggflag):
 		fbadsdata["roi"] = round(fbadsdata["revenue"]/max(fbadsdata["spend"],1),2)
 		fbadsdata["profit"] = round(fbadsdata["revenue"] - fbadsdata["spend"],2)
 		fbadsdata["cpc"] = round(fbadsdata["spend"]/max(fbadsdata["clicks"],1),2)
+		fbadsdata["cpm"] = round(fbadsdata["spend"]*1000/max(fbadsdata["impression"],1),2)
 	metric['meta'] = fbadsdata
 
 	ggdsdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0, "aov":0.0, "cpa":0.0, "roi":0.0, "profit":0.0, "cpc":0.0}
@@ -331,12 +332,14 @@ def channel_matrix(userid, productid, startdate, enddate, fbflag, ggflag):
 		ggdsdata["roi"] = round(ggdsdata["revenue"]/max(ggdsdata["spend"],1),2)
 		ggdsdata["profit"] = round(ggdsdata["revenue"] - ggdsdata["spend"],2)
 		ggdsdata["cpc"] = round(ggdsdata["spend"]/max(ggdsdata["clicks"],1),2)
+		ggdsdata["cpm"] = round(ggdsdata["spend"]*1000/max(ggdsdata["impression"],1),2)
 	metric['google'] = ggdsdata
 
 	adspend = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0, "aov":0.0, "cpa":0.0, "roi":0.0, "profit":0.0, "cpc":0.0}
 	adspend['impression'] = fbadsdata["impression"] + ggdsdata["impression"]
 	adspend['clicks'] = fbadsdata["clicks"] + ggdsdata["clicks"]
 	adspend['spend'] = fbadsdata["spend"] + ggdsdata["spend"]
+	adspend['cpm'] = adspend['spend']*1000/(fbadsdata["impression"] + ggdsdata["impression"])
 	adspend['sales'] = fbadsdata["sales"] + ggdsdata["sales"]
 	adspend['revenue'] = fbadsdata["revenue"] + ggdsdata["revenue"]
 	adspend['aov'] = fbadsdata["aov"] + ggdsdata["aov"]

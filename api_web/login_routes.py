@@ -252,6 +252,10 @@ def send_otp():
     otp = generate_otp()
     timestamp = datetime.now()
 
+    isexists = EmailChange.query.filter_by(email=to_email).first()
+    if isexists:
+        jsonify({'message': 'Email Already Exist'}), 400
+
     changemail = EmailChange.query.filter_by(workspace=userid).first()
     if changemail:
         changemail.otp = otp
@@ -269,7 +273,7 @@ def send_otp():
 def validate_otp_route():
     data = request.json
     input_otp = data.get('otp')
-    email = data.get('otp')
+    email = data.get('email')
     headers = request.headers
     userid = headers.get('workspaceId')
     changemail = EmailChange.query.filter_by(workspace=userid).first()
