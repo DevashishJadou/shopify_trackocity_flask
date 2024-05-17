@@ -252,7 +252,7 @@ def send_otp():
     otp = generate_otp()
     timestamp = datetime.now()
 
-    isexists = EmailChange.query.filter_by(email=to_email).first()
+    isexists = UserRegister.query.filter_by(email=to_email).first()
     if isexists:
         jsonify({'message': 'Email Already Exist'}), 400
 
