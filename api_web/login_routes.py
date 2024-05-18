@@ -200,7 +200,7 @@ def profile_user_change():
 
     if user:
         user.phone = data.get('phone')
-        user.name = data.get('name')
+        user.complete_name = data.get('name')
         user.currency = data.get('currency')
         user.company = data.get('company')
         user.timezone = data.get('timezone')
@@ -244,6 +244,7 @@ def validate_otp(input_otp, stored_otp, stored_timestamp, validity_minutes=30):
 
 # Route to generate and send OTP
 @auth_bp.route('/send_otp', methods=['POST'])
+@cross_origin()
 def send_otp():
     data = request.json
     to_email = data.get('email')
@@ -270,6 +271,7 @@ def send_otp():
 
 # Route to validate OTP
 @auth_bp.route('/validate_otp', methods=['PUT'])
+@cross_origin()
 def validate_otp_route():
     data = request.json
     input_otp = data.get('otp')

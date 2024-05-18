@@ -48,8 +48,6 @@ def integration_google():
 
     user = ClientGoogleCredentials.query.filter_by(workspace=workspace).all()
 
-    import pdb
-    pdb.set_trace()
     if user:
         accounts = {}
         for acc in user:
