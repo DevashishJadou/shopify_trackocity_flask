@@ -54,9 +54,8 @@ def list_accessible_customer(token):
         handleGoogleAdsException(ex)
 
 
-def clientaccount_googleads(userid, account, token):
-    user = ClientGoogleCredentials.query.filter_by(workspace=userid).first()
-
+def clientaccount_googleads(userid, account, token, id):
+    
     query = """
             SELECT
             	customer_client.resource_name,
@@ -79,6 +78,7 @@ def clientaccount_googleads(userid, account, token):
         for row in batch.results:
             manager_id = row.customer_client.resource_name.split('/')[1]
 
+    user = ClientGoogleCredentials.query.filter_by(id=id).first()
     if user:
         user.account_name = account
         user._token = token

@@ -59,7 +59,8 @@ def clientaccount():
     userid = headers.get("workSpaceId")
     account = (request.args.get("customerId").split('/')[-1]).strip()
     token = request.args.get("refresh_token")
-    status = clientaccount_googleads(userid, account, token)
+    id = token = request.args.get("system_id")
+    status = clientaccount_googleads(userid, account, token, id)
 
     return status
 
