@@ -20,7 +20,6 @@ payment_bp = Blueprint('clientpayment', __name__)
 def razorpay_params():
     header = request.headers
     _body = json.loads(request.get_data())
-    print(f'body:{_body}')
     workspace = header.get('workspaceId')
     _razorpay_api_secret = _body['razorpay_api_secret']
     _razorpay_api_key = _body['razorpay_api_key']
@@ -43,7 +42,6 @@ def razorpay_params():
                 try:
                     razorpay_table.create(bind=db.engine)
                     db.session.add(razorpay_register)
-                    dup_order_rule(tablename)
                 except:
                     pass
         except Exception as e:

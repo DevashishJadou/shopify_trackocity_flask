@@ -46,6 +46,7 @@ def customers():
     except:
         token = request.args.get("refresh_token")
     try:
+        print(f'google refresh token: {token}')
         resource_names = list_accessible_customer(token)
         return resource_names
     except Exception as ex:

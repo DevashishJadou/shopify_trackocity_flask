@@ -22,7 +22,7 @@ metadata = MetaData()
 @cross_origin()
 def instamojo_params():
     header = request.headers
-    _body = json.loads(request.get_data())
+    _body = request.form.to_dict()
     print(f'body:{_body}')
     workspace = header.get('workspaceId')
     _api_auth = _body['intamojo_api_auth']
@@ -53,3 +53,47 @@ def instamojo_params():
     db.session.commit()
 
     return jsonify({'message': 'success'}), 200
+
+
+@payment_bp.route('/<workspace>/razorpaywebhook', methods=['POST'])
+def razorpay_webhook(workspace):
+    user = InstaMojoConfiguration.query.filter_by(workspace=workspace).first()
+    
+    data = request.form.to_dict()
+    mac_provided = data.pop('mac', None)
+    
+    if not mac_provided:
+        return jsonify({'status': 'error', 'message': 'MAC not provided'}), 400
+    
+    tablename = 'order_'+workspace
+    orderTable = order_table_dynamic(tablename)
+    orderTable.metadata = db.Model.metadata
+
+    amount = data.get('amount')
+    buyer = data.get('buyer')
+    buyer_name = data.get('buyer_name')
+    buyer_phone = data.get('buyer_phone')
+    currency = data.get('currency')
+    fees = data.get('fees')
+    longurl = data.get('longurl')
+    payment_id = data.get('payment_id')
+    payment_request_id = data.get('payment_request_id')
+    purpose = data.get('purpose')
+    shorturl = data.get('shorturl')
+    status = data.get('status')
+
+
+    # Process the webhook event based on the event type
+    if status == 'Credit':
+        # Handle payment captured event
+        event_time = datetime.fromtimestamp(datetime.now()) + timedelta(hours=float(user.timezone))
+        
+        order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
+        if order_obj is None:
+            order_make = orderTable(order_date=event_time, transcation_id=payment_id, first_name=buyer_name, email=buyer, phone=buyer_phone, payment_method='Prepaid', total=amount, currency=currency)
+
+            db.session.add(order_make)
+            db.session.commit()
+
+
+    return jsonify({'status': 'success'}), 200

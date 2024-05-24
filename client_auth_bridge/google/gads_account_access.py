@@ -31,6 +31,7 @@ def list_accessible_customer(token):
 
     client = create_client(token)
     try:
+        print(f'google client create: {client}')
         google_ads_service = client.get_service("GoogleAdsService")
         customer_service = client.get_service("CustomerService")
 
@@ -38,6 +39,7 @@ def list_accessible_customer(token):
         resource_names=[]
         
         for customer_resource_names in accessible_customers.resource_names:
+            print(f'google customer id:{customer_resource_names}')
             customer_id = customer_resource_names.split('/')[-1]
             try:
                 response = google_ads_service.search_stream(customer_id=customer_id, query=query)
