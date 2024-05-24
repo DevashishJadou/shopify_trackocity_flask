@@ -216,7 +216,7 @@ def generate_otp(length=4):
     digits = string.digits
     return ''.join(random.choice(digits) for _ in range(length))
 
-def send_verification_email(to_email, otp, validity_minutes=30):
+def send_verification_change_email(to_email, otp, validity_minutes=30):
     subject = "OTP - Email Verification"
     body = f"""
     Dear User,
@@ -266,7 +266,7 @@ def send_otp():
        db.session.add(emailchange)
     db.session.commit()
 
-    send_verification_email(to_email, otp)
+    send_verification_change_email(to_email, otp)
     return jsonify({'message': 'OTP sent successfully'}), 200
 
 # Route to validate OTP

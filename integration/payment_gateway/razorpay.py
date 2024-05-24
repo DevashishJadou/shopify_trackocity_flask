@@ -97,25 +97,29 @@ def razorpay_webhook(workspace):
 
     # Parse the JSON data from the request
     data = json.loads(request_data)
+    print(f'razorpay:{data}')
 
     # Process the webhook event based on the event type
     event_type = data.get('event')
     if razorpay_client.active and event_type in ('order.paid', 'payment.captured', 'subscription.completed','refund.processed'):
-        # Handle payment captured event
-        payload = data.get('payload').get('payment').get('entity')
-        payment_id = payload.get('id')
-        amount = payload.get('amount')/100.0
-        currency = payload.get('currency')
-        email = payload.get('email')
-        phone = payload.get('contact')
-        event_time = datetime.fromtimestamp(data.get('created_at')) + timedelta(hours=float(user.timezone))
-        
-        order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
-        if order_obj is None:
-            order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, event_type=event_type, currency=currency)
+        try:
+            # Handle payment captured event
+            payload = data.get('payload').get('payment').get('entity')
+            payment_id = payload.get('id')
+            amount = payload.get('amount')/100.0
+            currency = payload.get('currency')
+            email = payload.get('email')
+            phone = payload.get('contact')
+            event_time = datetime.fromtimestamp(data.get('created_at')) + timedelta(hours=float(user.timezone))
+            
+            order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
+            if order_obj is None:
+                order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency)
 
-            db.session.add(order_make)
-            db.session.commit()
+                db.session.add(order_make)
+                db.session.commit()
+        except Exception as e:
+            print(f'Error razorpay webhook:{e.args}')
 
 
     return jsonify({'status': 'success'}), 200
