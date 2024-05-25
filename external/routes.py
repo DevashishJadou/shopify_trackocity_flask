@@ -16,63 +16,69 @@ def map_hash(field):
 @external_bp.route('/gusid', methods=['POST'])
 @cross_origin(origins='*', methods=['POST'], headers=['Content-Type'])
 def user_session():
-    # Get parameters from the request
-    productid = request.json.get('productId', 'temp')
-    creation_at = request.json.get('creationAt')
-    usrid = request.json.get('gusId')
-    localsession = request.json.get('clickId')
-    session = request.headers.get('sessionId')
+    try:
+        # Get parameters from the request
+        productid = request.json.get('productId', 'temp')
+        creation_at = request.json.get('creationAt')
+        usrid = request.json.get('gusId')
+        localsession = request.json.get('clickId')
+        session = request.headers.get('sessionId')
 
-    #Api-key Validation
-    securitykey = str(productid)+localsession
-    apikey = request.args.get("apiKey")
+        #Api-key Validation
+        securitykey = str(productid)+localsession
+        apikey = request.args.get("apiKey")
 
-    if apikey is None or apikey != map_hash(securitykey):
-        return jsonify({'error': 'Authenication Failed'}), 401
+        if apikey is None or apikey != map_hash(securitykey):
+            return jsonify({'error': 'Authenication Failed'}), 401
 
-    # Validate parameters
-    if not productid or not session or not creation_at or not usrid or not localsession:
-        return jsonify({'error': 'Missing parameters'}), 400
+        # Validate parameters
+        if not productid or not session or not creation_at or not usrid or not localsession:
+            return jsonify({'error': 'Missing parameters'}), 400
 
-    new_product = Fingerprint(visitorid=usrid, session=session, productid=productid, creation_at=creation_at, localsession=localsession)
-    new_product.save()
+        new_product = Fingerprint(visitorid=usrid, session=session, productid=productid, creation_at=creation_at, localsession=localsession)
+        new_product.save()
 
-    return jsonify(200), 200
+        return jsonify(200), 200
+    except Exception as e:
+        print(f'Error gusid external: {e.args}')
 
 
 @external_bp.route('/info', methods=['POST'])
 @cross_origin(origins='*', methods=['POST'], headers=['Content-Type'])
 def user_info():
-    # Get parameters from the request
-    productid = request.json.get('productId', 'temp')
-    creation_at = request.json.get('creationAt')
-    body = request.json.get('jsonBody')
-    localsession = request.json.get('clickId')
-    session = request.headers.get('sessionId')
-
     try:
-        x_forwarded_for = request.headers.get('X-Forwarded-For')
-        client_ip = x_forwarded_for.split(',')[0].strip() if x_forwarded_for else request.remote_addr
-        body['navigatordetails']['ipaddress'] = client_ip
-    except:
-        pass
+        # Get parameters from the request
+        productid = request.json.get('productId', 'temp')
+        creation_at = request.json.get('creationAt')
+        body = request.json.get('jsonBody')
+        localsession = request.json.get('clickId')
+        session = request.headers.get('sessionId')
 
-    #Api-key Validation
-    securitykey = str(productid)+localsession
-    apikey = request.args.get("apiKey")
+        try:
+            x_forwarded_for = request.headers.get('X-Forwarded-For')
+            client_ip = x_forwarded_for.split(',')[0].strip() if x_forwarded_for else request.remote_addr
+            body['navigatordetails']['ipaddress'] = client_ip
+        except:
+            pass
 
-    if apikey is None or apikey != map_hash(securitykey):
-        print(f'body: {body}')
-        return jsonify({'error': 'Authenication Failed'}), 401
+        #Api-key Validation
+        securitykey = str(productid)+localsession
+        apikey = request.args.get("apiKey")
 
-    # Validate parameters
-    if not productid or not session or not creation_at or not body or not localsession:
-        return jsonify({'error': 'Missing parameters'}), 400
+        if apikey is None or apikey != map_hash(securitykey):
+            print(f'body: {body}')
+            return jsonify({'error': 'Authenication Failed'}), 401
 
-    new_product = CustomerInfo(session=session, productid=productid, creation_at=creation_at, localsession=localsession, body=body)
-    new_product.save()
+        # Validate parameters
+        if not productid or not session or not creation_at or not body or not localsession:
+            return jsonify({'error': 'Missing parameters'}), 400
 
-    return jsonify(200), 200
+        new_product = CustomerInfo(session=session, productid=productid, creation_at=creation_at, localsession=localsession, body=body)
+        new_product.save()
+
+        return jsonify(200), 200
+    except Exception as e:
+        print(f'Error in info: {e.args}')
 
 
 
