@@ -55,8 +55,10 @@ def list_accessible_customer(token):
                 pass
         return resource_names
 
-    except GoogleAdsException as ex:
-        handleGoogleAdsException(ex)
+    # except GoogleAdsException as ex:
+    except Exception as e:
+        print(f'error in list_accessible_customer : {e.args}')
+        # handleGoogleAdsException(ex)
 
 
 def clientaccount_googleads(userid, account, token, id):
