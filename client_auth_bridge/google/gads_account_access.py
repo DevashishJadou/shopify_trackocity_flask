@@ -36,6 +36,7 @@ def list_accessible_customer(token):
         customer_service = client.get_service("CustomerService")
 
         accessible_customers = customer_service.list_accessible_customers()
+        print(f'google accessible_customers: {accessible_customers}, {customer_service}')
         resource_names=[]
         
         for customer_resource_names in accessible_customers.resource_names:
