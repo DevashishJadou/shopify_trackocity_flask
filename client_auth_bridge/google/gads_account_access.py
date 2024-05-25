@@ -33,10 +33,12 @@ def list_accessible_customer(token):
     try:
         print(f'google client create: {client}')
         google_ads_service = client.get_service("GoogleAdsService")
+        print(f'google google_ads_service: {google_ads_service}')
         customer_service = client.get_service("CustomerService")
+        print(f'google customer_service: {customer_service}')
 
         accessible_customers = customer_service.list_accessible_customers()
-        print(f'google accessible_customers: {accessible_customers}, {customer_service}')
+        print(f'google accessible_customers: {accessible_customers}')
         resource_names=[]
         
         for customer_resource_names in accessible_customers.resource_names:
