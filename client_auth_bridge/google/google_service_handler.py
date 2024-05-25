@@ -20,6 +20,7 @@ def authorize_endpoint():
     auth_info = authorize()
     passthrough_val = auth_info['passthrough_val']
     sess['passthrough_val'] = passthrough_val
+    session['passthrough_val'] = passthrough_val
     url = auth_info['authorization_url']
     return redirect(url)
 
@@ -31,6 +32,12 @@ def oauth2callback_endpoint():
     passthrough_val = sess.get("passthrough_val")
     state = request.args.get("state")
     code = request.args.get("code")
+    try:
+        print(f'passthrough_val:{passthrough_val}')
+        kk = session["passthrough_val"]
+        print(f'passthrough_val:{kk}')
+    except:
+        pass
     refresh_token = oauth2client(passthrough_val, state, code, token)
     session['refresh_token'] = refresh_token
     resource_names = customers()

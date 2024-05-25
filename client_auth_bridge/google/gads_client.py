@@ -6,9 +6,10 @@ from google.ads.googleads.errors import GoogleAdsException
 
 REFRESH_ERROR = "INVAILD REFRESH TOKEN"
 
-_VERSION = "v14"
+_VERSION = "v16"
 
 def create_client(token):
+    print(f'In google client: {token}')
 
     try:
         credentials = {
@@ -20,6 +21,7 @@ def create_client(token):
         }
         return GoogleAdsClient.load_from_dict(credentials, version=_VERSION)
     except:
+        print(f'error in google create_client')
         raise ValueError(REFRESH_ERROR)
 
 
