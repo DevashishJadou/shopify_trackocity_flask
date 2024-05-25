@@ -9,19 +9,18 @@ REFRESH_ERROR = "INVAILD REFRESH TOKEN"
 _VERSION = "v16"
 
 def create_client(token):
-    print(f'In google client: {token}')
-
     try:
         credentials = {
             "developer_token": os.environ.get("_DEVELOPER_TOKEN"),
             "client_id": os.environ.get("_CLIENT_ID"),
             "client_secret": os.environ.get("_CLIENT_SECRET"),
             "refresh_token": token,
+            "token_uri": "https://oauth2.googleapis.com/token",
             "use_proto_plus": "true" 
         }
         return GoogleAdsClient.load_from_dict(credentials, version=_VERSION)
-    except:
-        print(f'error in google create_client')
+    except Exception as e:
+        print(f'error in google create_client: {e.args}')
         raise ValueError(REFRESH_ERROR)
 
 

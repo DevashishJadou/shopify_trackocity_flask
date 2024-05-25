@@ -80,7 +80,7 @@ def clientaccount_googleads(userid, account, token, id):
         for row in batch.results:
             manager_id = row.customer_client.resource_name.split('/')[1]
 
-    user = ClientGoogleCredentials.query.filter_by(id=id).first()
+    user = ClientGoogleCredentials.query.filter_by(workspace=userid).first()
     if user:
         user.account_name = account
         user._token = token
