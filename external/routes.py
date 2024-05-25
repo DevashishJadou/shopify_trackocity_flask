@@ -17,7 +17,7 @@ def map_hash(field):
 @cross_origin(origins='*', methods=['POST'], headers=['Content-Type'])
 def user_session():
     # Get parameters from the request
-    productid = request.json.get('productId')
+    productid = request.json.get('productId', 'temp')
     creation_at = request.json.get('creationAt')
     usrid = request.json.get('gusId')
     localsession = request.json.get('clickId')
@@ -44,7 +44,7 @@ def user_session():
 @cross_origin(origins='*', methods=['POST'], headers=['Content-Type'])
 def user_info():
     # Get parameters from the request
-    productid = request.json.get('productId')
+    productid = request.json.get('productId', 'temp')
     creation_at = request.json.get('creationAt')
     body = request.json.get('jsonBody')
     localsession = request.json.get('clickId')
@@ -52,7 +52,6 @@ def user_info():
 
     try:
         x_forwarded_for = request.headers.get('X-Forwarded-For')
-        print(f'x_forwarded_for:{x_forwarded_for}')
         client_ip = x_forwarded_for.split(',')[0].strip() if x_forwarded_for else request.remote_addr
         body['navigatordetails']['ipaddress'] = client_ip
     except:
@@ -63,6 +62,7 @@ def user_info():
     apikey = request.args.get("apiKey")
 
     if apikey is None or apikey != map_hash(securitykey):
+        print(f'body: {body}')
         return jsonify({'error': 'Authenication Failed'}), 401
 
     # Validate parameters

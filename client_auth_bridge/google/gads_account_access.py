@@ -31,18 +31,13 @@ def list_accessible_customer(token):
 
     client = create_client(token)
     try:
-        print(f'google client create: {client}')
+        google_ads_service = client.get_service("GoogleAdsService")
         customer_service = client.get_service("CustomerService")
-        print(f'google customer_service: {customer_service}')
 
         accessible_customers = customer_service.list_accessible_customers()
-        print(f'google accessible_customers: {accessible_customers}')
         resource_names=[]
         
-        google_ads_service = client.get_service("GoogleAdsService")
-        print(f'google google_ads_service: {google_ads_service}')
         for customer_resource_names in accessible_customers.resource_names:
-            print(f'google customer id:{customer_resource_names}')
             customer_id = customer_resource_names.split('/')[-1]
             try:
                 response = google_ads_service.search_stream(customer_id=customer_id, query=query)
@@ -55,10 +50,10 @@ def list_accessible_customer(token):
                 pass
         return resource_names
 
-    # except GoogleAdsException as ex:
-    except Exception as e:
-        print(f'error in list_accessible_customer : {e.args}')
-        # handleGoogleAdsException(ex)
+    except GoogleAdsException as ex:
+        handleGoogleAdsException(ex)
+    # except Exception as e:
+    #     print(f'error in list_accessible_customer : {e.args}')
 
 
 def clientaccount_googleads(userid, account, token, id):

@@ -32,12 +32,6 @@ def oauth2callback_endpoint():
     passthrough_val = sess.get("passthrough_val")
     state = request.args.get("state")
     code = request.args.get("code")
-    try:
-        print(f'passthrough_val:{passthrough_val}')
-        kk = session["passthrough_val"]
-        print(f'passthrough_val:{kk}')
-    except:
-        pass
     refresh_token = oauth2client(passthrough_val, state, code, token)
     session['refresh_token'] = refresh_token
     resource_names = customers()
@@ -53,7 +47,6 @@ def customers():
     except:
         token = request.args.get("refresh_token")
     try:
-        print(f'google refresh token: {token}')
         resource_names = list_accessible_customer(token)
         return resource_names
     except Exception as ex:

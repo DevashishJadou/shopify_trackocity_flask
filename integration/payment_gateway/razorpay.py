@@ -95,7 +95,6 @@ def razorpay_webhook(workspace):
 
     # Parse the JSON data from the request
     data = json.loads(request_data)
-    print(f'razorpay:{data}')
 
     # Process the webhook event based on the event type
     event_type = data.get('event')
