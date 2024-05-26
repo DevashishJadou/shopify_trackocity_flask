@@ -40,7 +40,7 @@ def user_session():
 
         return jsonify(200), 200
     except Exception as e:
-        print(f'Error gusid external: {e.args}')
+        print(f'Error gusid external: {e.args}, session:{session}, product:{productid}')
 
 
 @external_bp.route('/info', methods=['POST'])
@@ -78,7 +78,7 @@ def user_info():
 
         return jsonify(200), 200
     except Exception as e:
-        print(f'Error in info: {e.args}')
+        print(f'Error in info: {e.args}, body:{body}, session:{session}, product:{productid}')
 
 
 
