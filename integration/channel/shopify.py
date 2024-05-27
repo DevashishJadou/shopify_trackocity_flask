@@ -9,9 +9,7 @@ from .woocommerce import channel_bp
 from ...db_model.sql_models import Shopify, order_table_dynamic, ordertable
 from ...connection import db
 from ...dbrule import dup_order_rule
-# from integration.channel.woocommerce import channel_bp
-# from db_model.sql_models import Shopify, order_table_dynamic, ordertable
-# from connection import db
+
 
 from sqlalchemy import MetaData
 

@@ -21,11 +21,11 @@ def user_session():
         productid = request.json.get('productId', 'temp')
         creation_at = request.json.get('creationAt')
         usrid = request.json.get('gusId')
-        localsession = request.json.get('clickId')
+        localsession = request.json.get('clickId', None)
         session = request.headers.get('sessionId')
 
         #Api-key Validation
-        securitykey = str(productid)+localsession
+        securitykey = str(productid) if localsession is None else str(productid)+localsession
         apikey = request.args.get("apiKey")
 
         if apikey is None or apikey != map_hash(securitykey):
@@ -41,6 +41,7 @@ def user_session():
         return jsonify(200), 200
     except Exception as e:
         print(f'Error gusid external: {e.args}, session:{session}, product:{productid}')
+        return jsonify(e.arg), 500
 
 
 @external_bp.route('/info', methods=['POST'])
@@ -51,7 +52,7 @@ def user_info():
         productid = request.json.get('productId', 'temp')
         creation_at = request.json.get('creationAt')
         body = request.json.get('jsonBody')
-        localsession = request.json.get('clickId')
+        localsession = request.json.get('clickId', None)
         session = request.headers.get('sessionId')
 
         try:
@@ -62,7 +63,7 @@ def user_info():
             pass
 
         #Api-key Validation
-        securitykey = str(productid)+localsession
+        securitykey = str(productid) if localsession is None else str(productid)+localsession
         apikey = request.args.get("apiKey")
 
         if apikey is None or apikey != map_hash(securitykey):
@@ -79,6 +80,7 @@ def user_info():
         return jsonify(200), 200
     except Exception as e:
         print(f'Error in info: {e.args}, body:{body}, session:{session}, product:{productid}')
+        return jsonify(e.arg), 500
 
 
 
