@@ -44,83 +44,86 @@ def get_reporttabledatafacebook():
 	userid = headers.get('workspaceId')
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
-	sort = 'ASC' if attribute == 'first' else 'DESC'
-	sql_query = db.text("select * from table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort)")
-	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
-	data = result.fetchall()
+	if user:
+		sort = 'ASC' if attribute == 'first' else 'DESC'
+		sql_query = db.text("select * from table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort)")
+		result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
+		data = result.fetchall()
 
-	fbdata = {}
-	fbadsdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0}
-	for row in data:
-		campaign_id = row[0]
-		ad_set_id = row[2]
-		ad_id = row[4]
+		fbdata = {}
+		fbadsdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0}
+		for row in data:
+			campaign_id = row[0]
+			ad_set_id = row[2]
+			ad_id = row[4]
 
-		if campaign_id not in fbdata:
-			fbdata[campaign_id] = {
-				"campaign_id": campaign_id,
-				"campaign_name": row[1],
-				"ad_sets": {},
-				"impression": 0,
-				"clicks": 0,
-				"spend" : 0.0,
-				"sales" : 0,
-				"revenue" : 0.0
-			}
+			if campaign_id not in fbdata:
+				fbdata[campaign_id] = {
+					"campaign_id": campaign_id,
+					"campaign_name": row[1],
+					"ad_sets": {},
+					"impression": 0,
+					"clicks": 0,
+					"spend" : 0.0,
+					"sales" : 0,
+					"revenue" : 0.0
+				}
 
-		if ad_set_id not in fbdata[campaign_id]["ad_sets"]:
-			fbdata[campaign_id]["ad_sets"][ad_set_id] = {
-				"ad_set_id": ad_set_id,
-				"ad_set_name": row[3],
-				"ads": [],
-				"impression": 0,
-				"clicks": 0,
-				"spend" : 0.0,
-				"sales" : 0,
-				"revenue" : 0.0
-			}
+			if ad_set_id not in fbdata[campaign_id]["ad_sets"]:
+				fbdata[campaign_id]["ad_sets"][ad_set_id] = {
+					"ad_set_id": ad_set_id,
+					"ad_set_name": row[3],
+					"ads": [],
+					"impression": 0,
+					"clicks": 0,
+					"spend" : 0.0,
+					"sales" : 0,
+					"revenue" : 0.0
+				}
 
-		fbdata[campaign_id]["ad_sets"][ad_set_id]["ads"].append({
-			"ad_id": ad_id,
-			"ad_name": row[5],
-			"impressions": row[6],
-			"clicks": row[7],
-			"spend": float(row[8]),
-			"sales": row[9],
-			"revenue": float(row[10])
-		})
+			fbdata[campaign_id]["ad_sets"][ad_set_id]["ads"].append({
+				"ad_id": ad_id,
+				"ad_name": row[5],
+				"impressions": row[6],
+				"clicks": row[7],
+				"spend": float(row[8]),
+				"sales": row[9],
+				"revenue": float(row[10])
+			})
 
-		fbadsdata["impression"] = fbadsdata["impression"] + row[6]
-		fbadsdata["clicks"] = fbadsdata["clicks"] + row[7]
-		fbadsdata["spend"] = fbadsdata["spend"] + float(row[8])
-		fbadsdata["sales"] = fbadsdata["sales"] + row[9]
-		fbadsdata["revenue"] = fbadsdata["revenue"] + float(row[10])
-		
-		fbdata[campaign_id]["impression"] = fbdata[campaign_id]["impression"] + row[6]
-		fbdata[campaign_id]["clicks"] = fbdata[campaign_id]["clicks"] + row[7]
-		fbdata[campaign_id]["spend"] = fbdata[campaign_id]["spend"] + float(row[8])
-		fbdata[campaign_id]["sales"] = fbdata[campaign_id]["sales"] + row[9]
-		fbdata[campaign_id]["revenue"] = fbdata[campaign_id]["revenue"] + float(row[10])
+			fbadsdata["impression"] = fbadsdata["impression"] + row[6]
+			fbadsdata["clicks"] = fbadsdata["clicks"] + row[7]
+			fbadsdata["spend"] = fbadsdata["spend"] + float(row[8])
+			fbadsdata["sales"] = fbadsdata["sales"] + row[9]
+			fbadsdata["revenue"] = fbadsdata["revenue"] + float(row[10])
+			
+			fbdata[campaign_id]["impression"] = fbdata[campaign_id]["impression"] + row[6]
+			fbdata[campaign_id]["clicks"] = fbdata[campaign_id]["clicks"] + row[7]
+			fbdata[campaign_id]["spend"] = fbdata[campaign_id]["spend"] + float(row[8])
+			fbdata[campaign_id]["sales"] = fbdata[campaign_id]["sales"] + row[9]
+			fbdata[campaign_id]["revenue"] = fbdata[campaign_id]["revenue"] + float(row[10])
 
-		fbdata[campaign_id]["ad_sets"][ad_set_id]["impression"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["impression"] + row[6]
-		fbdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] + row[7]
-		fbdata[campaign_id]["ad_sets"][ad_set_id]["spend"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["spend"] + float(row[8])
-		fbdata[campaign_id]["ad_sets"][ad_set_id]["sales"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["sales"] + row[9]
-		fbdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] + float(row[10])
-
-
-	# Convert the nested structure to a list of dates with campaigns
-	campaign_list = list(fbdata.values())
-	for date_entry in campaign_list:
-		date_entry["ad_sets"] = list(date_entry["ad_sets"].values())
-
-	fbadsdata["campaign"] = campaign_list
-	# Convert to JSON
-	# json_data = json.dumps(campaign_list)n
-	json_data = fbadsdata
+			fbdata[campaign_id]["ad_sets"][ad_set_id]["impression"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["impression"] + row[6]
+			fbdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] + row[7]
+			fbdata[campaign_id]["ad_sets"][ad_set_id]["spend"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["spend"] + float(row[8])
+			fbdata[campaign_id]["ad_sets"][ad_set_id]["sales"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["sales"] + row[9]
+			fbdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] + float(row[10])
 
 
-	return jsonify(json_data)
+		# Convert the nested structure to a list of dates with campaigns
+		campaign_list = list(fbdata.values())
+		for date_entry in campaign_list:
+			date_entry["ad_sets"] = list(date_entry["ad_sets"].values())
+
+		fbadsdata["campaign"] = campaign_list
+		# Convert to JSON
+		# json_data = json.dumps(campaign_list)n
+		json_data = fbadsdata
+
+
+		return jsonify(json_data)
+	else:
+		return jsonify({"msg":"No Data Found"}), 404
 
 
 
@@ -137,83 +140,86 @@ def get_reporttabledatagoogle():
 	
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
-	sort = 'ASC' if attribute == 'first' else 'DESC'
-	sql_query = db.text("select * from table_googleattribute(:workspace, :productid, :startdate, :enddate, :sort)")
-	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
-	data = result.fetchall()
+	if user:
+		sort = 'ASC' if attribute == 'first' else 'DESC'
+		sql_query = db.text("select * from table_googleattribute(:workspace, :productid, :startdate, :enddate, :sort)")
+		result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
+		data = result.fetchall()
 
-	ggdata = {}
-	ggadsdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0}
-	for row in data:
-		campaign_id = row[0]
-		ad_set_id = row[2]
-		ad_id = row[4]
+		ggdata = {}
+		ggadsdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0}
+		for row in data:
+			campaign_id = row[0]
+			ad_set_id = row[2]
+			ad_id = row[4]
 
-		if campaign_id not in ggdata:
-			ggdata[campaign_id] = {
-				"campaign_id": campaign_id,
-				"campaign_name": row[1],
-				"ad_sets": {},
-				"impression": 0,
-				"clicks": 0,
-				"spend" : 0.0,
-				"sales" : 0,
-				"revenue" : 0.0
-			}
+			if campaign_id not in ggdata:
+				ggdata[campaign_id] = {
+					"campaign_id": campaign_id,
+					"campaign_name": row[1],
+					"ad_sets": {},
+					"impression": 0,
+					"clicks": 0,
+					"spend" : 0.0,
+					"sales" : 0,
+					"revenue" : 0.0
+				}
 
-		if ad_set_id not in ggdata[campaign_id]["ad_sets"]:
-			ggdata[campaign_id]["ad_sets"][ad_set_id] = {
-				"ad_set_id": ad_set_id,
-				"ad_set_name": row[3],
-				"ads": [],
-				"impression": 0,
-				"clicks": 0,
-				"spend" : 0.0,
-				"sales" : 0,
-				"revenue" : 0.0
-			}
+			if ad_set_id not in ggdata[campaign_id]["ad_sets"]:
+				ggdata[campaign_id]["ad_sets"][ad_set_id] = {
+					"ad_set_id": ad_set_id,
+					"ad_set_name": row[3],
+					"ads": [],
+					"impression": 0,
+					"clicks": 0,
+					"spend" : 0.0,
+					"sales" : 0,
+					"revenue" : 0.0
+				}
 
-		ggdata[campaign_id]["ad_sets"][ad_set_id]["ads"].append({
-			"ad_id": ad_id,
-			"ad_name": row[5],
-			"impressions": row[6],
-			"clicks": row[7],
-			"spend": float(row[8]),
-			"sales": row[9],
-			"revenue": float(row[10])
-		})
+			ggdata[campaign_id]["ad_sets"][ad_set_id]["ads"].append({
+				"ad_id": ad_id,
+				"ad_name": row[5],
+				"impressions": row[6],
+				"clicks": row[7],
+				"spend": float(row[8]),
+				"sales": row[9],
+				"revenue": float(row[10])
+			})
 
-		ggadsdata["impression"] = ggadsdata["impression"] + row[6]
-		ggadsdata["clicks"] = ggadsdata["clicks"] + row[7]
-		ggadsdata["spend"] = ggadsdata["spend"] + float(row[8])
-		ggadsdata["sales"] = ggadsdata["sales"] + row[9]
-		ggadsdata["revenue"] = ggadsdata["revenue"] + float(row[10])
-		
-		ggdata[campaign_id]["impression"] = ggdata[campaign_id]["impression"] + row[6]
-		ggdata[campaign_id]["clicks"] = ggdata[campaign_id]["clicks"] + row[7]
-		ggdata[campaign_id]["spend"] = ggdata[campaign_id]["spend"] + float(row[8])
-		ggdata[campaign_id]["sales"] = ggdata[campaign_id]["sales"] + row[9]
-		ggdata[campaign_id]["revenue"] = ggdata[campaign_id]["revenue"] + float(row[10])
+			ggadsdata["impression"] = ggadsdata["impression"] + row[6]
+			ggadsdata["clicks"] = ggadsdata["clicks"] + row[7]
+			ggadsdata["spend"] = ggadsdata["spend"] + float(row[8])
+			ggadsdata["sales"] = ggadsdata["sales"] + row[9]
+			ggadsdata["revenue"] = ggadsdata["revenue"] + float(row[10])
+			
+			ggdata[campaign_id]["impression"] = ggdata[campaign_id]["impression"] + row[6]
+			ggdata[campaign_id]["clicks"] = ggdata[campaign_id]["clicks"] + row[7]
+			ggdata[campaign_id]["spend"] = ggdata[campaign_id]["spend"] + float(row[8])
+			ggdata[campaign_id]["sales"] = ggdata[campaign_id]["sales"] + row[9]
+			ggdata[campaign_id]["revenue"] = ggdata[campaign_id]["revenue"] + float(row[10])
 
-		ggdata[campaign_id]["ad_sets"][ad_set_id]["impression"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["impression"] + row[6]
-		ggdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] + row[7]
-		ggdata[campaign_id]["ad_sets"][ad_set_id]["spend"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["spend"] + float(row[8])
-		ggdata[campaign_id]["ad_sets"][ad_set_id]["sales"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["sales"] + row[9]
-		ggdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] + float(row[10])
-
-
-	# Convert the nested structure to a list of dates with campaigns
-	campaign_list = list(ggdata.values())
-	for date_entry in campaign_list:
-		date_entry["ad_sets"] = list(date_entry["ad_sets"].values())
-
-	ggadsdata["campaign"] = campaign_list
-	# Convert to JSON
-	# json_data = json.dumps(campaign_list)n
-	json_data = ggadsdata
+			ggdata[campaign_id]["ad_sets"][ad_set_id]["impression"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["impression"] + row[6]
+			ggdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] + row[7]
+			ggdata[campaign_id]["ad_sets"][ad_set_id]["spend"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["spend"] + float(row[8])
+			ggdata[campaign_id]["ad_sets"][ad_set_id]["sales"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["sales"] + row[9]
+			ggdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] + float(row[10])
 
 
-	return jsonify(json_data)
+		# Convert the nested structure to a list of dates with campaigns
+		campaign_list = list(ggdata.values())
+		for date_entry in campaign_list:
+			date_entry["ad_sets"] = list(date_entry["ad_sets"].values())
+
+		ggadsdata["campaign"] = campaign_list
+		# Convert to JSON
+		# json_data = json.dumps(campaign_list)n
+		json_data = ggadsdata
+
+
+		return jsonify(json_data)
+	else:
+		return jsonify({"msg":"No Data Found"}), 404
 
 
 
@@ -241,7 +247,7 @@ def get_reportgraphdata():
 		sale_data['revenue'] = sale_data['revenue'] + float(row[1])
 		sale_data['sales'] = sale_data['sales'] + int(row[2])
 
-	return jsonify(sale_data)
+	return jsonify(sale_data), 200
 
 
 
@@ -287,29 +293,30 @@ def get_dashboardgraphdata():
 	sale_data["cpa"]['total'] = round(sale_data["spend"]['total']/max(sale_data["sales"]['total'],1), 2)
 	sale_data["spend"]['total'] = round(sale_data["spend"]['total'], 2)
 
-	return jsonify(sale_data)
+	return jsonify(sale_data), 200
 
 
 def channel_matrix(userid, productid, startdate, enddate, fbflag, ggflag):
 	sort = 'DESC'
+	metric={}
 	fbadsdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0, "aov":0.0, "cpa":0.0, "roi":0.0, "profit":0.0, "cpc":0.0}
 	if fbflag:
 		sql_query_fb = db.text("select * from table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort)")
 		result = db.session.execute(sql_query_fb, {'workspace': userid, 'productid':productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
 		data = result.fetchall()
 
-		metric={}
 		for row in data:
 			fbadsdata["impression"] = fbadsdata["impression"] + int(row[6])
 			fbadsdata["clicks"] = fbadsdata["clicks"] + int(row[7])
 			fbadsdata["spend"] = fbadsdata["spend"] + float(row[8])
 			fbadsdata["sales"] = fbadsdata["sales"] + int(row[9])
 			fbadsdata["revenue"] = fbadsdata["revenue"] + float(row[10])
-		fbadsdata["spend"] = round(fbadsdata["spend"],2)	
+		fbadsdata["revenue"] = round(fbadsdata["revenue"],0)
+		fbadsdata["spend"] = round(fbadsdata["spend"],0)
 		fbadsdata["aov"] = round(fbadsdata["revenue"]/max(fbadsdata["sales"],1),2)
 		fbadsdata["cpa"] = round(fbadsdata["spend"]/max(fbadsdata["sales"],1),2)
 		fbadsdata["roi"] = round(fbadsdata["revenue"]/max(fbadsdata["spend"],1),2)
-		fbadsdata["profit"] = round(fbadsdata["revenue"] - fbadsdata["spend"],2)
+		fbadsdata["profit"] = round(fbadsdata["revenue"] - fbadsdata["spend"],0)
 		fbadsdata["cpc"] = round(fbadsdata["spend"]/max(fbadsdata["clicks"],1),2)
 		fbadsdata["cpm"] = round(fbadsdata["spend"]*1000/max(fbadsdata["impression"],1),2)
 	metric['meta'] = fbadsdata
@@ -326,11 +333,12 @@ def channel_matrix(userid, productid, startdate, enddate, fbflag, ggflag):
 			ggdsdata["spend"] = ggdsdata["spend"] + float(row[8])
 			ggdsdata["sales"] = ggdsdata["sales"] + int(row[9])
 			ggdsdata["revenue"] = ggdsdata["revenue"] + float(row[10])
-		ggdsdata["spend"] = round(ggdsdata["spend"],2)
+		ggdsdata["revenue"] = round(ggdsdata["revenue"],0)
+		ggdsdata["spend"] = round(ggdsdata["spend"],0)
 		ggdsdata["aov"] = round(ggdsdata["revenue"]/max(ggdsdata["sales"],1),2)
 		ggdsdata["cpa"] = round(ggdsdata["spend"]/max(ggdsdata["sales"],1),2)
 		ggdsdata["roi"] = round(ggdsdata["revenue"]/max(ggdsdata["spend"],1),2)
-		ggdsdata["profit"] = round(ggdsdata["revenue"] - ggdsdata["spend"],2)
+		ggdsdata["profit"] = round(ggdsdata["revenue"] - ggdsdata["spend"],0)
 		ggdsdata["cpc"] = round(ggdsdata["spend"]/max(ggdsdata["clicks"],1),2)
 		ggdsdata["cpm"] = round(ggdsdata["spend"]*1000/max(ggdsdata["impression"],1),2)
 	metric['google'] = ggdsdata
@@ -374,7 +382,7 @@ def get_dashboardmetric():
 
 	result = channel_matrix(userid, user.productid, startdate, enddate, fbflag, ggflag)
 
-	return jsonify(result)
+	return jsonify(result),200
 
 
 
