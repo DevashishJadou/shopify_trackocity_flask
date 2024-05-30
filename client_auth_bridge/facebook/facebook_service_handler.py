@@ -56,3 +56,18 @@ def authorize_endpoint():
 
     return jsonify({'message': 'Succesfully'}), 200
 
+
+@facebook_bp.route("/clientpixel", methods=['POST', 'OPTIONS'])
+@cross_origin(origins='*', methods=['POST'], headers=['Content-Type'])
+def authorize_pixelendpoint():
+    data = json.loads(request.data)
+    headers = request.headers
+    workspace = headers['workspaceId']
+
+    user = ClientFacebookredentials.query.filter_by(workspace=workspace).first()
+    if user:
+        user.pixelid = data['pixelid']
+        db.session.commit()
+        return jsonify({'message': 'Inforamtion Updated Succesfully'}), 200
+    else:
+        return jsonify({'message': 'Connect to Facebbok First'}), 404

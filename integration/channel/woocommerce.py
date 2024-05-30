@@ -101,6 +101,9 @@ def woocommercewebook(workspace):
 	payment_method = request_data['payment_method']
 	customer_ip = request_data['customer_ip_address']
 	customer_user_agent = request_data['customer_user_agent']
+	city = request_data['billing']['city']
+	postcode = request_data['billing']['postcode']
+	currency = request_data['currency']
 
 	order = orderTable.query.filter_by(transcation_id=transcation_id).filter_by(channel='woocommerce').first()
 	if order:

@@ -121,7 +121,7 @@ def payment_order_creation(name, email, phone='1212121212', currency='INR', prod
     'email': email,
     'phone': phone if phone else '1212121212',
     'product': product,
-    'total': '1'})
+    'total': '4128.82'})
 
     headers = {
     'Content-Type': 'application/json'

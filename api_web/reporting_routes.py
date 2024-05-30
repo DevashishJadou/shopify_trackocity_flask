@@ -51,7 +51,7 @@ def get_reporttabledatafacebook():
 		data = result.fetchall()
 
 		fbdata = {}
-		fbadsdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0}
+		fbadsdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0, "cancelorder":0, "cancelrev":0.0}
 		for row in data:
 			campaign_id = row[0]
 			ad_set_id = row[2]
@@ -66,7 +66,9 @@ def get_reporttabledatafacebook():
 					"clicks": 0,
 					"spend" : 0.0,
 					"sales" : 0,
-					"revenue" : 0.0
+					"revenue" : 0.0,
+					"cancelorder": 0,
+					"cancelrev": 0.0
 				}
 
 			if ad_set_id not in fbdata[campaign_id]["ad_sets"]:
@@ -78,7 +80,9 @@ def get_reporttabledatafacebook():
 					"clicks": 0,
 					"spend" : 0.0,
 					"sales" : 0,
-					"revenue" : 0.0
+					"revenue" : 0.0,
+					"cancelorder": 0,
+					"cancelrev": 0.0
 				}
 
 			fbdata[campaign_id]["ad_sets"][ad_set_id]["ads"].append({
@@ -88,7 +92,9 @@ def get_reporttabledatafacebook():
 				"clicks": row[7],
 				"spend": float(row[8]),
 				"sales": row[9],
-				"revenue": float(row[10])
+				"revenue": float(row[10]),
+				"cancelorder": row[11],
+				"cancelrev": float(row[12])
 			})
 
 			fbadsdata["impression"] = fbadsdata["impression"] + row[6]
@@ -96,18 +102,24 @@ def get_reporttabledatafacebook():
 			fbadsdata["spend"] = fbadsdata["spend"] + float(row[8])
 			fbadsdata["sales"] = fbadsdata["sales"] + row[9]
 			fbadsdata["revenue"] = fbadsdata["revenue"] + float(row[10])
+			fbadsdata["cancelorder"] = fbadsdata["cancelorder"] + row[11]
+			fbadsdata["cancelrev"] = fbadsdata["cancelrev"] + float(row[12])
 			
 			fbdata[campaign_id]["impression"] = fbdata[campaign_id]["impression"] + row[6]
 			fbdata[campaign_id]["clicks"] = fbdata[campaign_id]["clicks"] + row[7]
 			fbdata[campaign_id]["spend"] = fbdata[campaign_id]["spend"] + float(row[8])
 			fbdata[campaign_id]["sales"] = fbdata[campaign_id]["sales"] + row[9]
 			fbdata[campaign_id]["revenue"] = fbdata[campaign_id]["revenue"] + float(row[10])
+			fbdata[campaign_id]["cancelorder"] = fbdata[campaign_id]["cancelorder"] + row[11]
+			fbdata[campaign_id]["cancelrev"] = fbdata[campaign_id]["cancelrev"] + float(row[12])
 
 			fbdata[campaign_id]["ad_sets"][ad_set_id]["impression"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["impression"] + row[6]
 			fbdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] + row[7]
 			fbdata[campaign_id]["ad_sets"][ad_set_id]["spend"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["spend"] + float(row[8])
 			fbdata[campaign_id]["ad_sets"][ad_set_id]["sales"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["sales"] + row[9]
 			fbdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] + float(row[10])
+			fbdata[campaign_id]["ad_sets"][ad_set_id]["cancelorder"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["cancelorder"] + row[10]
+			fbdata[campaign_id]["ad_sets"][ad_set_id]["cancelrev"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["cancelrev"] + float(row[12])
 
 
 		# Convert the nested structure to a list of dates with campaigns
@@ -147,7 +159,7 @@ def get_reporttabledatagoogle():
 		data = result.fetchall()
 
 		ggdata = {}
-		ggadsdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0}
+		ggadsdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0, "cancelorder":0, "cancelrev":0.0}
 		for row in data:
 			campaign_id = row[0]
 			ad_set_id = row[2]
@@ -162,7 +174,9 @@ def get_reporttabledatagoogle():
 					"clicks": 0,
 					"spend" : 0.0,
 					"sales" : 0,
-					"revenue" : 0.0
+					"revenue" : 0.0,
+					"cancelorder": 0,
+					"cancelrev": 0.0
 				}
 
 			if ad_set_id not in ggdata[campaign_id]["ad_sets"]:
@@ -174,7 +188,9 @@ def get_reporttabledatagoogle():
 					"clicks": 0,
 					"spend" : 0.0,
 					"sales" : 0,
-					"revenue" : 0.0
+					"revenue" : 0.0,
+					"cancelorder": 0,
+					"cancelrev": 0.0
 				}
 
 			ggdata[campaign_id]["ad_sets"][ad_set_id]["ads"].append({
@@ -184,7 +200,9 @@ def get_reporttabledatagoogle():
 				"clicks": row[7],
 				"spend": float(row[8]),
 				"sales": row[9],
-				"revenue": float(row[10])
+				"revenue": float(row[10]),
+				"cancelorder": row[11],
+				"cancelrev": float(row[12])
 			})
 
 			ggadsdata["impression"] = ggadsdata["impression"] + row[6]
@@ -192,19 +210,24 @@ def get_reporttabledatagoogle():
 			ggadsdata["spend"] = ggadsdata["spend"] + float(row[8])
 			ggadsdata["sales"] = ggadsdata["sales"] + row[9]
 			ggadsdata["revenue"] = ggadsdata["revenue"] + float(row[10])
+			ggadsdata["cancelorder"] = ggadsdata["cancelorder"] + row[11]
+			ggadsdata["cancelrev"] = ggadsdata["cancelrev"] + float(row[12])
 			
 			ggdata[campaign_id]["impression"] = ggdata[campaign_id]["impression"] + row[6]
 			ggdata[campaign_id]["clicks"] = ggdata[campaign_id]["clicks"] + row[7]
 			ggdata[campaign_id]["spend"] = ggdata[campaign_id]["spend"] + float(row[8])
 			ggdata[campaign_id]["sales"] = ggdata[campaign_id]["sales"] + row[9]
 			ggdata[campaign_id]["revenue"] = ggdata[campaign_id]["revenue"] + float(row[10])
+			ggdata[campaign_id]["cancelorder"] = ggdata[campaign_id]["cancelorder"] + row[11]
+			ggdata[campaign_id]["cancelrev"] = ggdata[campaign_id]["cancelrev"] + float(row[12])
 
 			ggdata[campaign_id]["ad_sets"][ad_set_id]["impression"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["impression"] + row[6]
 			ggdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] + row[7]
 			ggdata[campaign_id]["ad_sets"][ad_set_id]["spend"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["spend"] + float(row[8])
 			ggdata[campaign_id]["ad_sets"][ad_set_id]["sales"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["sales"] + row[9]
 			ggdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] + float(row[10])
-
+			ggdata[campaign_id]["ad_sets"][ad_set_id]["cancelorder"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["cancelorder"] + row[10]
+			ggdata[campaign_id]["ad_sets"][ad_set_id]["cancelrev"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["cancelrev"] + float(row[12])
 
 		# Convert the nested structure to a list of dates with campaigns
 		campaign_list = list(ggdata.values())

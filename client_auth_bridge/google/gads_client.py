@@ -15,7 +15,6 @@ def create_client(token):
             "client_id": os.environ.get("_CLIENT_ID"),
             "client_secret": os.environ.get("_CLIENT_SECRET"),
             "refresh_token": token,
-            "token_uri": "https://oauth2.googleapis.com/token",
             "use_proto_plus": "true" 
         }
         return GoogleAdsClient.load_from_dict(credentials, version=_VERSION)
