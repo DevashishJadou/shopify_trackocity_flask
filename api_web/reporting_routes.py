@@ -274,6 +274,39 @@ def get_reportgraphdata():
 
 
 
+@report_bp.route('/tablesaledata', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def get_reporttablesaledata():
+
+	headers = request.headers
+	body = request.args
+	startdate = body.get('startdate')
+	enddate = body.get('enddate')
+	userid = headers.get('workspaceId')
+	adid = body.get('adid')
+	attribute = body.get('attribute')
+	user = UserRegister.query.filter_by(workspace=userid).first()
+
+	output = []
+	if user:
+		sort = 'ASC' if attribute == 'first' else 'DESC'
+		sql_query = db.text("select * from table_salesdata(:workspace, :productid, :startdate, :enddate, :adid, :sort)")
+
+		result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'adid':adid, 'sort':sort})
+		data = result.fetchall()
+
+		for row in data:
+			element = {}
+			element['complete_name'] = row[0]
+			element['email_phone'] = row[1]
+			element['total'] = float(row[2])
+			element['order_date'] = row[3]
+			output.append(element)
+		
+	return jsonify(output), 200
+
+
+
 @report_bp.route('/dashboardgraphsales', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_dashboardgraphdata():
