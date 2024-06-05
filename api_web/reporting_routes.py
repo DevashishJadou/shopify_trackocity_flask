@@ -300,7 +300,7 @@ def get_reporttablesaledata():
 			element['complete_name'] = row[0]
 			element['email_phone'] = row[1]
 			element['total'] = float(row[2])
-			element['order_date'] = row[3]
+			element['order_date'] = row[3].strftime("%Y-%m-%d %H:%M:%S")
 			output.append(element)
 		
 	return jsonify(output), 200

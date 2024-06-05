@@ -15,7 +15,12 @@ app = Flask(__name__)
 app.url_map._rules_by_endpoint = {}
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('_SQLALCHEMY_DATABASE_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ECHO'] = True
+app.config['SQLALCHEMY_ECHO'] = False
+app.config['SQLALCHEMY_POOL_SIZE'] = 10
+app.config['SQLALCHEMY_MAX_OVERFLOW'] = 20
+app.config['SQLALCHEMY_POOL_TIMEOUT'] = 30
+app.config['SQLALCHEMY_POOL_RECYCLE'] = 1800
+app.config['SQLALCHEMY_POOL_PRE_PING'] = True
 app.config['JWT_SECRET_KEY'] = os.environ.get('_JWT_SECRET_KEY')
 app.config['SECRET_KEY'] = os.environ.get('_SECRET_KEY_FLASK')
 
