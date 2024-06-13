@@ -32,9 +32,10 @@ def integration_facebbok():
     user = ClientFacebookredentials.query.filter_by(workspace=workspace).all()
 
     if user:
-        accounts = {}
+        accounts = []
         for acc in user:
-            accounts[acc.id] = [acc.account, acc.account_name]
+            value = {'id':acc.id, 'accountname':acc.account_name, 'accountid':acc.account}
+            accounts.append(value)
         return jsonify({"accounts":accounts}), 200
     else:
         return jsonify({"message":"no account found"}), 400
@@ -49,9 +50,10 @@ def integration_google():
     user = ClientGoogleCredentials.query.filter_by(workspace=workspace).all()
 
     if user:
-        accounts = {}
+        accounts = []
         for acc in user:
-            accounts[acc.id] = [acc.account_name, acc.account_name]
+            value = {'id':acc.id, 'accountname':acc.account_name, 'accountid':acc.account}
+            accounts.append(value)
         return jsonify({"accounts":accounts}), 200
     else:
         return jsonify({"message":"no account found"}), 400

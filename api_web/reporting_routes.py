@@ -284,15 +284,16 @@ def get_reporttablesaledata():
 	enddate = body.get('enddate')
 	userid = headers.get('workspaceId')
 	adid = body.get('adid')
+	channel = body.get('channel')
 	attribute = body.get('attribute')
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
 	output = []
 	if user:
 		sort = 'ASC' if attribute == 'first' else 'DESC'
-		sql_query = db.text("select * from table_salesdata(:workspace, :productid, :startdate, :enddate, :adid, :sort)")
+		sql_query = db.text("select * from table_salesdata(:workspace, :productid, :startdate, :enddate, :channel, :adid, :sort)")
 
-		result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'adid':adid, 'sort':sort})
+		result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'channel':channel, 'adid':adid, 'sort':sort})
 		data = result.fetchall()
 
 		for row in data:
@@ -455,12 +456,12 @@ def get_dashboardtraffic():
 	data={}
 
 	page_view = CustomerInfo.objects(
-		**{"body__customerInfo": {}},
+		**{"body__pageLoad": 1},
 		productid=float(user.productid),
 		creation_at__gte=startdate,
    		creation_at__lte=enddate
 	).count()
-	data['page_view'] = int(page_view*1.02)
+	data['page_view'] = int(page_view*1.03)
 
 	
 	localsess_pipeline = [

@@ -56,7 +56,7 @@ def list_accessible_customer(token):
     #     print(f'error in list_accessible_customer : {e.args}')
 
 
-def clientaccount_googleads(userid, account, token, id):
+def clientaccount_googleads(userid, account, accname, token, id):
     
     query = """
             SELECT
@@ -79,20 +79,27 @@ def clientaccount_googleads(userid, account, token, id):
     for batch in response:
         for row in batch.results:
             manager_id = row.customer_client.resource_name.split('/')[1]
+    # manager_id = 'tmp'
 
-    user = ClientGoogleCredentials.query.filter_by(workspace=userid).first()
-    if user:
-        user.account_name = account
-        user._token = token
-        user.manager_account = manager_id 
+    if id:
+        user = ClientGoogleCredentials.query.filter_by(id=id).first()   
+        if user:
+            user.account_name = account
+            user.account = accname
+            user._token = token
+            user.manager_account = manager_id
+        else:
+            return jsonify({'status': 'id not exist'}), 404
 
-    if not user and token:
-        user = ClientGoogleCredentials(workspace=userid, _token=token, account_name=account, manager_account=manager_id)
+    else:
+        user = ClientGoogleCredentials(workspace=userid, _token=token, account_name=account, account=accname, manager_account=manager_id)
         tablename = 'googleads_'+userid
-        if not metadata.tables.get(tablename):
-            google_table = googleads_table(tablename)
-            google_table.create(bind=db.engine)
+        try:
+            if not metadata.tables.get(tablename):
+                google_table = googleads_table(tablename)
+                google_table.create(bind=db.engine)
+        except:
+            pass
         db.session.add(user)
-   
     db.session.commit()
     return jsonify({'status': 'success'}), 200
