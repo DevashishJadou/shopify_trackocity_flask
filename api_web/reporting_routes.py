@@ -457,7 +457,7 @@ def get_dashboardtraffic():
 
 	page_view = CustomerInfo.objects(
 		**{"body__pageLoad": 1},
-		productid=float(user.productid),
+		productid=int(user.productid),
 		creation_at__gte=startdate,
    		creation_at__lte=enddate
 	).count()
@@ -466,7 +466,7 @@ def get_dashboardtraffic():
 	
 	localsess_pipeline = [
     {'$match': {
-        'productid': float(user.productid),
+        'productid': int(user.productid),
         'creation_at': {'$gte': startdate, '$lte': enddate}
     }},
     {'$group': {
@@ -483,7 +483,7 @@ def get_dashboardtraffic():
 
 	sess_pipeline = [
     {'$match': {
-        'productid': float(user.productid),
+        'productid': int(user.productid),
         'creation_at': {'$gte': startdate, '$lte': enddate},
         'body.customerInfo': {}
     }},
@@ -497,6 +497,7 @@ def get_dashboardtraffic():
 		data['unique_user'] = unique_usr[0]['distinct_session_count']
 	except:
 		data['unique_user'] = 0
+
 
 	if user.product_type == 'growth':
 		bounce_pipeline = [
