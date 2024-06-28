@@ -27,32 +27,31 @@ def authorize_endpoint():
     _key = os.environ.get("_KEY")
     cipher_suite = Fernet(_key)
     accountinfo = data['accountinfo']
+    db.session.query(ClientFacebookredentials).filter_by(workspace=workspace).delete()
     for acc in accountinfo:
         account = acc['id']
         account_name = acc['name']
-        # userid = data['userid']
         cipher_access_key = cipher_suite.encrypt(data['accessToken'].encode()).decode()
-        # cipher_email = cipher_suite.encrypt(data['email'].encode()).decode()
-        # cipher_email=data['email']
-        # id = data['system_id']
 
-        user = ClientFacebookredentials.query.filter_by(workspace=workspace).first()
-        if user:
-            user.account = account
-            user.account_name = account_name
-            # user.userid = userid
-            user.accesstoken = cipher_access_key
-            # user.email = cipher_email
-            db.session.commit()
-            return jsonify({'message': 'Inforamtion Updated Succesfully'}), 200
-        else:
-            user_make = ClientFacebookredentials(account=account, account_name=account_name, accesstoken=cipher_access_key, workspace=workspace)
+        # users = ClientFacebookredentials.query.filter_by(workspace=workspace).first()
+        # if users:
+        #     user = users[0]
+        #     user.account = account
+        #     user.account_name = account_name
+        #     user.accesstoken = cipher_access_key
+        #     db.session.commit()
+            # return jsonify({'message': 'Inforamtion Updated Succesfully'}), 200
+
+        user_make = ClientFacebookredentials(account=account, account_name=account_name, accesstoken=cipher_access_key, workspace=workspace)
+        try:
             tablename = 'facebookads_'+workspace
             if not metadata.tables.get(tablename):
                 facebook_table = facebookads_table(tablename)
                 facebook_table.create(bind=db.engine)
-            db.session.add(user_make)
-            db.session.commit()
+        except:
+            pass
+        db.session.add(user_make)
+        db.session.commit()
 
     return jsonify({'message': 'Succesfully'}), 200
 
