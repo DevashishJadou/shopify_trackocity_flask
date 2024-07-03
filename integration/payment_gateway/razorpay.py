@@ -98,6 +98,7 @@ def razorpay_webhook(workspace):
 
     # Process the webhook event based on the event type
     event_type = data.get('event')
+    print(f'event:{event_type}')
     if razorpay_client.active and event_type in ('order.paid', 'payment.captured', 'subscription.completed','refund.processed'):
         try:
             # Handle payment captured event
