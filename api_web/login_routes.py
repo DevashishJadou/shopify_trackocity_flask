@@ -12,7 +12,7 @@ from flask_jwt_extended import create_access_token, create_refresh_token
 
 from uuid import uuid4
 from datetime import timedelta, datetime
-import os, json, random
+import os, json, random, re
 
 from flask_cors import cross_origin
 from flask_mail import Message
@@ -197,6 +197,9 @@ def profile_user_change():
 
     # Check if the user exists
     user = UserRegister.query.filter_by(workspace=userid).first()
+    match = re.search(r"GMT ([+-]\d{2}):\d{2}", data.get('timezone'))
+    if match:
+        offset_hours = int(match.group(1))
 
     if user:
         user.phone = data.get('phone')
@@ -204,6 +207,7 @@ def profile_user_change():
         user.currency = data.get('currency')
         user.company = data.get('company')
         user.timezone = data.get('timezone')
+        user.timezone_value = offset_hours
 
         db.session.commit()
         

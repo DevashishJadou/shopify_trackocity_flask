@@ -12,18 +12,25 @@ trackocitypayment_bp = Blueprint('trackocitypayment', __name__)
 
 @trackocitypayment_bp.route('/payment_link', methods=['POST'])
 def razorpay_params():
-    data = json.loads(request.get_data())
+    try:
+        data = json.loads(request.get_data())
+        name = data.get('name')
+        order_id = data.get('order_id')
+        total = data.get('total')
+        link = data.get('link')
+        email = data.get('email')
+        workspace = data.get('workspace')
+        # expireon = datetime.fromtimestamp(data.get('expireon'), tz=ZoneInfo("Asia/Kolkata"))
 
-    name = data.get('name')
-    order_id = data.get('order_id')
-    total = data.get('total')
-    link = data.get('link')
-    email = data.get('email')
-    expireon = datetime.fromtimestamp(data.get('expireon'), tz=ZoneInfo("Asia/Kolkata"))
-
-    payment = Payment(completename=name, order_id=order_id, total=total, link=link, email=email, status='pending', expireon=expireon)
-    db.session.add(payment)
-    db.session.commit()
+        isexist = Payment.query.filter(workspace=workspace, total=total).first()
+        if isexist:
+            return jsonify({'status': 'success'}), 200
+        else:
+            payment = Payment(completename=name, order_id=order_id, total=total, link=link, email=email, status='pending', workspace=workspace)
+            db.session.add(payment)
+            db.session.commit()
+    except Exception as e:
+        print(f'error payment link:{e.args}')
     return jsonify({'status': 'success'}), 200
 
 
@@ -38,7 +45,6 @@ def razorpay_webhook():
 
     # Process the webhook event based on the event type
     event_type = data.get('event')
-    print(f'event_payment_link:{event_type}')
     if event_type in ('order.paid', 'payment.captured', 'subscription.completed'):
         # Handle payment captured event
         payload = data.get('payload').get('payment').get('entity')

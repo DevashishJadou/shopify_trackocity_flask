@@ -83,7 +83,6 @@ def razorpay_webhook(workspace):
 
     request_data = request.get_data()
     client = razorpay.Client(auth=(webhook_key, webhook_secret))
-    print(f'request_data razorpay:{request_data}, type:{type(request_data)}')
     # verify = client.utility.verify_webhook_signature(request_data.decode("utf-8"), signature, client_secret)
 
 
@@ -100,7 +99,6 @@ def razorpay_webhook(workspace):
 
     # Process the webhook event based on the event type
     event_type = data.get('event')
-    print(f'event razorpay:{event_type}')
     if razorpay_client.active and event_type in ('order.paid', 'payment.captured', 'subscription.completed','refund.processed'):
         try:
             # Handle payment captured event
@@ -110,7 +108,7 @@ def razorpay_webhook(workspace):
             currency = payload.get('currency')
             email = payload.get('email')
             phone = payload.get('contact')
-            event_time = datetime.fromtimestamp(data.get('created_at')) + timedelta(hours=float(user.timezone_value))
+            event_time = datetime.fromtimestamp(data.get('created_at')) + timedelta(hours=float(user.timezone))
             
             order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
             if order_obj is None:

@@ -17,7 +17,7 @@ class UserRegister(db.Model):
     _password = db.Column(db.String(255))
     workspace = db.Column(db.String(64), unique=True)
     productid = db.Column(db.String(16), unique=True)
-    timezone = db.Column(db.Numeric)
+    timezone = db.Column(db.String(128))
     company = db.Column(db.String(64))
     currency = db.Column(db.String(8))
     isverify = db.Column(db.Boolean, default=False)
