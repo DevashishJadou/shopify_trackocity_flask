@@ -95,7 +95,7 @@ def razorpay_webhook(workspace):
 
     # Parse the JSON data from the request
     data = json.loads(request_data)
-    print(f'data razorpay:{data}, data razorpay:{type(data)}')
+    print(f'razorpay data: {data}')
 
     # Process the webhook event based on the event type
     event_type = data.get('event')
@@ -115,7 +115,7 @@ def razorpay_webhook(workspace):
                 order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency)
 
                 db.session.add(order_make)
-                db.session.commit()
+            db.session.commit()
         except Exception as e:
             print(f'Error razorpay webhook:{e.args}')
 
