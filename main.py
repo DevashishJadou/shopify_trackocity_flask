@@ -90,11 +90,11 @@ def before_request():
             verify_jwt_in_request()
             user = UserRegister.query.filter_by(workspace=userid).first()
             if datetime.now() > user.plan_till or user.isactive is False:
-                response = payment_order_creation(user.complete_name, user.workspace, user.plan_till, user.email, user.phone, user.currency)
+                response = payment_order_creation(user.complete_name, userid, user.plan_till, user.email, user.phone, user.currency)
                 user.isactive = False
                 return jsonify({"payment_link":response,"message": "Subscription Expired"}), 403
             if datetime.now() + timedelta(days=3) > user.plan_till and user.isactive:
-                payment_order_creation(user.complete_name, user.workspace, user.plan_till, user.email, user.phone, user.currency)
+                payment_order_creation(user.complete_name, userid, user.plan_till, user.email, user.phone, user.currency)
 
 @app.after_request
 def after_request(response):
@@ -112,7 +112,9 @@ def handle_cors_error(e):
 
 
 def payment_order_creation(name, workspace, plan_till, email, phone='1212121212', currency='INR', product='standard'):
-    payment = Payment.query.filter(workspace=workspace).first()
+    # import pdb
+    # pdb.set_trace()
+    payment = Payment.query.filter(workspace==workspace).first()
     if payment:
         return payment.link
     url = "https://connect.pabbly.com/workflow/sendwebhookdata/IjU3NjUwNTY1MDYzMDA0MzQ1MjZmNTUzZDUxMzYi_pc"
@@ -122,16 +124,16 @@ def payment_order_creation(name, workspace, plan_till, email, phone='1212121212'
     'email': email,
     'phone': phone if phone else '1212121212',
     'product': product,
-    'startat':plan_till.timestamp(), 
+    'startat':max(datetime.now()+timedelta(days=1), plan_till).timestamp(), 
     'workspace':workspace,
-    'total': '4128.82'})
+    'total': '7078.82'})
 
     headers = {
     'Content-Type': 'application/json'
     }
     requests.request("POST", url, headers=headers, data=payload)
     time.sleep(5)
-    payment = Payment.query.filter(Payment.expireon>datetime.now(),Payment.email==email).first()
+    payment = Payment.query.filter(workspace==workspace).first()
     if payment:
         return payment.link
 

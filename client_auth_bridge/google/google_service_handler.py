@@ -63,9 +63,10 @@ def clientaccount():
     headers =  request.headers
     userid = headers.get("workSpaceId")
     token = request.args.get("refresh_token")
-    if request.args.get("systemid") == 'null':
-        id = None
-    id = int(request.args.get("systemid")) if request.args.get("systemid") else None
+    systemid = request.args.get("systemid")
+    if systemid == 'undefined':
+        systemid = None
+    id = int(systemid) if systemid else None
     accounts = request.args.get("customerId")
     for acc in accounts.split(','):
         account = (acc.split('/')[-1]).strip()

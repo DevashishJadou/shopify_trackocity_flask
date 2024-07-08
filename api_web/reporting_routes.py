@@ -290,7 +290,7 @@ def get_reporttablesaledata():
 
 	output = []
 	if user:
-		sort = 'ASC' if attribute == 'first' else 'DESC'
+		sort = 'ASC' if attribute == 'First' else 'DESC'
 		sql_query = db.text("select * from table_salesdata(:workspace, :productid, :startdate, :enddate, :channel, :adid, :sort)")
 
 		result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'channel':channel, 'adid':adid, 'sort':sort})
@@ -455,6 +455,28 @@ def get_dashboardtraffic():
 
 	data={}
 
+	# 	pipeline = [
+	# 	{
+	# 		'$match': {
+	# 			'body.pageLoad': 1,
+	# 			'productid': int(user['productid']),
+	# 			'creation_at': {'$gte': startdate, '$lte': enddate}
+	# 		}
+	# 	},
+	# 	{
+	# 		'$group': {
+	# 			'_id': {'$dateToString': {'format': '%Y-%m-%d', 'date': '$creation_at'}},
+	# 			'page_view': {'$sum': 1}
+	# 		}
+	# 	},
+	# 	{
+	# 		'$sort': {'_id': 1}
+	# 	}
+	# ]
+	# results = list(collection.aggregate(pipeline))
+	# for result in results:
+	# 	result['page_view'] = int(result['page_view'] * 1.03)
+
 	page_view = CustomerInfo.objects(
 		**{"body__pageLoad": 1},
 		productid=int(user.productid),
@@ -485,7 +507,7 @@ def get_dashboardtraffic():
     {'$match': {
         'productid': int(user.productid),
         'creation_at': {'$gte': startdate, '$lte': enddate},
-        'body.customerInfo': {}
+		'body.customerInfo': {}
     }},
     {'$group': {
         '_id': '$session'  # Group by 'localsession' to get distinct values
