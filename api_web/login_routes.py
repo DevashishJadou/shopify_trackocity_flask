@@ -197,19 +197,23 @@ def profile_user_change():
 
     # Check if the user exists
     user = UserRegister.query.filter_by(workspace=userid).first()
-    match = re.search(r"GMT ([+-]\d{2}):\d{2}", data.get('timezone'))
-    if match:
-        offset_hours = int(match.group(1))
+    try:
+        match = data.get('timezone').split(" ")[0].replace('(GMT','').replace(')','') .split(':')
+        if match:
+            offset_hours = int(match[0])
+            offset_minutes = int(match[1])
+            total_offset = offset_hours + offset_minutes / 60
+            user.timezone_value = total_offset
+    except:
+        pass
 
-    if user:
-        user.phone = data.get('phone')
-        user.complete_name = data.get('name')
-        user.currency = data.get('currency')
-        user.company = data.get('company')
-        user.timezone = data.get('timezone')
-        user.timezone_value = offset_hours
+    user.phone = data.get('phone')
+    user.complete_name = data.get('name')
+    user.currency = data.get('currency')
+    user.company = data.get('company')
+    user.timezone = data.get('timezone')
 
-        db.session.commit()
+    db.session.commit()
         
     return jsonify({"message":"Profile Updated"}), 200
 

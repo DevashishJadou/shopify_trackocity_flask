@@ -7,6 +7,7 @@ from .external.routes import external_bp
 from .client_auth_bridge.google.google_service_handler import google_bp
 from .client_auth_bridge.facebook.facebook_service_handler import facebook_bp
 from .integration.payment_gateway.razorpay import payment_bp
+from .integration.payment_gateway.instamojo import payment_bp
 from .integration.channel.woocommerce import channel_bp
 from .integration.channel.shopify import channel_bp
 from .integration.channel.pabbly import channel_bp

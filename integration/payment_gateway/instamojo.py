@@ -1,5 +1,4 @@
 from flask import request, jsonify
-import json, os
 from datetime import datetime, timedelta
 from flask_cors import cross_origin
 
@@ -10,15 +9,14 @@ from sqlalchemy import MetaData
 from ...db_model.sql_models import UserRegister, InstaMojoConfiguration, order_table_dynamic, ordertable
 from ...connection import db
 from ...dbrule import dup_order_rule
-from integration.payment_gateway.razorpay import payment_bp
+from .razorpay import payment_bp
 
-from instamojo_wrapper import Instamojo
 from datetime import datetime
 
 
 metadata = MetaData()
 
-@payment_bp.route('/razorpaycredentials', methods=['POST'])
+@payment_bp.route('/instamojocredentials', methods=['POST'])
 @cross_origin()
 def instamojo_params():
     header = request.headers
@@ -55,11 +53,14 @@ def instamojo_params():
     return jsonify({'message': 'success'}), 200
 
 
-@payment_bp.route('/<workspace>/razorpaywebhook', methods=['POST'])
-def razorpay_webhook(workspace):
-    user = InstaMojoConfiguration.query.filter_by(workspace=workspace).first()
+@payment_bp.route('/<workspace>/instamojowebhook', methods=['POST'])
+def instamojo_webhook(workspace):
+    user = UserRegister.query.filter_by(workspace=workspace).first()
+    if not user.isactive:
+        jsonify({'status': 'Unauthorized'}), 403
     
     data = request.form.to_dict()
+    print(f'instamojo:{data}')
     mac_provided = data.pop('mac', None)
     
     if not mac_provided:
@@ -86,7 +87,7 @@ def razorpay_webhook(workspace):
     # Process the webhook event based on the event type
     if status == 'Credit':
         # Handle payment captured event
-        event_time = datetime.fromtimestamp(datetime.now()) + timedelta(hours=float(user.timezone))
+        event_time = datetime.fromtimestamp(datetime.now()) #+ timedelta(hours=float(user.timezone_value))
         
         order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
         if order_obj is None:

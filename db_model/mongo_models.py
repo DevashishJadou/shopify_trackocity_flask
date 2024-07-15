@@ -7,9 +7,11 @@ from datetime import datetime
 class Fingerprint(me.Document):
     session = me.StringField()
     visitorid = me.StringField()
+    fingerprint = me.StringField()
     productid = me.FloatField()
     creation_at = me.DateTimeField(default=datetime.now)
     localsession = me.StringField()
+    body = me.DictField()
 
 class CustomerInfo(me.Document):
     session = me.StringField()

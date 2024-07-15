@@ -21,8 +21,10 @@ def user_session():
         productid = request.json.get('productId', 'temp')
         creation_at = request.json.get('creationAt')
         usrid = request.json.get('gusId')
+        fingerprint = request.json.get('fingerprint')
         localsession = request.json.get('clickId', None)
         session = request.headers.get('sessionId')
+        body = request.json.get('body')
 
         #Api-key Validation
         securitykey = str(productid) if localsession is None else str(productid)+localsession
@@ -35,7 +37,7 @@ def user_session():
         if not productid or not session or not creation_at or not usrid or not localsession:
             return jsonify({'error': 'Missing parameters'}), 400
 
-        new_product = Fingerprint(visitorid=usrid, session=session, productid=productid, creation_at=creation_at, localsession=localsession)
+        new_product = Fingerprint(visitorid=usrid, fingerprint=fingerprint, session=session, productid=productid, creation_at=creation_at, localsession=localsession, body=body)
         new_product.save()
 
         return jsonify(200), 200

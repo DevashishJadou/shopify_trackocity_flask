@@ -107,7 +107,7 @@ def razorpay_webhook(workspace):
             currency = payload.get('currency')
             email = payload.get('email')
             phone = payload.get('contact')
-            event_time = datetime.fromtimestamp(data.get('created_at')) + timedelta(hours=float(user.timezone))
+            event_time = datetime.fromtimestamp(data.get('created_at')) + timedelta(hours=float(user.timezone_value))
             
             order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
             if order_obj is None:

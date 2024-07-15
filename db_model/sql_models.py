@@ -18,6 +18,7 @@ class UserRegister(db.Model):
     workspace = db.Column(db.String(64), unique=True)
     productid = db.Column(db.String(16), unique=True)
     timezone = db.Column(db.String(128))
+    timezone_value = db.Column(db.Numeric)
     company = db.Column(db.String(64))
     currency = db.Column(db.String(8))
     isverify = db.Column(db.Boolean, default=False)
@@ -50,6 +51,12 @@ class RazorpayConfiguration(db.Model):
     razorpay_client_secret = db.Column(db.String(64))
     active = db.Column(db.Boolean, default=False)
 
+
+class InstaMojoConfiguration(db.Model):
+    __tablename__ = "payment_instamojo_config"
+    id = db.Column(db.Integer, primary_key=True)
+    workspace = db.Column(db.String(64))
+    active = db.Column(db.Boolean, default=False)
 
 class ClientFacebookredentials(db.Model):
     __tablename__ = "client_facebook_credentials"
@@ -96,6 +103,7 @@ class Payment(db.Model):
     link = db.Column(db.String(128))
     status = db.Column(db.String(16))
     transaction_id = db.Column(db.String(64))
+    workspace = db.Column(db.String(64))
     expireon = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
