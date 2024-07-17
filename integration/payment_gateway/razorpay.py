@@ -98,7 +98,7 @@ def razorpay_webhook(workspace):
 
     # Process the webhook event based on the event type
     event_type = data.get('event')
-    print(f'razorpay event: {event_type}')
+    print(f'razorpay event: {workspace}, {event_type}')
     if razorpay_client.active and event_type in ('order.paid', 'payment.captured', 'subscription.completed','refund.processed'):
         try:
             # Handle payment captured event
@@ -116,8 +116,9 @@ def razorpay_webhook(workspace):
                 order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency)
                 db.session.add(order_make)
             db.session.commit()
+            return jsonify({'status': 'success'}), 200
         except Exception as e:
             print(f'Error razorpay webhook:{e.args}')
 
 
-    return jsonify({'status': 'success'}), 200
+    return jsonify({'status': 'success'}), 400

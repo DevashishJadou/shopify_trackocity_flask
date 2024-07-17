@@ -140,4 +140,4 @@ def payment_order_creation(name, workspace, plan_till, email, phone='1212121212'
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
