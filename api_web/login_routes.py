@@ -119,13 +119,13 @@ def login_user():
 @auth_bp.route('/verify/<token>')
 def verify_email(token):
     try:
-        email = s.loads(token, salt='email-verify', max_age=72000)  # Token expires in 1 hour
+        email = s.loads(token, salt='email-verify', max_age=72000)  # Token expires in 2 hour
         user = UserRegister.query.filter_by(email=email).first()
         user.isverify = True
         if user.plan_till and user.plan_till > datetime.now():
             user.isactive = True
         db.session.commit()
-        return redirect(_CLIENT_URL+"/sign-in")
+        return redirect(_CLIENT_URL+"/email-verify")
     except:
         db.session.rollback()
         return 'The verification link is invalid or has expired.'
