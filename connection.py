@@ -59,7 +59,7 @@ db.init_app(app)
 jwt.init_app(app)
 mail = Mail(app)
 
-# disconnect()
+
 db_mongo = connect(host=os.environ.get('_MONGO_URI'))
 # db = MongoEngine(app)
 # MongoDB connection

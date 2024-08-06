@@ -91,11 +91,11 @@ def before_request():
             verify_jwt_in_request()
             user = UserRegister.query.filter_by(workspace=userid).first()
             if datetime.now() > user.plan_till or user.isactive is False:
-                response = payment_order_creation(user.complete_name, userid, user.plan_till, user.email, user.phone, user.currency)
+                # response = payment_order_creation(user.complete_name, userid, user.plan_till, user.email, user.phone, user.currency)
                 user.isactive = False
-                return jsonify({"payment_link":response,"message": "Subscription Expired"}), 403
-            if datetime.now() + timedelta(days=3) > user.plan_till and user.isactive:
-                payment_order_creation(user.complete_name, userid, user.plan_till, user.email, user.phone, user.currency)
+                return jsonify({"message": "Subscription Expired"}), 406
+            # if datetime.now() + timedelta(days=3) > user.plan_till and user.isactive:
+            #     payment_order_creation(user.complete_name, userid, user.plan_till, user.email, user.phone, user.currency)
 
 @app.after_request
 def after_request(response):

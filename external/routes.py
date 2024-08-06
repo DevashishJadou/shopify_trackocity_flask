@@ -3,8 +3,6 @@ from flask import Blueprint, jsonify, request
 import hashlib
 
 from ..db_model.mongo_models import Fingerprint, CustomerInfo, Error
-# from db_model.mongo_models import Fingerprint, CustomerInfo, Error, CustomerInfoext
-
 from flask_cors import cross_origin
 
  

@@ -1,6 +1,6 @@
 # routes.py
 
-from ..db_model.sql_models import UserRegister, EmailChange
+from ..db_model.sql_models import UserRegister, EmailChange, order_table_dynamic
 from ..connection import db, mail, app
 # from db_model.sql_models import UserRegister
 # from connection import db
@@ -75,6 +75,17 @@ def user_registor():
 
     user = UserRegister(complete_name=data['name'], email=data['email'], phone=data['phone'], _password=_hassed_password, workspace=workspace, productid=productid, plan_till=plantill)
     db.session.add(user)
+    db.session.commit()
+
+    tablename = 'order_448e9569ea4a45dbb24a2a096adf951a'
+    orderTable = order_table_dynamic(tablename)
+    orderTable.metadata = db.Model.metadata
+    name = data['name'].split(' ')
+    fname = name[0]
+    lname = name[-1]
+    usr = UserRegister.query.filter_by(email=data['email']).first()
+    order_make = orderTable(order_date=usr.created_at, transcation_id=usr.id, first_name=fname, last_name=lname, email=data['email'], phone=data['phone'])
+    db.session.add(order_make)
     db.session.commit()
 
     token = s.dumps(data['email'], salt='email-verify')
