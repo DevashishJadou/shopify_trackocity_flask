@@ -72,6 +72,24 @@ def handle_invalid_token_error(error):
     return jsonify({'message': 'Invalid JWT Token or Token has expired'}), 401
 
 
+@app.route('/googlesheetuser', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET', 'OPTIONS'], headers=['Content-Type'])
+def googlesheet_user():
+    api_key = request.args.get('api_key')
+    print(f'api_key:{api_key}')
+    if api_key != 'hisd8gi385ho0dfn49js80943tggbo934t90ge':
+        return jsonify({"message":"Non Authorized"}), 400
+
+    user = UserRegister.query.all()
+    header = ['id','complete_name','email','phone','created_at','isverify','plan_till','company','product_type','timezone_value']
+    data = []
+    data.append(header)
+    for usr in user:
+        row = [usr.id, usr.complete_name, usr.email, usr.phone, usr.created_at, usr.isverify, usr.plan_till, usr.company, usr.product_type, usr.timezone_value]
+        data.append(row)
+    return jsonify(data), 200
+
+
 @app.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
 @cross_origin()
@@ -86,7 +104,7 @@ def refresh():
 def before_request():
     headers = request.headers
     userid = headers.get('workspaceId', None)
-    if request.endpoint != 'refresh':
+    if request.endpoint not in ('refresh', 'googlesheetuser'):
         if userid:
             verify_jwt_in_request()
             user = UserRegister.query.filter_by(workspace=userid).first()
