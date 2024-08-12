@@ -12,11 +12,13 @@ from .integration.channel.woocommerce import channel_bp
 from .integration.channel.shopify import channel_bp
 from .integration.channel.pabbly import channel_bp
 from .api_web.reporting_routes import report_bp
+from .api_web.creative_routes import creative_bp
 from .api_web.integration_routes import intgration_cd
 from .payment import trackocitypayment_bp
-from .connection import create_app, jwt
+from .connection import create_app, jwt, db
 from .db_model.sql_models import UserRegister, Payment
 from datetime import datetime, timedelta
+
 
 
 from flask_cors import CORS, cross_origin
@@ -41,6 +43,7 @@ app.register_blueprint(external_bp, url_prefix='/external')
 app.register_blueprint(google_bp, url_prefix='/google')
 app.register_blueprint(facebook_bp, url_prefix='/facebook')
 app.register_blueprint(report_bp, url_prefix='/reporting')
+app.register_blueprint(creative_bp, url_prefix='/creative')
 app.register_blueprint(payment_bp, url_prefix='/clientpayment')
 app.register_blueprint(channel_bp, url_prefix='/clientchannel')
 app.register_blueprint(trackocitypayment_bp, url_prefix='/trackocitypayment')
@@ -80,12 +83,12 @@ def googlesheet_user():
     if api_key != 'hisd8gi385ho0dfn49js80943tggbo934t90ge':
         return jsonify({"message":"Non Authorized"}), 400
 
-    user = UserRegister.query.all()
-    header = ['id','complete_name','email','phone','created_at','isverify','plan_till','company','product_type','timezone_value']
+    user = UserRegister.query.order_by(UserRegister.id.desc()).all()
+    header = ['id','complete_name','email','phone','created_at','isverify','plan_till','company','product_type','timezone']
     data = []
     data.append(header)
     for usr in user:
-        row = [usr.id, usr.complete_name, usr.email, usr.phone, usr.created_at, usr.isverify, usr.plan_till, usr.company, usr.product_type, usr.timezone_value]
+        row = [usr.id, usr.complete_name, usr.email, usr.phone, usr.created_at, usr.isverify, usr.plan_till, usr.company, usr.product_type, usr.timezone]
         data.append(row)
     return jsonify(data), 200
 
@@ -108,12 +111,15 @@ def before_request():
         if userid:
             verify_jwt_in_request()
             user = UserRegister.query.filter_by(workspace=userid).first()
+            user.last_activity = datetime.now()
             if datetime.now() > user.plan_till or user.isactive is False:
                 # response = payment_order_creation(user.complete_name, userid, user.plan_till, user.email, user.phone, user.currency)
                 user.isactive = False
                 return jsonify({"message": "Subscription Expired"}), 406
             # if datetime.now() + timedelta(days=3) > user.plan_till and user.isactive:
             #     payment_order_creation(user.complete_name, userid, user.plan_till, user.email, user.phone, user.currency)
+            db.session.commit()
+
 
 @app.after_request
 def after_request(response):

@@ -381,8 +381,14 @@ def get_dashboardgraphdata():
 
 
 	sql_prevquery = db.text("select * from dashboard_graphprev_sales(:workspace, :startdate, :enddate)")
-	startdate = datetime.strptime(startdate, '%b %d %Y')
-	enddate = datetime.strptime(enddate, '%b %d %Y')
+	try:
+		startdate = datetime.strptime(startdate, '%b %d %Y')
+	except:
+		startdate = datetime.strptime(startdate, '%b %d, %Y')
+	try:
+		enddate = datetime.strptime(enddate, '%b %d %Y')
+	except:
+		enddate = datetime.strptime(enddate, '%b %d, %Y')
 	difference = enddate - startdate
 	enddate = (startdate - timedelta(days=1)).strftime('%Y-%m-%d')
 	startdate = (startdate - difference).strftime('%Y-%m-%d')
@@ -412,8 +418,12 @@ def sum_dicts(list1, list2):
 
 def channel_matrix(userid, productid, startdate, enddate, fbflag, ggflag):
 
-	startdate_ = datetime.strptime(startdate, '%b %d %Y')
-	enddate_ = datetime.strptime(enddate, '%b %d %Y')
+	try:
+		startdate_ = datetime.strptime(startdate, '%b %d %Y')
+		enddate_ = datetime.strptime(enddate, '%b %d %Y')
+	except:
+		startdate_ = datetime.strptime(startdate, '%b %d, %Y')
+		enddate_ = datetime.strptime(enddate, '%b %d, %Y')
 	difference = enddate_ - startdate_
 	enddate_prev = (startdate_ - timedelta(days=1)).strftime('%Y-%m-%d')
 	startdate_prev = (startdate_ - difference - timedelta(days=1)).strftime('%Y-%m-%d')
@@ -629,8 +639,12 @@ def get_dashboardtraffic():
 	_body = request.args
 	# startdate = datetime.strptime(_body.get('startdate'), "%Y-%m-%d")
 	# enddate = datetime.strptime(_body.get('enddate'), "%Y-%m-%d") + timedelta(days=1)
-	startdate = datetime.strptime(_body.get('startdate'), '%b %d %Y')
-	enddate = datetime.strptime(_body.get('enddate'), '%b %d %Y')
+	try:
+		startdate = datetime.strptime(_body.get('startdate'), '%b %d %Y')
+		enddate = datetime.strptime(_body.get('enddate'), '%b %d %Y')
+	except:
+		startdate = datetime.strptime(_body.get('startdate'), '%b %d, %Y')
+		enddate = datetime.strptime(_body.get('enddate'), '%b %d, %Y')
 	difference = enddate - startdate
 	enddate_prev = (startdate - timedelta(days=1)).strftime('%Y-%m-%d')
 	startdate_prev = (startdate - difference).strftime('%Y-%m-%d')
