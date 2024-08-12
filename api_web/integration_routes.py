@@ -16,9 +16,10 @@ def code_productid():
     workspace = headers.get('workspaceId')
 
     user = UserRegister.query.filter_by(workspace=workspace).first()
+    subdomain = user.subdomain if user.subdomain is not None else 'delivery'
 
     if user:
-        return jsonify({"productid":user.productid}), 200
+        return jsonify({"productid":user.productid, "subdomain":subdomain}), 200
     else:
         return jsonify({"message":"Workspace don't found"}), 400
 

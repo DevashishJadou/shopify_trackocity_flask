@@ -1,6 +1,6 @@
 # routes.py
 
-from ..db_model.sql_models import UserRegister, EmailChange, order_table_dynamic
+from ..db_model.sql_models import UserRegister, EmailChange, order_table_dynamic, UserSubdomain
 from ..connection import db, mail, app
 # from db_model.sql_models import UserRegister
 # from connection import db
@@ -73,7 +73,10 @@ def user_registor():
     productid = random.randint(100000000, 999999999)
     plantill = datetime.now() + timedelta(days=14)
 
-    user = UserRegister(complete_name=data['name'], email=data['email'], phone=data['phone'], _password=_hassed_password, workspace=workspace, productid=productid, plan_till=plantill)
+    subdomain = UserSubdomain.query.filter_by(status=False).first()
+    subdomain.status = True
+
+    user = UserRegister(complete_name=data['name'], email=data['email'], phone=data['phone'], _password=_hassed_password, workspace=workspace, productid=productid, plan_till=plantill, subdomain=subdomain.subdomain)
     db.session.add(user)
     db.session.commit()
 
@@ -84,7 +87,8 @@ def user_registor():
     fname = name[0]
     lname = name[-1]
     usr = UserRegister.query.filter_by(email=data['email']).first()
-    order_make = orderTable(order_date=usr.created_at, transcation_id=usr.id, first_name=fname, last_name=lname, email=data['email'], phone=data['phone'])
+    order_date = usr.created_at + timedelta(hours=11)
+    order_make = orderTable(order_date=order_date, transcation_id=usr.id, first_name=fname, last_name=lname, email=data['email'], phone=data['phone'])
     db.session.add(order_make)
     db.session.commit()
 
@@ -130,7 +134,7 @@ def login_user():
 @auth_bp.route('/verify/<token>')
 def verify_email(token):
     try:
-        email = s.loads(token, salt='email-verify', max_age=72000)  # Token expires in 2 hour
+        email = s.loads(token, salt='email-verify', max_age=7*24*3600)  # Token expires in 7 days
         user = UserRegister.query.filter_by(email=email).first()
         user.isverify = True
         if user.plan_till and user.plan_till > datetime.now():

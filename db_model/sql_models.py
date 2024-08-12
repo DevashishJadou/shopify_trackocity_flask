@@ -25,8 +25,15 @@ class UserRegister(db.Model):
     isactive = db.Column(db.Boolean, default=False)
     plan_till = db.Column(db.DateTime)
     product_type = db.Column(db.String(16))
+    subdomain = db.Column(db.String(16))
     created_at = db.Column(db.DateTime, default=datetime.now)
-    
+    last_activity = db.Column(db.DateTime, default=datetime.now)
+
+class UserSubdomain(db.Model):
+    __tablename__ = "user_subdomain_list"
+    id = db.Column(db.Integer, primary_key=True)
+    subdomain = db.Column(db.String(16))
+    status = db.Column(db.Boolean, default=False)
 
 
 class ClientGoogleCredentials(db.Model):
@@ -114,6 +121,16 @@ class EmailChange(db.Model):
     workspace = db.Column(db.String(32), primary_key=True)
     otp = db.Column(db.String(4))
     created_at = db.Column(db.DateTime, default=datetime.now)
+
+
+class MongoMetric(db.Model):
+    __tablename__ = "mongo_metric"
+    id = db.Column(db.Integer, primary_key=True)
+    dated = db.Column(db.Date)
+    workspace = db.Column(db.String(32))
+    productid = db.Column(db.String(16))
+    metric = db.Column(db.String(16))
+    value = db.Column(db.INTEGER)
 
 def order_table_dynamic(tablename):
     class OrderTable(db.Model):
