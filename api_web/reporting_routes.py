@@ -89,7 +89,7 @@ def get_reporttabledatafacebook():
 			fbdata[campaign_id]["ad_sets"][ad_set_id]["ads"].append({
 				"ad_id": ad_id,
 				"ad_name": row[5],
-				"impressions": row[6],
+				"impression": row[6],
 				"clicks": row[7],
 				"spend": float(row[8]),
 				"sales": int(row[9]),
@@ -197,7 +197,7 @@ def get_reporttabledatagoogle():
 			ggdata[campaign_id]["ad_sets"][ad_set_id]["ads"].append({
 				"ad_id": ad_id,
 				"ad_name": row[5],
-				"impressions": row[6],
+				"impression": row[6],
 				"clicks": row[7],
 				"spend": float(row[8]),
 				"sales": int(row[9]),
