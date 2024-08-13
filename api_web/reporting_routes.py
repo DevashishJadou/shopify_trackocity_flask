@@ -383,15 +383,13 @@ def get_dashboardgraphdata():
 	sql_prevquery = db.text("select * from dashboard_graphprev_sales(:workspace, :startdate, :enddate)")
 	try:
 		startdate = datetime.strptime(startdate, '%b %d %Y')
-	except:
-		startdate = datetime.strptime(startdate, '%b %d, %Y')
-	try:
 		enddate = datetime.strptime(enddate, '%b %d %Y')
 	except:
+		startdate = datetime.strptime(startdate, '%b %d, %Y')
 		enddate = datetime.strptime(enddate, '%b %d, %Y')
 	difference = enddate - startdate
 	enddate = (startdate - timedelta(days=1)).strftime('%Y-%m-%d')
-	startdate = (startdate - difference).strftime('%Y-%m-%d')
+	startdate = (startdate - difference - timedelta(days=1)).strftime('%Y-%m-%d')
 	
 	result = db.session.execute(sql_prevquery, {'workspace': userid, 'startdate':startdate, 'enddate':enddate})
 	data = result.fetchall()
@@ -647,7 +645,7 @@ def get_dashboardtraffic():
 		enddate = datetime.strptime(_body.get('enddate'), '%b %d, %Y')
 	difference = enddate - startdate
 	enddate_prev = (startdate - timedelta(days=1)).strftime('%Y-%m-%d')
-	startdate_prev = (startdate - difference).strftime('%Y-%m-%d')
+	startdate_prev = (startdate - difference - timedelta(days=1)).strftime('%Y-%m-%d')
 	userid = headers.get('workspaceId')
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
