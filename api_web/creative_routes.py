@@ -79,7 +79,7 @@ def get_dashboardgraphdata():
 	crdata["aov"] = round(crdata["revenue"] / max(crdata["sales"], 1))
 	crdata["cpc"] = round(crdata["spend"] / max(crdata["clicks"], 1),2)
 	crdata["cpm"] = round(crdata["spend"]*1000 / max(crdata["impression"], 1),2)
-	crdata["ctr"] = round(crdata["clicks"]*1000 / max(crdata["impression"], 1),2)
+	crdata["ctr"] = round(crdata["clicks"]*100 / max(crdata["impression"], 1),2)
 	crdata["cr"] = round(crdata["sales"]*100 / max(crdata["clicks"], 1),2)
 
 	return jsonify(crdata), 200

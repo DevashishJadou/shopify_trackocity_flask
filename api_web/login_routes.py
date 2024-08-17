@@ -87,7 +87,7 @@ def user_registor():
     fname = name[0]
     lname = name[-1]
     usr = UserRegister.query.filter_by(email=data['email']).first()
-    order_date = usr.created_at + timedelta(hours=11)
+    order_date = usr.created_at + timedelta(hours=5.5)
     order_make = orderTable(order_date=order_date, transcation_id=usr.id, first_name=fname, last_name=lname, email=data['email'], phone=data['phone'])
     db.session.add(order_make)
     db.session.commit()
