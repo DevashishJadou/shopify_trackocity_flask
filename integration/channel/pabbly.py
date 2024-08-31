@@ -47,6 +47,8 @@ def pabbly_integration():
 
 
 def parse_date(date_str):
+    if isinstance(date_str, datetime):
+        return date_str
     try:
         # First attempt to parse the date normally
         return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
@@ -92,11 +94,7 @@ def pabbly_webhook(workspace):
     orderTable = order_table_dynamic(tablename)
     orderTable.metadata = db.Model.metadata
 
-    # Parse the JSON data from the request
-    request_data = request.get_data()
-    data = json.loads(request_data)
-    print(f"pabbly data: {data}")
-
+    data = request.get_json()
   
     # Handle payment captured event
     first_name = data.get('first_name')
@@ -106,12 +104,13 @@ def pabbly_webhook(workspace):
     amount = data.get('total')
     currency = data.get('currency')
     email = data.get('email')
+    phone = data.get('phone')
     payment_method = data.get('payment_method')
-    event_time = parse_date(data.get('order_date')).strftime("%Y-%m-%d %H:%M:%S")
+    event_time = parse_date(data.get('order_date', datetime.now()+timedelta(hours=5.5))).strftime("%Y-%m-%d %H:%M:%S")
         
     order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
     if order_obj is None:
-        order_make = orderTable(order_date=event_time, transcation_id=payment_id, first_name=first_name, last_name=last_name, email=email, payment_method=payment_method, total=amount, order_status=order_status)
+        order_make = orderTable(order_date=event_time, transcation_id=payment_id, first_name=first_name, last_name=last_name, email=email, phone=phone, payment_method=payment_method, total=amount, order_status=order_status)
 
         db.session.add(order_make)
     db.session.commit()
