@@ -110,9 +110,11 @@ def pabbly_webhook(workspace):
         
     order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
     if order_obj is None:
-        order_make = orderTable(order_date=event_time, transcation_id=payment_id, first_name=first_name, last_name=last_name, email=email, phone=phone, payment_method=payment_method, total=amount, order_status=order_status)
-
-        db.session.add(order_make)
+        try:
+            order_make = orderTable(order_date=event_time, transcation_id=payment_id, first_name=first_name, last_name=last_name, email=email, phone=phone, payment_method=payment_method, total=amount, order_status=order_status)
+            db.session.add(order_make)
+        except:
+            print(f'pabblydata:{data}')
     db.session.commit()
 
 
