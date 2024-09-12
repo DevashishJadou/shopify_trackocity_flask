@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from flask_cors import cross_origin
 
 from sqlalchemy import MetaData
-import hashlib
+import hashlib, random
 
 from ...db_model.sql_models import UserRegister, order_table_dynamic, ordertable
 from .woocommerce import channel_bp
@@ -100,7 +100,7 @@ def pabbly_webhook(workspace):
     first_name = data.get('first_name')
     last_name = data.get('last_name')
     order_status = data.get('order_status')
-    payment_id = data.get('order_number')
+    payment_id = data.get('order_number', random.randint(1, 9999999))
     amount = data.get('total')
     currency = data.get('currency')
     email = data.get('email')
