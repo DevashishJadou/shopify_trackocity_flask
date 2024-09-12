@@ -107,9 +107,9 @@ def pabbly_webhook(workspace):
     payment_method = data.get('payment_method')
     event_time = parse_date(data.get('order_date', datetime.now()+timedelta(hours=5.5))).strftime("%Y-%m-%d %H:%M:%S")
     if data.get('order_number') == '001':
-        payment_id = random.randint(1, 9999999)
+        payment_id = str(random.randint(1, 9999999))
     else:
-        payment_id = data.get('order_number', random.randint(1, 9999999))
+        payment_id = data.get('order_number', str(random.randint(1, 9999999)))
 
     print(f'pabblydata:{data}')
     order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
