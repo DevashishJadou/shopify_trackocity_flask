@@ -78,16 +78,16 @@ def pabbly_webhook(workspace):
     # "notes":{"order_signature":"55cefa46e2b7622026471e1393130056447cf9f4eb19b0b86811bbec21ddf026",
     # "sio_order_item_id":5659823},"created_at":1701769359}}},"created_at":1701769395}
 
-    # user = UserRegister.query.filter_by(workspace=workspace).first()
-    # if not user.isactive:
-    #     jsonify({'status': 'Unauthorized'}), 403
+    user = UserRegister.query.filter_by(workspace=workspace).first()
+    if not user.isactive:
+        jsonify({'status': 'Unauthorized'}), 403
 
     signature = request.headers.get('Authorization')
     key = workspace + "trackocity"
     verify = signature == hashlib.sha256(key.encode('utf-8')).hexdigest()
 
-    # if not verify:
-    #     return jsonify({'error': 'Invalid Authorization'}), 400
+    if not verify:
+        return jsonify({'error': 'Invalid Authorization'}), 400
     
         
     tablename = 'order_'+workspace
@@ -111,7 +111,6 @@ def pabbly_webhook(workspace):
     else:
         payment_id = data.get('order_number', str(random.randint(1, 9999999)))
 
-    print(f'pabblydata:{data}')
     order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
     if order_obj is None:
         try:
