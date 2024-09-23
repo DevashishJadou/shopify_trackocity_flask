@@ -3,7 +3,7 @@ Resources:
   - TargetService:
       Type: AWS::ECS::Service
       Properties:
-              TaskDefinition: "arn:aws:ecs:ap-south-1:705653111952:task-definition/trackocity-flask-dev-task:1"
+              TaskDefinition: "arn:aws:ecs:ap-south-1:705653111952:task-definition/trackocity-flask-dev-task:170"
               LoadBalancerInfo:
                       ContainerName: "trackocity-dev-container"
                       ContainerPort: 5000     
