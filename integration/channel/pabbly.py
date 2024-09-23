@@ -35,7 +35,6 @@ def pabbly_integration():
             pabbly_table = ordertable(tablename)
             try:
                 pabbly_table.create(bind=db.engine)
-                dup_order_rule(tablename)
             except:
                 pass
     except Exception as e:

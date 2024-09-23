@@ -4,7 +4,7 @@ from flask_cors import cross_origin
 from cryptography.fernet import Fernet
 import requests
 
-from ...db_model.sql_models import ClientFacebookredentials, facebookads_table
+from ...db_model.sql_models import ClientFacebookredentials, facebookads_table, facebookcreative_table
 from ...connection import db
 # from db_model import sql_models, facebookads
 
@@ -49,6 +49,13 @@ def authorize_endpoint():
                 facebook_table = facebookads_table(tablename)
                 facebook_table.create(bind=db.engine)
         except:
+            pass
+        try:
+            tablename = 'facebookcreative_'+workspace
+            if not metadata.tables.get(tablename):
+                facebook_table = facebookcreative_table(tablename)
+                facebook_table.create(bind=db.engine)
+        except Exception as e:
             pass
         db.session.add(user_make)
         db.session.commit()

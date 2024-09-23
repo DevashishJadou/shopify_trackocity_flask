@@ -25,6 +25,7 @@ class UserRegister(db.Model):
     isactive = db.Column(db.Boolean, default=False)
     plan_till = db.Column(db.DateTime)
     product_type = db.Column(db.String(16))
+    account_type = db.Column(db.String(16))
     subdomain = db.Column(db.String(16))
     created_at = db.Column(db.DateTime, default=datetime.now)
     last_activity = db.Column(db.DateTime, default=datetime.now)
@@ -34,6 +35,24 @@ class UserSubdomain(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     subdomain = db.Column(db.String(16))
     status = db.Column(db.Boolean, default=False)
+
+
+# class AgencyRegister(db.Model):
+#     __tablename__ = "agency_register"
+#     id = db.Column(db.Integer, primary_key=True)
+#     complete_name = db.Column(db.String(255))
+#     email = db.Column(db.String(64))
+#     phone = db.Column(db.String(16))
+#     _password = db.Column(db.String(255))
+#     workspace = db.Column(db.String(64), unique=True)
+#     productid = db.Column(db.String(16), unique=True)
+#     timezone = db.Column(db.String(128))
+#     company = db.Column(db.String(128))
+#     currency = db.Column(db.String(8))
+#     isverify = db.Column(db.Boolean, default=False)
+#     isactive = db.Column(db.Boolean, default=False)
+#     created_at = db.Column(db.DateTime, default=datetime.now)
+
 
 
 class ClientGoogleCredentials(db.Model):
@@ -204,6 +223,7 @@ def ordertable(tablename):
             Column('order_status', String(32)),
 			Column('customer_ip', String(64)),
 			Column('customer_user_agent', Text),
+            Column('event_type', String(32)),
 			Column('created_at', DateTime, default=datetime.now),
 			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now)
 		)
@@ -264,3 +284,45 @@ def facebookads_table(tablename):
 		)
     return facebookads_table
 
+
+
+
+def facebookcreative_table(tablename):
+    # Define a table with googleads name and columns
+    metadata = MetaData()
+    facebookcreative_table = Table(
+			tablename,
+			metadata,
+            Column('dated', Date),
+            Column('account', String(32)),
+            Column('account_name', String(64)),
+            Column('adid', String(32)),
+			Column('ad_name', String(128)),
+			Column('adsetid', String(32)),
+            Column('campaignid', String(32)),
+            Column('frequency', Integer),
+            Column('impression', Integer),
+            Column('reach', Integer),
+            Column('spend', Numeric),
+            Column('clicks', Integer),
+            Column('creative_id', String(32)),
+            Column('creative_name', Text),
+            Column('status', String(16)),
+            Column('created_time', DateTime),
+            Column('engagement', Integer),
+            Column('video_view_3s', Integer),
+            Column('video_p25_watched_actions', Integer),
+            Column('video_p50_watched_actions', Integer),
+            Column('video_p100_watched_actions', Integer),
+            Column('video_30_sec_watched_actions', Integer),
+            Column('video_thruplay_watched_actions', Integer),
+            Column('ad_copy', Text),
+            Column('ad_type', String(16)),
+            Column('thumbnail_url', Text),
+            Column('preview_shareable_link', Text),
+            Column('video_length', Numeric),
+            Column('preview', Text),
+            Column('purchase', Integer),
+            UniqueConstraint('dated', 'adid', name=uuid.uuid4().hex)
+		)
+    return facebookcreative_table
