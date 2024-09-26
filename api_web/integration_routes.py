@@ -1,6 +1,6 @@
 # integration pg
 
-from ..db_model.sql_models import UserRegister, ClientFacebookredentials, ClientGoogleCredentials
+from ..db_model.sql_models import *
 from ..connection import db
 
 from flask import Blueprint, request, jsonify
@@ -42,6 +42,18 @@ def integration_facebbok():
         return jsonify({"message":"no account found"}), 400
     
 
+@intgration_cd.route('/facebook/deleteaccount', methods=['PUT', 'OPTIONS'])
+@cross_origin(origins='*', methods=['PUT', 'OPTIONS'], headers=['Content-Type'])
+def integration_facebbok_account_delete():
+    headers = request.headers
+    workspace = headers.get('workspaceId')
+    body = request.args
+    id = body.get('id')
+    row_to_delete = ClientFacebookredentials.query.get(id)
+    db.session.delete(row_to_delete)
+    return jsonify({"message":"no account found"}), 200
+    
+
 @intgration_cd.route('/google', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET', 'OPTIONS'], headers=['Content-Type'])
 def integration_google():
@@ -58,3 +70,37 @@ def integration_google():
         return jsonify({"accounts":accounts}), 200
     else:
         return jsonify({"message":"no account found"}), 400
+    
+
+@intgration_cd.route('/google/deleteaccount', methods=['PUT', 'OPTIONS'])
+@cross_origin(origins='*', methods=['PUT', 'OPTIONS'], headers=['Content-Type'])
+def integration_google_account_delete():
+    headers = request.headers
+    workspace = headers.get('workspaceId')
+    body = request.args
+    id = body.get('id')
+    row_to_delete = ClientGoogleCredentials.query.get(id)
+    db.session.delete(row_to_delete)
+    return jsonify({"message":"no account found"}), 200
+
+
+@intgration_cd.route('/integration', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET', 'OPTIONS'], headers=['Content-Type'])
+def integrationed_plaform():
+    headers = request.headers
+    workspace = headers.get('workspaceId')
+    integation = {}
+
+    shopify = Shopify.query.filter_by(workspace=workspace).first()
+    integation['shopify'] = True if shopify else False
+
+    razorpay = RazorpayConfiguration.query.filter_by(workspace=workspace).first()
+    integation['razorpay'] = True if razorpay else False
+
+    woocommerce = WooCommerce.query.filter_by(workspace=workspace).first()
+    integation['woocommerce'] = True if woocommerce else False
+
+    return jsonify(integation), 200
+
+
+
