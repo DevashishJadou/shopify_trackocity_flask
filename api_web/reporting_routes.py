@@ -680,141 +680,79 @@ def get_dashboardmetric():
 
 
 
-def dashbaord_monog_query(metric, productid, startdate, enddate):
-    if metric == 'pageview':
-        pipeline = [
-        {
-            '$match': {
-                'body.pageLoad': 1,
-                'productid': int(productid),
-                'creation_at': {'$gte': startdate, '$lte': enddate}
-            }
-        },
-        {
-            '$group': {
-                '_id': {'$dateToString': {'format': '%Y-%m-%d', 'date': '$creation_at'}},
-                'page_view': {'$sum': 1}
-            }
-        },
-        {
-            '$sort': {'_id': 1}
-        }
-        ]
-        return list(CustomerInfo.objects.aggregate(*pipeline))
-    
-    if metric in ('localsession', 'session'):
-        pipeline = [
-            {
-                '$match': {
-                    'productid': int(productid),
-                    'creation_at': {'$gte': startdate, '$lte': enddate},
-                    'body.customerInfo': {}
-                }
-            },
-            {
-                '$group': {
-                    '_id': {
-                        'date': {'$dateToString': {'format': '%Y-%m-%d', 'date': '$creation_at'}},
-                        metric: '$'+metric
-                    }
-                }
-            },
-            {
-                '$group': {
-                    '_id': '$_id.date',
-                    metric: {'$sum': 1}
-                }
-            },
-            {
-                '$sort': {'_id': 1}
-            }
-        ]
-        return list(CustomerInfo.objects.aggregate(*pipeline))
-    
-    if metric == 'nuser':
-        pipeline = [
-        {
-            '$match': {
-                'productid': int(productid),
-                'creation_at': {'$gte': startdate, '$lte': enddate},
-                'body.setSession': 1
-            }
-        },
-        {
-            '$group': {
-                '_id': {
-                    'date': {'$dateToString': {'format': '%Y-%m-%d', 'date': '$creation_at'}}
-                },
-                'distinctSessions': {'$addToSet': '$session'}
-            }
-        },
-        {
-            '$project': {
-                'date': '$_id.date',
-                'nuser': {'$size': '$distinctSessions'}
-            }
-        },
-        {
-            '$sort': {'date': 1}
-        }
-    ]
-    return list(CustomerInfo.objects.aggregate(*pipeline))
-
-
-
 @report_bp.route('/dashboardtraffic', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_dashboardtraffic():
-    headers = request.headers
-    _body = request.args
-    # startdate = datetime.strptime(_body.get('startdate'), "%Y-%m-%d")
-    # enddate = datetime.strptime(_body.get('enddate'), "%Y-%m-%d") + timedelta(days=1)
-    try:
-        startdate = datetime.strptime(_body.get('startdate'), '%b %d %Y')
-        enddate = datetime.strptime(_body.get('enddate'), '%b %d %Y')
-    except:
-        startdate = datetime.strptime(_body.get('startdate'), '%b %d, %Y')
-        enddate = datetime.strptime(_body.get('enddate'), '%b %d, %Y')
-    difference = enddate - startdate
-    enddate_prev = (startdate - timedelta(days=1)).strftime('%Y-%m-%d')
-    startdate_prev = (startdate - difference - timedelta(days=1)).strftime('%Y-%m-%d')
-    userid = headers.get('workspaceId')
-    user = UserRegister.query.filter_by(workspace=userid).first()
+	headers = request.headers
+	_body = request.args
+	# startdate = datetime.strptime(_body.get('startdate'), "%Y-%m-%d")
+	# enddate = datetime.strptime(_body.get('enddate'), "%Y-%m-%d") + timedelta(days=1)
+	try:
+		startdate = datetime.strptime(_body.get('startdate'), '%b %d %Y')
+		enddate = datetime.strptime(_body.get('enddate'), '%b %d %Y')
+	except:
+		startdate = datetime.strptime(_body.get('startdate'), '%b %d, %Y')
+		enddate = datetime.strptime(_body.get('enddate'), '%b %d, %Y')
+	difference = enddate - startdate
+	enddate_prev = (startdate - timedelta(days=1)).strftime('%Y-%m-%d')
+	startdate_prev = (startdate - difference - timedelta(days=1)).strftime('%Y-%m-%d')
+	userid = headers.get('workspaceId')
+	user = UserRegister.query.filter_by(workspace=userid).first()
 
-    trafficdata = {'pageview':{"data":[], "total":0.0, "compare":0.0}}
+	trafficdata = {'pageview':{"data":[], "total":0.0, "compare":0.0}}
 
-    
-    
-    # for metric in ['page_view','session','localsession','nuser']:
-    for metric in ['page_view']:
-        result = dashbaord_monog_query(metric, user.productid, startdate, enddate)
-        metric = MongoMetric.query.filter(MongoMetric.dated>=_body.get('startdate'), MongoMetric.dated<=_body.get('enddate'), MongoMetric.workspace==userid, MongoMetric.metric==metric)
+	pipeline = [
+	{
+		'$match': {
+			'body.pageLoad': 1,
+			'productid': int(user.productid),
+			'creation_at': {'$gte': startdate, '$lte': enddate}
+		}
+	},
+	{
+		'$group': {
+			'_id': {'$dateToString': {'format': '%Y-%m-%d', 'date': '$creation_at'}},
+			'page_view': {'$sum': 1}
+		}
+	},
+	{
+		'$sort': {'_id': 1}
+	}
+	]
+	pvresult = list(CustomerInfo.objects.aggregate(*pipeline))
+	
+	# for result in results:
+	# 	result['page_view'] = int(result['page_view'] * 1.03)
+	pageview_metric = MongoMetric.query.filter(MongoMetric.dated>=_body.get('startdate'), MongoMetric.dated<=_body.get('enddate'), MongoMetric.workspace==userid, MongoMetric.metric=='page_view')
 
-        total = 0
-        total_cmp = 0
-        combined_dict = defaultdict(int)
-        for entry in result:
-            if metric == 'nuser':
-                combined_dict[entry['date']] += entry[metric]
-            else:
-                combined_dict[entry['_id']] += entry[metric]
-            total += entry[metric]
+	total_pageview = 0
+	total_pageview_cmp = 0
+	combined_dict = defaultdict(int)
+	for entry in pvresult:
+		combined_dict[entry['_id']] += entry['page_view']
+		total_pageview += entry['page_view']
 
-        for entry in metric:
-            dated = entry.dated
-            combined_dict[dated.strftime('%Y-%m-%d')] += entry.value
-            total += entry.value
-        
-        trafficdata[metric]['data'].append([{'date': date, 'value': value} for date, value in combined_dict.items()])
-        trafficdata[metric]['total'] = total
+	for entry in pageview_metric:
+		dated = entry.dated
+		combined_dict[dated.strftime('%Y-%m-%d')] += entry.value
+		total_pageview += entry.value
+	
+	trafficdata['pageview']['data'].append([{'date': date, 'value': value} for date, value in combined_dict.items()])
+	trafficdata['pageview']['total'] = total_pageview
 
-        metric_cmp = MongoMetric.query.filter(MongoMetric.dated>=startdate_prev, MongoMetric.dated<=enddate_prev, MongoMetric.workspace==userid, MongoMetric.metric==metric)
-        for entry in metric_cmp:
-            total_cmp += entry.value
-        trafficdata[metric]['compare'] = (100.0*(total - total_cmp) / max(total_cmp,1)) if (total_cmp) != 0 else 0
+	pageview_metric_cmp = MongoMetric.query.filter(MongoMetric.dated>=startdate_prev, MongoMetric.dated<=enddate_prev, MongoMetric.workspace==userid, MongoMetric.metric=='page_view')
+	for entry in pageview_metric_cmp:
+		total_pageview_cmp += entry.value
 
-     
-    # localsess_pipeline = [
+	trafficdata['pageview']['compare'] = (100.0*(total_pageview - total_pageview_cmp) / max(total_pageview_cmp,1)) if (total_pageview_cmp) != 0 else 0
+
+	# import pdb
+	# pdb.set_trace()
+
+
+
+	
+	# localsess_pipeline = [
     # {'$match': {
     #     'productid': int(user.productid),
     #     'creation_at': {'$gte': startdate, '$lte': enddate}
@@ -823,8 +761,8 @@ def get_dashboardtraffic():
     #     '_id': '$localsession'
     # }},
     # {'$count': 'distinct_localsession_count'}
-    # ]
-    # localsess_pipeline = [
+	# ]
+	# localsess_pipeline = [
     # {'$match': {
     #     'productid': int(user.productid),
     #     'creation_at': {'$gte': startdate, '$lte': enddate}
@@ -841,77 +779,81 @@ def get_dashboardtraffic():
     #     '_id': 1,
     #     'distinct_localsession_count': {'$size': '$distinct_localsessions'}
     # }}
-    # ]
-    # usr = list(CustomerInfo.objects.aggregate(*localsess_pipeline))
-    # try:
-    # 	data['user'] = usr[0]['distinct_localsession_count']
-    # except:
-    # 	data['user'] = 0
+	# ]
+	# usr = list(CustomerInfo.objects.aggregate(*localsess_pipeline))
+	# try:
+	# 	data['user'] = usr[0]['distinct_localsession_count']
+	# except:
+	# 	data['user'] = 0
 
 
-    # sess_pipeline = [
+	# sess_pipeline = [
     # {'$match': {
     #     'productid': int(user.productid),
     #     'creation_at': {'$gte': startdate, '$lte': enddate},
-    # 	'body.customerInfo': {}
+	# 	'body.customerInfo': {}
     # }},
     # {'$group': {
     #     '_id': '$session'  # Group by 'localsession' to get distinct values
     # }},
     # {'$count': 'distinct_session_count'}  # Counts the number of distinct groups
-    # ]
-    # unique_usr = list(CustomerInfo.objects.aggregate(*sess_pipeline))
-    # try:
-    # 	data['unique_user'] = unique_usr[0]['distinct_session_count']
-    # except:
-    # 	data['unique_user'] = 0
+	# ]
+	# unique_usr = list(CustomerInfo.objects.aggregate(*sess_pipeline))
+	# try:
+	# 	data['unique_user'] = unique_usr[0]['distinct_session_count']
+	# except:
+	# 	data['unique_user'] = 0
 
 
-    # if user.product_type == 'growth':
-    # 	bounce_pipeline = [
-    # 		{
-    # 			'$match': {
-    # 				'productid': float(user.productid),
-    # 				'creation_at': {'$gte': startdate, '$lte': enddate}
-    # 			}
-    # 		},
-    # 		{
-    # 			'$group': {
-    # 				'_id': '$localsession',
-    # 				'count': {'$sum': 1}  # Count occurrences of each localsession
-    # 			}
-    # 		},
-    # 		{
-    # 			'$match': {
-    # 				'count': 1  # Filter to keep only those groups where count is exactly 1
-    # 			}
-    # 		},
-    # 		{
-    # 			'$count': 'unique_localsession_count'
-    # 		}
-    # 	]
+	# if user.product_type == 'growth':
+	# 	bounce_pipeline = [
+	# 		{
+	# 			'$match': {
+	# 				'productid': float(user.productid),
+	# 				'creation_at': {'$gte': startdate, '$lte': enddate}
+	# 			}
+	# 		},
+	# 		{
+	# 			'$group': {
+	# 				'_id': '$localsession',
+	# 				'count': {'$sum': 1}  # Count occurrences of each localsession
+	# 			}
+	# 		},
+	# 		{
+	# 			'$match': {
+	# 				'count': 1  # Filter to keep only those groups where count is exactly 1
+	# 			}
+	# 		},
+	# 		{
+	# 			'$count': 'unique_localsession_count'
+	# 		}
+	# 	]
 
-    # 	session = data['user'] if data['user'] !=0 else 1
-    # 	try:
-    # 		bounce = list(CustomerInfo.objects.aggregate(*bounce_pipeline))
-    # 		data['bounce_rate'] = round(bounce[0]['unique_localsession_count']*100/session,2)
-    # 	except:
-    # 		data['bounce_rate'] = 0.0
+	# 	session = data['user'] if data['user'] !=0 else 1
+	# 	try:
+	# 		bounce = list(CustomerInfo.objects.aggregate(*bounce_pipeline))
+	# 		data['bounce_rate'] = round(bounce[0]['unique_localsession_count']*100/session,2)
+	# 	except:
+	# 		data['bounce_rate'] = 0.0
 
-    # 	data['page_view_per_session'] = round(data['page_view']/session, 2)
+	# 	data['page_view_per_session'] = round(data['page_view']/session, 2)
 
-    
-    # tablename = 'order_' + userid
-    # orderTable = order_table_dynamic(tablename)
-    # db.Model.metadata.reflect(db.engine)
-    # conversion = orderTable.query.filter(
+	
+	# tablename = 'order_' + userid
+	# orderTable = order_table_dynamic(tablename)
+	# db.Model.metadata.reflect(db.engine)
+	# conversion = orderTable.query.filter(
     #     orderTable.order_date >= startdate,
     #     orderTable.order_date <= enddate
     # ).count()
-    # if data['user'] == 0:
-    # 	data['cr'] = 0.0
-    # else:
-    # 	data['cr'] = round(conversion*100.0/data['user'],2)
+	# if data['user'] == 0:
+	# 	data['cr'] = 0.0
+	# else:
+	# 	data['cr'] = round(conversion*100.0/data['user'],2)
 
 
-    return jsonify(trafficdata), 200
+	return jsonify(trafficdata), 200
+
+
+
+

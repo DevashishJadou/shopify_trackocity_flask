@@ -38,7 +38,7 @@ def get_dashboardgraphdata():
 		impression = int(row[12]);  click = int(row[13]);	engagement = int(row[14])
 		vv3s = int(row[15]); 	   p25 = int(row[16]);		p50 = int(row[17])
 		p100 = int(row[18]);	   sec30 = int(row[19]);	thruplay = int(row[20])
-		videolength = round(float(row[21],2));    adcount = int(row[22]);    
+		videolength = round(float(row[21]),2);    adcount = int(row[22]);    
 
 		if adtype == 'SHARE' and vv3s>0:
 			adtype = 'VIDEO'
