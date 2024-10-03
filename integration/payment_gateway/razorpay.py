@@ -99,7 +99,7 @@ def razorpay_webhook(workspace):
     # Process the webhook event based on the event type
     event_type = data.get('event')
 
-    if razorpay_client.active and event_type in ('order.paid', 'payment.captured', 'subscription.charged','refund.processed'):
+    if razorpay_client.active and event_type in ('order.paid', 'payment.captured', 'subscription.charged'):
         try:
             # Handle payment captured event
             payload = data.get('payload').get('payment').get('entity')
@@ -118,6 +118,7 @@ def razorpay_webhook(workspace):
             return jsonify({'status': 'success'}), 200
         except Exception as e:
             print(f'Error razorpay webhook:{e.args}')
+            return jsonify({'status': 'success'}), 200
     
     if razorpay_client.active and event_type in ('refund.processed'):
         try:
@@ -128,6 +129,7 @@ def razorpay_webhook(workspace):
             return jsonify({'status': 'success'}), 200
         except Exception as e:
             print(f'Error razorpay webhook:{e.args}')
+            return jsonify({'status': 'success'}), 200
 
 
-    return jsonify({'status': 'success'}), 400
+    return jsonify({'status': 'success'}), 200
