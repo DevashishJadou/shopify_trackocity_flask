@@ -215,10 +215,12 @@ def get_reporttabledatagoogle():
 
         ggdata = {}
         ggadsdata = {
-            "Impression": 0, "Clicks": 0, "Spend": 0.0,
-            "Sales": 0, "Revenue": 0.0, "CancelOrder": 0,
+            "Impression": 0, "Clicks": 0, "Spend": 0.0, "Profit":0.0,
+            "Sales": 0, "Revenue": 0.0, "ROAS": 0.0, "AOV": 0.0,
+			"CPC": 0.0, "CPA":0.0, "CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
             "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
-            "nWV": 0, "nvisitor":0, "visitor":0, "nSpend":0.0
+            "nWV": 0, "nvisitor":0, "visitor":0,
+            "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "nWV %":0.0
         }
 
         # Process each row of data
@@ -227,7 +229,7 @@ def get_reporttabledatagoogle():
                 "ad_name": 5, "Impression": 6, "Clicks": 7, "Spend": 8,
                 "Sales": 9, "Revenue": 10, "CancelOrder": 11, 
                 "CancelRev": 12, "nSales": 13, "nRevenue": 14, 
-                "nWV": 15, "nvisitor":16, "visitor":17, "nSpend":18
+                "nWV": 15, "nvisitor":16, "visitor":17
             })
 
         # Convert ad_sets to list in campaigns
