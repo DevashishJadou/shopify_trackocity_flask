@@ -49,9 +49,15 @@ def integration_facebbok_account_delete():
     workspace = headers.get('workspaceId')
     body = request.args
     id = body.get('id')
-    row_to_delete = ClientFacebookredentials.query.get(id)
-    db.session.delete(row_to_delete)
-    return jsonify({"message":"no account found"}), 200
+    row_to_delete = ClientFacebookredentials.query.filter_by(id=id, workspace=workspace).first()
+    if row_to_delete:
+        # If the row exists, delete it
+        db.session.delete(row_to_delete)
+        db.session.commit()  # Commit the transaction to delete the row
+        return jsonify({"message": "Account successfully deleted"}), 200
+    else:
+        # Return an appropriate message if the row doesn't exist
+        return jsonify({"message": "No account found"}), 404
     
 
 @intgration_cd.route('/google', methods=['GET', 'OPTIONS'])
@@ -79,9 +85,16 @@ def integration_google_account_delete():
     workspace = headers.get('workspaceId')
     body = request.args
     id = body.get('id')
-    row_to_delete = ClientGoogleCredentials.query.get(id)
-    db.session.delete(row_to_delete)
-    return jsonify({"message":"no account found"}), 200
+    row_to_delete = ClientGoogleCredentials.query.filter_by(id=id, workspace=workspace).first()
+
+    if row_to_delete:
+        # If the row exists, delete it
+        db.session.delete(row_to_delete)
+        db.session.commit()  # Commit the transaction to delete the row
+        return jsonify({"message": "Account successfully deleted"}), 200
+    else:
+        # Return an appropriate message if the row doesn't exist
+        return jsonify({"message": "No account found"}), 404
 
 
 @intgration_cd.route('/integration', methods=['GET', 'OPTIONS'])
@@ -101,6 +114,3 @@ def integrationed_plaform():
     integation['woocommerce'] = True if woocommerce else False
 
     return jsonify(integation), 200
-
-
-

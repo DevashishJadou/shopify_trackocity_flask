@@ -5,6 +5,7 @@ from ..db_model.mongo_models import CustomerInfo
 from ..connection import db
 
 from flask import Blueprint, request, jsonify
+from sqlalchemy import text
 from .schema import FB
 from flask_cors import cross_origin
 import json
@@ -33,267 +34,212 @@ def get_all_user():
 		}), 200 
 
 
+# Utility function to update metrics
+def update_metrics(metrics, row, indexes):
+    metrics["Impression"] += row[indexes["Impression"]]
+    metrics["Clicks"] += row[indexes["Clicks"]]
+    metrics["Spend"] += float(row[indexes["Spend"]])
+    metrics["Sales"] += int(row[indexes["Sales"]])
+    metrics["Revenue"] += float(row[indexes["Revenue"]])
+    metrics["Profit"] += (float(row[indexes["Revenue"]]) - float(row[indexes["Spend"]]))
+    metrics["CancelOrder"] += int(row[indexes["CancelOrder"]])
+    metrics["CancelRev"] += float(row[indexes["CancelRev"]])
+    metrics["nSales"] += int(row[indexes["nSales"]])
+    metrics["nRevenue"] += float(row[indexes["nRevenue"]])
+    metrics["nWV"] += min((int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]])), row[indexes["Clicks"]])
+    metrics["nvisitor"] += int(row[indexes["nvisitor"]])
+    metrics["visitor"] += (int(row[indexes["nvisitor"]]) + int(row[indexes["nWV"]]))
+
+    # Calculate new metrics
+    metrics["CPM"] = round(metrics["Spend"] *1000 / max(metrics["Impression"],1), 2)
+    metrics["ROAS"] = round(metrics["Revenue"] / max(metrics["Spend"], 1),2)
+    metrics["AOV"] = round(metrics["Revenue"] / max(metrics["Sales"], 1),2)
+    metrics["CPA"] = round(metrics["Spend"] / max(metrics["Sales"], 1),2)
+    metrics["CPC"] = round(metrics["Spend"] / max(metrics["Clicks"], 1),2)
+    metrics["CTR %"] = round(metrics["Clicks"]*100 / max(metrics["Impression"], 1),2)
+    metrics["CR %"] = round(metrics["Sales"]*100 / max(metrics["Clicks"], 1),2)
+	
+    metrics["nSpend"] = float(metrics["Spend"]) * min(metrics["Clicks"], metrics["visitor"]) / max(1, metrics["Clicks"], metrics["visitor"])
+    metrics["nROAS"] = round(metrics["nRevenue"] / max(metrics["Spend"], 1),2)
+    metrics["nAOV"] = round(metrics["nRevenue"] / max(metrics["nSales"], 1),2)
+    metrics["nCPA"] = round(metrics["Spend"] / max(metrics["nSales"], 1),2)
+    metrics["nCPC"] = round(metrics["Spend"] / max(metrics["visitor"], 1),2)
+    metrics["nCR %"] = round(metrics["nSales"]*100 / max(metrics["visitor"], 1),2)
+    metrics["nWV %"] = round(metrics["nWV"]*100 / max(metrics["Clicks"],1) ,2)
+    # metrics["eCPNV"] = round(metrics["Spend"] / max(metrics["nWV"], 1),2)
+
+# Utility function to initialize campaign and ad set
+def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
+    if campaign_id not in data:
+        data[campaign_id] = {
+            "campaign_id": campaign_id,
+            "campaign_name": row[1],
+            "ad_sets": {},
+            "Impression": 0, "Clicks": 0, "Spend": 0.0,
+            "Sales": 0, "Revenue": 0.0, "Profit":0.0, "CPM":0, "ROAS": 0.0, "AOV": 0.0,
+			"CPC": 0.0, "CPA":0.0, "CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
+            "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
+            "nWV": 0, "nvisitor": 0, "visitor": 0, "nSpend": 0.0,
+            "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "nWV %": 0.0
+        }
+    if ad_set_id not in data[campaign_id]["ad_sets"]:
+        data[campaign_id]["ad_sets"][ad_set_id] = {
+            "ad_set_id": ad_set_id,
+            "ad_set_name": row[3],
+            "ads": [],
+            "Impression": 0, "Clicks": 0, "Spend": 0.0, "Profit": 0.0,
+            "Sales": 0, "Revenue": 0.0, "CPM":0, "ROAS": 0.0, "AOV": 0.0,
+			"CPC": 0.0, "CPA":0.0, "CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
+            "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
+            "nWV": 0, "nvisitor": 0, "visitor": 0, "nSpend": 0.0,
+            "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "nWV %": 0.0
+        }
+
+# Utility function to process ads
+def process_ads(data, fbadsdata, row, indexes):
+    campaign_id, ad_set_id, ad_id = row[0], row[2], row[4]
+    
+    # Initialize campaign and ad set
+    initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id)
+    nspend = float(row[indexes["Spend"]]) * min(row[indexes["Clicks"]], int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]])) / max(1, row[indexes["Clicks"]], int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]))
+    
+    # Add ad details
+    data[campaign_id]["ad_sets"][ad_set_id]["ads"].append({
+        "ad_id": ad_id,
+        "ad_name": row[indexes["ad_name"]],
+        "Impression": row[indexes["Impression"]],
+        "Clicks": row[indexes["Clicks"]],
+        "Spend": round(float(row[indexes["Spend"]]),2),
+        "Sales": int(row[indexes["Sales"]]),
+        "Revenue": float(row[indexes["Revenue"]]),
+		"Profit" : round(float(row[indexes["Revenue"]]) - float(row[indexes["Spend"]]),2),
+		"CPM": round(float(row[indexes["Spend"]]*1000 / max(row[indexes["Impression"]],1)),2),
+		"ROAS": round(float(row[indexes["Revenue"]]) / max(float(row[indexes["Spend"]]), 1),2),
+        "AOV": round(float(row[indexes["Revenue"]]) / max(int(row[indexes["Sales"]]), 1),2),
+        "CPA": round(float(row[indexes["Spend"]]) / max(int(row[indexes["Sales"]]), 1),2),
+        "CPC": round(float(row[indexes["Spend"]]) / max(int(row[indexes["Clicks"]]), 1),2),
+		"CTR %": round(float(row[indexes["Clicks"]])*100 / max(int(row[indexes["Impression"]]), 1),2),
+        "CR %": round(int(row[indexes["Sales"]])*100 / max(int(row[indexes["Clicks"]]), 1),2),
+        "CancelOrder": int(row[indexes["CancelOrder"]]),
+        "CancelRev": float(row[indexes["CancelRev"]]),
+        "nSales": int(row[indexes["nSales"]]),
+        "nRevenue": float(row[indexes["nRevenue"]]),
+        "nWV": min(int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]), row[indexes["Clicks"]]),
+        "nvisitor": int(row[indexes["nvisitor"]]),
+        "visitor": int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]),
+        "nSpend": nspend,
+        "nROAS": round(float(row[indexes["nRevenue"]]) / max(float(nspend), 1),2),
+        "nAOV": round(float(row[indexes["nRevenue"]]) / max(int(row[indexes["nSales"]]), 1),2),
+        "nCPA": round(float(row[indexes["Spend"]]) / max(int(row[indexes["nSales"]]), 1),2),
+        "nCPC": round(float(row[indexes["Spend"]]) / max(int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]), 1),2),
+        "nCR %": round(int(row[indexes["nSales"]])*100 / max(int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]), 1),2),
+		"nWV %": round(min(int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]), row[indexes["Clicks"]])*100 / max(row[indexes["Clicks"]],1) ,2)
+    })
+    
+    # Update metrics for campaign, ad set, and overall
+    update_metrics(fbadsdata, row, indexes)
+    update_metrics(data[campaign_id], row, indexes)
+    update_metrics(data[campaign_id]["ad_sets"][ad_set_id], row, indexes)
+	
+
 @report_bp.route('/fbtable', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_reporttabledatafacebook():
+    headers = request.headers
+    body = request.args
+    startdate = body.get('startdate')
+    enddate = body.get('enddate')
+    attribute = body.get('attribute')
+    userid = headers.get('workspaceId')
+    user = UserRegister.query.filter_by(workspace=userid).first()
 
-	headers = request.headers
-	body = request.args
-	startdate = body.get('startdate')
-	enddate = body.get('enddate')
-	attribute = body.get('attribute')
-	userid = headers.get('workspaceId')
-	user = UserRegister.query.filter_by(workspace=userid).first()
+    if user:
+        sort = 'ASC' if attribute == 'first' else 'DESC'
+        sql_query = text("SELECT * FROM table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort)")
+        result = db.session.execute(sql_query, {
+            'workspace': userid, 'productid': user.productid,
+            'startdate': startdate, 'enddate': enddate, 'sort': sort
+        })
+        data = result.fetchall()
 
-	if user:
-		sort = 'ASC' if attribute == 'first' else 'DESC'
-		sql_query = db.text("select * from table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort)")
-		result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
-		data = result.fetchall()
+        fbdata = {}
+        fbadsdata = {
+            "Impression": 0, "Clicks": 0, "Spend": 0.0, "Profit":0.0,
+            "Sales": 0, "Revenue": 0.0, "ROAS": 0.0, "AOV": 0.0,
+			"CPC": 0.0, "CPA":0.0, "CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
+            "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
+            "nWV": 0, "nvisitor":0, "visitor":0,
+            "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "nWV %":0.0
+        }
 
-		fbdata = {}
-		fbadsdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0, "cancelorder":0, "cancelrev":0.0, "nsales":0, "nrev":0.0, "nclick":0, "nspend":0.0}
-		for row in data:
-			campaign_id = row[0]
-			ad_set_id = row[2]
-			ad_id = row[4]
-			nspend = (float(row[8])*min(int(row[15]), row[7]))/max(row[7],1)
+        # Process each row of data
+        for row in data:
+            process_ads(fbdata, fbadsdata, row, {
+                "ad_name": 5, "Impression": 6, "Clicks": 7, "Spend": 8,
+                "Sales": 9, "Revenue": 10, "CancelOrder": 11, 
+                "CancelRev": 12, "nSales": 13, "nRevenue": 14, 
+                "nWV": 15, "nvisitor":16, "visitor":17
+            })
 
-			if campaign_id not in fbdata:
-				fbdata[campaign_id] = {
-					"campaign_id": campaign_id,
-					"campaign_name": row[1],
-					"ad_sets": {},
-					"impression": 0,
-					"clicks": 0,
-					"spend" : 0.0,
-					"sales" : 0,
-					"revenue" : 0.0,
-					"cancelorder": 0,
-					"cancelrev": 0.0,
-					"nsales":0, 
-					"nrev":0.0, 
-					"nclick":0,
-					"nspend": 0.0
-				}
+        # Convert ad_sets to list in campaigns
+        campaign_list = list(fbdata.values())
+        for campaign in campaign_list:
+            campaign["ad_sets"] = list(campaign["ad_sets"].values())
 
-			if ad_set_id not in fbdata[campaign_id]["ad_sets"]:
-				fbdata[campaign_id]["ad_sets"][ad_set_id] = {
-					"ad_set_id": ad_set_id,
-					"ad_set_name": row[3],
-					"ads": [],
-					"impression": 0,
-					"clicks": 0,
-					"spend" : 0.0,
-					"sales" : 0,
-					"revenue" : 0.0,
-					"cancelorder": 0,
-					"cancelrev": 0.0,
-					"nsales":0, 
-					"nrev":0.0, 
-					"nclick":0,
-					"nspend" : 0.0
-				}
+        fbadsdata["campaign"] = campaign_list
 
-			fbdata[campaign_id]["ad_sets"][ad_set_id]["ads"].append({
-				"ad_id": ad_id,
-				"ad_name": row[5],
-				"impression": row[6],
-				"clicks": row[7],
-				"spend": float(row[8]),
-				"sales": int(row[9]),
-				"revenue": float(row[10]),
-				"cancelorder": int(row[11]),
-				"cancelrev": float(row[12]),
-				"nsales":int(row[13]), 
-				"nrev":float(row[14]), 
-				"nclick":int(row[15]),
-				"nspend": nspend
-			})
-
-			fbadsdata["impression"] = fbadsdata["impression"] + row[6]
-			fbadsdata["clicks"] = fbadsdata["clicks"] + row[7]
-			fbadsdata["spend"] = fbadsdata["spend"] + float(row[8])
-			fbadsdata["sales"] = fbadsdata["sales"] + int(row[9])
-			fbadsdata["revenue"] = fbadsdata["revenue"] + float(row[10])
-			fbadsdata["cancelorder"] = fbadsdata["cancelorder"] + int(row[11])
-			fbadsdata["cancelrev"] = fbadsdata["cancelrev"] + float(row[12])
-			fbadsdata["nsales"] = fbadsdata["nsales"] + int(row[13])
-			fbadsdata["nrev"] = fbadsdata["nrev"] + float(row[14])
-			fbadsdata["nclick"] = fbadsdata["nclick"] + int(row[15])
-			fbadsdata["nspend"] = fbadsdata["nspend"] + nspend
-			
-			fbdata[campaign_id]["impression"] = fbdata[campaign_id]["impression"] + row[6]
-			fbdata[campaign_id]["clicks"] = fbdata[campaign_id]["clicks"] + row[7]
-			fbdata[campaign_id]["spend"] = fbdata[campaign_id]["spend"] + float(row[8])
-			fbdata[campaign_id]["sales"] = fbdata[campaign_id]["sales"] + int(row[9])
-			fbdata[campaign_id]["revenue"] = fbdata[campaign_id]["revenue"] + float(row[10])
-			fbdata[campaign_id]["cancelorder"] = fbdata[campaign_id]["cancelorder"] + int(row[11])
-			fbdata[campaign_id]["cancelrev"] = fbdata[campaign_id]["cancelrev"] + float(row[12])
-			fbdata[campaign_id]["nsales"] = fbdata[campaign_id]["nsales"] + int(row[13])
-			fbdata[campaign_id]["nrev"] = fbdata[campaign_id]["nrev"] + float(row[14])
-			fbdata[campaign_id]["nclick"] = fbdata[campaign_id]["nclick"] + int(row[15])
-			fbdata[campaign_id]["nspend"] = fbdata[campaign_id]["nspend"] + nspend
-
-			fbdata[campaign_id]["ad_sets"][ad_set_id]["impression"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["impression"] + row[6]
-			fbdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] + row[7]
-			fbdata[campaign_id]["ad_sets"][ad_set_id]["spend"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["spend"] + float(row[8])
-			fbdata[campaign_id]["ad_sets"][ad_set_id]["sales"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["sales"] + int(row[9])
-			fbdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] + float(row[10])
-			fbdata[campaign_id]["ad_sets"][ad_set_id]["cancelorder"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["cancelorder"] + int(row[11])
-			fbdata[campaign_id]["ad_sets"][ad_set_id]["cancelrev"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["cancelrev"] + float(row[12])
-			fbdata[campaign_id]["ad_sets"][ad_set_id]["nsales"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["nsales"] + int(row[13])
-			fbdata[campaign_id]["ad_sets"][ad_set_id]["nrev"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["nrev"] + float(row[14])
-			fbdata[campaign_id]["ad_sets"][ad_set_id]["nclick"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["nclick"] + int(row[15])
-			fbdata[campaign_id]["ad_sets"][ad_set_id]["nspend"] = fbdata[campaign_id]["ad_sets"][ad_set_id]["nspend"] + nspend
-
-
-		# Convert the nested structure to a list of dates with campaigns
-		campaign_list = list(fbdata.values())
-		for date_entry in campaign_list:
-			date_entry["ad_sets"] = list(date_entry["ad_sets"].values())
-
-		fbadsdata["campaign"] = campaign_list
-		# Convert to JSON
-		# json_data = json.dumps(campaign_list)n
-		json_data = fbadsdata
-
-
-		return jsonify(json_data)
-	else:
-		return jsonify({"msg":"No Data Found"}), 404
-
+        return jsonify(fbadsdata)
+    else:
+        return jsonify({"msg": "No Data Found"}), 404
 
 
 @report_bp.route('/ggtable', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_reporttabledatagoogle():
+    headers = request.headers
+    body = request.args
+    startdate = body.get('startdate')
+    enddate = body.get('enddate')
+    attribute = body.get('attribute')
+    userid = headers.get('workspaceId')
+    user = UserRegister.query.filter_by(workspace=userid).first()
 
-	headers = request.headers
-	body = request.args
-	startdate = body.get('startdate')
-	enddate = body.get('enddate')
-	attribute = body.get('attribute')
-	userid = headers.get('workspaceId')
-	
-	user = UserRegister.query.filter_by(workspace=userid).first()
+    if user:
+        sort = 'ASC' if attribute == 'first' else 'DESC'
+        sql_query = text("SELECT * FROM table_googleattribute(:workspace, :productid, :startdate, :enddate, :sort)")
+        result = db.session.execute(sql_query, {
+            'workspace': userid, 'productid': user.productid,
+            'startdate': startdate, 'enddate': enddate, 'sort': sort
+        })
+        data = result.fetchall()
 
-	if user:
-		sort = 'ASC' if attribute == 'first' else 'DESC'
-		sql_query = db.text("select * from table_googleattribute(:workspace, :productid, :startdate, :enddate, :sort)")
-		result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
-		data = result.fetchall()
+        ggdata = {}
+        ggadsdata = {
+            "Impression": 0, "Clicks": 0, "Spend": 0.0,
+            "Sales": 0, "Revenue": 0.0, "CancelOrder": 0,
+            "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
+            "nWV": 0, "nvisitor":0, "visitor":0, "nSpend":0.0
+        }
 
-		ggdata = {}
-		ggadsdata = {"impression":0, "clicks":0, "spend":0.0, "sales":0, "revenue":0.0, "cancelorder":0, "cancelrev":0.0, "nsales":0, "nrev":0.0, "nclick":0, "nspend":0.0}
-		for row in data:
-			campaign_id = row[0]
-			ad_set_id = row[2]
-			ad_id = row[4]
-			nspend = (float(row[8])*min(int(row[15]), row[7]))/max(row[7],1)
+        # Process each row of data
+        for row in data:
+            process_ads(ggdata, ggadsdata, row, {
+                "ad_name": 5, "Impression": 6, "Clicks": 7, "Spend": 8,
+                "Sales": 9, "Revenue": 10, "CancelOrder": 11, 
+                "CancelRev": 12, "nSales": 13, "nRevenue": 14, 
+                "nWV": 15, "nvisitor":16, "visitor":17, "nSpend":18
+            })
 
-			if campaign_id not in ggdata:
-				ggdata[campaign_id] = {
-					"campaign_id": campaign_id,
-					"campaign_name": row[1],
-					"ad_sets": {},
-					"impression": 0,
-					"clicks": 0,
-					"spend" : 0.0,
-					"sales" : 0,
-					"revenue" : 0.0,
-					"cancelorder": 0,
-					"cancelrev": 0.0,
-					"nsales":0, 
-					"nrev":0.0, 
-					"nclick":0,
-					"nspend":0.0
-				}
+        # Convert ad_sets to list in campaigns
+        campaign_list = list(ggdata.values())
+        for campaign in campaign_list:
+            campaign["ad_sets"] = list(campaign["ad_sets"].values())
 
-			if ad_set_id not in ggdata[campaign_id]["ad_sets"]:
-				ggdata[campaign_id]["ad_sets"][ad_set_id] = {
-					"ad_set_id": ad_set_id,
-					"ad_set_name": row[3],
-					"ads": [],
-					"impression": 0,
-					"clicks": 0,
-					"spend" : 0.0,
-					"sales" : 0,
-					"revenue" : 0.0,
-					"cancelorder": 0,
-					"cancelrev": 0.0,
-					"nsales":0, 
-					"nrev":0.0, 
-					"nclick":0,
-					"nspend":0.0
-				}
+        ggadsdata["campaign"] = campaign_list
 
-			ggdata[campaign_id]["ad_sets"][ad_set_id]["ads"].append({
-				"ad_id": ad_id,
-				"ad_name": row[5],
-				"impression": row[6],
-				"clicks": row[7],
-				"spend": float(row[8]),
-				"sales": int(row[9]),
-				"revenue": float(row[10]),
-				"cancelorder": int(row[11]),
-				"cancelrev": float(row[12]),
-				"nsales":int(row[13]), 
-				"nrev":float(row[14]), 
-				"nclick": min(int(row[15]), row[7]),
-				"nspend": nspend
-			})
-
-			ggadsdata["impression"] = ggadsdata["impression"] + row[6]
-			ggadsdata["clicks"] = ggadsdata["clicks"] + row[7]
-			ggadsdata["spend"] = ggadsdata["spend"] + float(row[8])
-			ggadsdata["sales"] = ggadsdata["sales"] + int(row[9])
-			ggadsdata["revenue"] = ggadsdata["revenue"] + float(row[10])
-			ggadsdata["cancelorder"] = ggadsdata["cancelorder"] + int(row[11])
-			ggadsdata["cancelrev"] = ggadsdata["cancelrev"] + float(row[12])
-			ggadsdata["nsales"] = ggadsdata["nsales"] + int(row[13])
-			ggadsdata["nrev"] = ggadsdata["nrev"] + float(row[14])
-			ggadsdata["nclick"] = ggadsdata["nclick"] + int(row[15])
-			ggadsdata["nspend"] = ggadsdata["nspend"] + nspend
-			
-			ggdata[campaign_id]["impression"] = ggdata[campaign_id]["impression"] + row[6]
-			ggdata[campaign_id]["clicks"] = ggdata[campaign_id]["clicks"] + row[7]
-			ggdata[campaign_id]["spend"] = ggdata[campaign_id]["spend"] + float(row[8])
-			ggdata[campaign_id]["sales"] = ggdata[campaign_id]["sales"] + int(row[9])
-			ggdata[campaign_id]["revenue"] = ggdata[campaign_id]["revenue"] + float(row[10])
-			ggdata[campaign_id]["cancelorder"] = ggdata[campaign_id]["cancelorder"] + int(row[11])
-			ggdata[campaign_id]["cancelrev"] = ggdata[campaign_id]["cancelrev"] + float(row[12])
-			ggdata[campaign_id]["nsales"] = ggdata[campaign_id]["nsales"] + int(row[13])
-			ggdata[campaign_id]["nrev"] = ggdata[campaign_id]["nrev"] + float(row[14])
-			ggdata[campaign_id]["nclick"] = ggdata[campaign_id]["nclick"] + int(row[15])
-			ggdata[campaign_id]["nspend"] = ggdata[campaign_id]["nspend"] + nspend
-
-			ggdata[campaign_id]["ad_sets"][ad_set_id]["impression"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["impression"] + row[6]
-			ggdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["clicks"] + row[7]
-			ggdata[campaign_id]["ad_sets"][ad_set_id]["spend"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["spend"] + float(row[8])
-			ggdata[campaign_id]["ad_sets"][ad_set_id]["sales"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["sales"] + int(row[9])
-			ggdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["revenue"] + float(row[10])
-			ggdata[campaign_id]["ad_sets"][ad_set_id]["cancelorder"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["cancelorder"] + int(row[11])
-			ggdata[campaign_id]["ad_sets"][ad_set_id]["cancelrev"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["cancelrev"] + float(row[12])
-			ggdata[campaign_id]["ad_sets"][ad_set_id]["nsales"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["nsales"] + int(row[13])
-			ggdata[campaign_id]["ad_sets"][ad_set_id]["nrev"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["nrev"] + float(row[14])
-			ggdata[campaign_id]["ad_sets"][ad_set_id]["nclick"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["nclick"] + int(row[15])
-			ggdata[campaign_id]["ad_sets"][ad_set_id]["nspend"] = ggdata[campaign_id]["ad_sets"][ad_set_id]["nspend"] + nspend
-
-		# Convert the nested structure to a list of dates with campaigns
-		campaign_list = list(ggdata.values())
-		for date_entry in campaign_list:
-			date_entry["ad_sets"] = list(date_entry["ad_sets"].values())
-
-		ggadsdata["campaign"] = campaign_list
-		# Convert to JSON
-		# json_data = json.dumps(campaign_list)n
-		json_data = ggadsdata
-
-
-		return jsonify(json_data)
-	else:
-		return jsonify({"msg":"No Data Found"}), 404
+        return jsonify(ggadsdata)
+    else:
+        return jsonify({"msg": "No Data Found"}), 404
 
 
 
@@ -680,79 +626,158 @@ def get_dashboardmetric():
 
 
 
+def dashbaord_mongo_query(metric, productid, startdate, enddate):
+	
+    if metric == 'pageview':
+        pipeline = [
+        {
+            '$match': {
+                'body.pageLoad': 1,
+                'productid': int(productid),
+                'creation_at': {'$gte': startdate, '$lte': enddate}
+            }
+        },
+        {
+            '$group': {
+                '_id': {'$dateToString': {'format': '%Y-%m-%d', 'date': '$creation_at'}},
+                'pageview': {'$sum': 1}
+            }
+        },
+        {
+            '$sort': {'_id': 1}
+        }
+        ]
+        return list(CustomerInfo.objects.aggregate(*pipeline))
+    
+    if metric in ('localsession', 'session'):
+        pipeline = [
+            {
+                '$match': {
+                    'productid': int(productid),
+                    'creation_at': {'$gte': startdate, '$lte': enddate},
+                    'body.customerInfo': {}
+                }
+            },
+            {
+                '$group': {
+                    '_id': {
+                        'date': {'$dateToString': {'format': '%Y-%m-%d', 'date': '$creation_at'}},
+                        metric: '$'+metric
+                    }
+                }
+            },
+            {
+                '$group': {
+                    '_id': '$_id.date',
+                    metric: {'$sum': 1}
+                }
+            },
+            {
+                '$sort': {'_id': 1}
+            }
+        ]
+        return list(CustomerInfo.objects.aggregate(*pipeline))
+    
+    if metric == 'nuser':
+        pipeline = [
+        {
+            '$match': {
+                'productid': int(productid),
+                'creation_at': {'$gte': startdate, '$lte': enddate},
+                'body.setSession': 1
+            }
+        },
+        {
+            '$group': {
+                '_id': {
+                    'date': {'$dateToString': {'format': '%Y-%m-%d', 'date': '$creation_at'}}
+                },
+                'distinctSessions': {'$addToSet': '$session'}
+            }
+        },
+        {
+            '$project': {
+                'date': '$_id.date',
+                'nuser': {'$size': '$distinctSessions'}
+            }
+        },
+        {
+            '$sort': {'date': 1}
+        }
+    ]
+        return list(CustomerInfo.objects.aggregate(*pipeline))
+
+
+
 @report_bp.route('/dashboardtraffic', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_dashboardtraffic():
-	headers = request.headers
-	_body = request.args
-	# startdate = datetime.strptime(_body.get('startdate'), "%Y-%m-%d")
-	# enddate = datetime.strptime(_body.get('enddate'), "%Y-%m-%d") + timedelta(days=1)
-	try:
-		startdate = datetime.strptime(_body.get('startdate'), '%b %d %Y')
-		enddate = datetime.strptime(_body.get('enddate'), '%b %d %Y')
-	except:
-		startdate = datetime.strptime(_body.get('startdate'), '%b %d, %Y')
-		enddate = datetime.strptime(_body.get('enddate'), '%b %d, %Y')
-	difference = enddate - startdate
-	enddate_prev = (startdate - timedelta(days=1)).strftime('%Y-%m-%d')
-	startdate_prev = (startdate - difference - timedelta(days=1)).strftime('%Y-%m-%d')
-	userid = headers.get('workspaceId')
-	user = UserRegister.query.filter_by(workspace=userid).first()
+    headers = request.headers
+    _body = request.args
+    # startdate = datetime.strptime(_body.get('startdate'), "%Y-%m-%d")
+    # enddate = datetime.strptime(_body.get('enddate'), "%Y-%m-%d") + timedelta(days=1)
+    try:
+        startdate = datetime.strptime(_body.get('startdate'), '%b %d %Y')
+        enddate = datetime.strptime(_body.get('enddate'), '%b %d %Y') + timedelta(days=1)
+    except:
+        startdate = datetime.strptime(_body.get('startdate'), '%b %d, %Y')
+        enddate = datetime.strptime(_body.get('enddate'), '%b %d, %Y') + timedelta(days=1)
+    difference = enddate - startdate
+    enddate_prev = (startdate - timedelta(days=1)).strftime('%Y-%m-%d')
+    startdate_prev = (startdate - difference - timedelta(days=1)).strftime('%Y-%m-%d')
+    userid = headers.get('workspaceId')
+    user = UserRegister.query.filter_by(workspace=userid).first()
 
-	trafficdata = {'pageview':{"data":[], "total":0.0, "compare":0.0}}
+    trafficdata = {'pageview':{"data":[], "total":0.0, "compare":0.0}, 'session':{"data":[], "total":0.0, "compare":0.0}, 'localsession':{"data":[], "total":0.0, "compare":0.0}, 'nuser':{"data":[], "total":0.0, "compare":0.0}}
+    
+    for metric in ['pageview','session','localsession','nuser']:
+        result = dashbaord_mongo_query(metric, user.productid, startdate, enddate)
+        if metric == 'pageview':
+            metric_result = MongoMetric.query.filter(MongoMetric.dated>=_body.get('startdate'), MongoMetric.dated<=_body.get('enddate'), MongoMetric.workspace==userid, MongoMetric.metric=='page_view').all()
+        else:
+            metric_result = MongoMetric.query.filter(MongoMetric.dated>=_body.get('startdate'), MongoMetric.dated<=_body.get('enddate'), MongoMetric.workspace==userid, MongoMetric.metric==metric).all()
 
-	pipeline = [
-	{
-		'$match': {
-			'body.pageLoad': 1,
-			'productid': int(user.productid),
-			'creation_at': {'$gte': startdate, '$lte': enddate}
-		}
-	},
-	{
-		'$group': {
-			'_id': {'$dateToString': {'format': '%Y-%m-%d', 'date': '$creation_at'}},
-			'page_view': {'$sum': 1}
-		}
-	},
-	{
-		'$sort': {'_id': 1}
-	}
-	]
-	pvresult = list(CustomerInfo.objects.aggregate(*pipeline))
-	
-	# for result in results:
-	# 	result['page_view'] = int(result['page_view'] * 1.03)
-	pageview_metric = MongoMetric.query.filter(MongoMetric.dated>=_body.get('startdate'), MongoMetric.dated<=_body.get('enddate'), MongoMetric.workspace==userid, MongoMetric.metric=='page_view')
+        total = 0
+        total_cmp = 0
+        combined_dict = defaultdict(int)
 
-	total_pageview = 0
-	total_pageview_cmp = 0
-	combined_dict = defaultdict(int)
-	for entry in pvresult:
-		combined_dict[entry['_id']] += entry['page_view']
-		total_pageview += entry['page_view']
+        for entry in metric_result:
+            dated = entry.dated
+            # Add to combined_dict using the date as key, and accumulate the values
+            combined_dict[dated.strftime('%Y-%m-%d')] += entry.value
+            total += entry.value
+        
+        for ele in result:
+            dd = ele['_id']['date'] if metric == 'nuser' else ele['_id']
+            combined_dict[dd] += ele[metric]
+            total += ele[metric]
 
-	for entry in pageview_metric:
-		dated = entry.dated
-		combined_dict[dated.strftime('%Y-%m-%d')] += entry.value
-		total_pageview += entry.value
-	
-	trafficdata['pageview']['data'].append([{'date': date, 'value': value} for date, value in combined_dict.items()])
-	trafficdata['pageview']['total'] = total_pageview
+        # Update total in trafficdata
+        trafficdata[metric]['total'] = total
 
-	pageview_metric_cmp = MongoMetric.query.filter(MongoMetric.dated>=startdate_prev, MongoMetric.dated<=enddate_prev, MongoMetric.workspace==userid, MongoMetric.metric=='page_view')
-	for entry in pageview_metric_cmp:
-		total_pageview_cmp += entry.value
+        # Now update trafficdata[metric]['data'] with the combined_dict logic
+        for date, value in combined_dict.items():
+            date_found = False
 
-	trafficdata['pageview']['compare'] = (100.0*(total_pageview - total_pageview_cmp) / max(total_pageview_cmp,1)) if (total_pageview_cmp) != 0 else 0
+            # Check if the date already exists in the metric data
+            for entry in trafficdata[metric]['data']:
+                if entry['date'] == date:
+                    # If the date is found, add the value to the existing value
+                    entry['value'] += value
+                    date_found = True
+                    break
 
-	# import pdb
-	# pdb.set_trace()
+            # If the date is not found, append a new dictionary with the date and value
+            if not date_found:
+                trafficdata[metric]['data'].append({'date': date, 'value': value})
 
+        metric_cmp = MongoMetric.query.filter(MongoMetric.dated>=startdate_prev, MongoMetric.dated<=enddate_prev, MongoMetric.workspace==userid, MongoMetric.metric==metric).all()
+        for entry in metric_cmp:
+            total_cmp += entry.value
+        trafficdata[metric]['compare'] = (100.0*(total - total_cmp) / max(total_cmp,1)) if (total_cmp) != 0 else 0
 
-
-	
-	# localsess_pipeline = [
+     
+    # localsess_pipeline = [
     # {'$match': {
     #     'productid': int(user.productid),
     #     'creation_at': {'$gte': startdate, '$lte': enddate}
@@ -761,8 +786,8 @@ def get_dashboardtraffic():
     #     '_id': '$localsession'
     # }},
     # {'$count': 'distinct_localsession_count'}
-	# ]
-	# localsess_pipeline = [
+    # ]
+    # localsess_pipeline = [
     # {'$match': {
     #     'productid': int(user.productid),
     #     'creation_at': {'$gte': startdate, '$lte': enddate}
@@ -779,81 +804,77 @@ def get_dashboardtraffic():
     #     '_id': 1,
     #     'distinct_localsession_count': {'$size': '$distinct_localsessions'}
     # }}
-	# ]
-	# usr = list(CustomerInfo.objects.aggregate(*localsess_pipeline))
-	# try:
-	# 	data['user'] = usr[0]['distinct_localsession_count']
-	# except:
-	# 	data['user'] = 0
+    # ]
+    # usr = list(CustomerInfo.objects.aggregate(*localsess_pipeline))
+    # try:
+    # 	data['user'] = usr[0]['distinct_localsession_count']
+    # except:
+    # 	data['user'] = 0
 
 
-	# sess_pipeline = [
+    # sess_pipeline = [
     # {'$match': {
     #     'productid': int(user.productid),
     #     'creation_at': {'$gte': startdate, '$lte': enddate},
-	# 	'body.customerInfo': {}
+    # 	'body.customerInfo': {}
     # }},
     # {'$group': {
     #     '_id': '$session'  # Group by 'localsession' to get distinct values
     # }},
     # {'$count': 'distinct_session_count'}  # Counts the number of distinct groups
-	# ]
-	# unique_usr = list(CustomerInfo.objects.aggregate(*sess_pipeline))
-	# try:
-	# 	data['unique_user'] = unique_usr[0]['distinct_session_count']
-	# except:
-	# 	data['unique_user'] = 0
+    # ]
+    # unique_usr = list(CustomerInfo.objects.aggregate(*sess_pipeline))
+    # try:
+    # 	data['unique_user'] = unique_usr[0]['distinct_session_count']
+    # except:
+    # 	data['unique_user'] = 0
 
 
-	# if user.product_type == 'growth':
-	# 	bounce_pipeline = [
-	# 		{
-	# 			'$match': {
-	# 				'productid': float(user.productid),
-	# 				'creation_at': {'$gte': startdate, '$lte': enddate}
-	# 			}
-	# 		},
-	# 		{
-	# 			'$group': {
-	# 				'_id': '$localsession',
-	# 				'count': {'$sum': 1}  # Count occurrences of each localsession
-	# 			}
-	# 		},
-	# 		{
-	# 			'$match': {
-	# 				'count': 1  # Filter to keep only those groups where count is exactly 1
-	# 			}
-	# 		},
-	# 		{
-	# 			'$count': 'unique_localsession_count'
-	# 		}
-	# 	]
+    # if user.product_type == 'growth':
+    # 	bounce_pipeline = [
+    # 		{
+    # 			'$match': {
+    # 				'productid': float(user.productid),
+    # 				'creation_at': {'$gte': startdate, '$lte': enddate}
+    # 			}
+    # 		},
+    # 		{
+    # 			'$group': {
+    # 				'_id': '$localsession',
+    # 				'count': {'$sum': 1}  # Count occurrences of each localsession
+    # 			}
+    # 		},
+    # 		{
+    # 			'$match': {
+    # 				'count': 1  # Filter to keep only those groups where count is exactly 1
+    # 			}
+    # 		},
+    # 		{
+    # 			'$count': 'unique_localsession_count'
+    # 		}
+    # 	]
 
-	# 	session = data['user'] if data['user'] !=0 else 1
-	# 	try:
-	# 		bounce = list(CustomerInfo.objects.aggregate(*bounce_pipeline))
-	# 		data['bounce_rate'] = round(bounce[0]['unique_localsession_count']*100/session,2)
-	# 	except:
-	# 		data['bounce_rate'] = 0.0
+    # 	session = data['user'] if data['user'] !=0 else 1
+    # 	try:
+    # 		bounce = list(CustomerInfo.objects.aggregate(*bounce_pipeline))
+    # 		data['bounce_rate'] = round(bounce[0]['unique_localsession_count']*100/session,2)
+    # 	except:
+    # 		data['bounce_rate'] = 0.0
 
-	# 	data['page_view_per_session'] = round(data['page_view']/session, 2)
+    # 	data['page_view_per_session'] = round(data['page_view']/session, 2)
 
-	
-	# tablename = 'order_' + userid
-	# orderTable = order_table_dynamic(tablename)
-	# db.Model.metadata.reflect(db.engine)
-	# conversion = orderTable.query.filter(
+    
+    # tablename = 'order_' + userid
+    # orderTable = order_table_dynamic(tablename)
+    # db.Model.metadata.reflect(db.engine)
+    # conversion = orderTable.query.filter(
     #     orderTable.order_date >= startdate,
     #     orderTable.order_date <= enddate
     # ).count()
-	# if data['user'] == 0:
-	# 	data['cr'] = 0.0
-	# else:
-	# 	data['cr'] = round(conversion*100.0/data['user'],2)
+    # if data['user'] == 0:
+    # 	data['cr'] = 0.0
+    # else:
+    # 	data['cr'] = round(conversion*100.0/data['user'],2)
 
 
-	return jsonify(trafficdata), 200
-
-
-
-
+    return jsonify(trafficdata), 200

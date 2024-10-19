@@ -42,7 +42,7 @@ def shopifyintegration():
 				try:
 					shopify_table.create(bind=db.engine)
 					db.session.add(user_make)
-					dup_order_rule(tablename)
+					# dup_order_rule(tablename)
 				except:
 					pass
 			db.session.commit()

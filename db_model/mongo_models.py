@@ -25,5 +25,5 @@ class CustomerInfo(me.Document):
 class Error(me.Document):
     session = me.StringField()
     productid = me.FloatField()
-    error = me.StringField()
+    error = me.DictField()
 

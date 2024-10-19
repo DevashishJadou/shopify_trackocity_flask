@@ -34,9 +34,9 @@ def woocommerceintegration():
         tablename = 'order_'+workspace
         try:
             if not metadata.tables.get(tablename):
-                razorpay_table = ordertable(tablename)
+                woocommerce_table = ordertable(tablename)
                 try:
-                    razorpay_table.create(bind=db.engine)
+                    woocommerce_table.create(bind=db.engine)
                     db.session.add(razorpay_register)
                     dup_order_rule(tablename)
                 except:

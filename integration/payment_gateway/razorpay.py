@@ -124,7 +124,10 @@ def razorpay_webhook(workspace):
         try:
             order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
             if order_obj:
-                order_obj.order_status = 'Refund'
+                order_obj.order_status = 'cancelled'
+            else:
+                order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency, order_status='cancelled')
+                db.session.add(order_make)
             db.session.commit()
             return jsonify({'status': 'success'}), 200
         except Exception as e:

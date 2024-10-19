@@ -8,6 +8,7 @@ from .client_auth_bridge.google.google_service_handler import google_bp
 from .client_auth_bridge.facebook.facebook_service_handler import facebook_bp
 from .integration.payment_gateway.razorpay import payment_bp
 from .integration.payment_gateway.instamojo import payment_bp
+from .integration.payment_gateway.cashfree import payment_bp
 from .integration.channel.woocommerce import channel_bp
 from .integration.channel.shopify import channel_bp
 from .integration.channel.pabbly import channel_bp
@@ -22,7 +23,6 @@ from datetime import datetime, timedelta
 
 
 from flask_cors import CORS, cross_origin
-from flask_cors import CORS
 from flask_jwt_extended import verify_jwt_in_request, jwt_required, create_access_token
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 import time, json , requests
@@ -111,14 +111,15 @@ def before_request():
         if userid:
             verify_jwt_in_request()
             user = UserRegister.query.filter_by(workspace=userid).first()
-            user.last_activity = datetime.now()
-            if datetime.now() > user.plan_till or user.isactive is False:
-                # response = payment_order_creation(user.complete_name, userid, user.plan_till, user.email, user.phone, user.currency)
-                user.isactive = False
-                return jsonify({"message": "Subscription Expired"}), 406
-            # if datetime.now() + timedelta(days=3) > user.plan_till and user.isactive:
-            #     payment_order_creation(user.complete_name, userid, user.plan_till, user.email, user.phone, user.currency)
-            db.session.commit()
+            if user:
+                user.last_activity = datetime.now()
+                if datetime.now() > user.plan_till or user.isactive is False:
+                    # response = payment_order_creation(user.complete_name, userid, user.plan_till, user.email, user.phone, user.currency)
+                    user.isactive = False
+                    return jsonify({"message": "Subscription Expired"}), 406
+                # if datetime.now() + timedelta(days=3) > user.plan_till and user.isactive:
+                #     payment_order_creation(user.complete_name, userid, user.plan_till, user.email, user.phone, user.currency)
+                db.session.commit()
 
 
 @app.after_request

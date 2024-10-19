@@ -92,7 +92,7 @@ def error():
     errormsg = request.json.get('error')
     session = request.headers.get('sessionId')
 
-    new_product = Error(session=session, productid=productid, error=error)
+    new_product = Error(session=session, productid=productid, error=errormsg)
     new_product.save()
 
     return jsonify(200), 200

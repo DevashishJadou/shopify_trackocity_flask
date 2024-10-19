@@ -21,12 +21,12 @@ def pabbly_sent_sign():
     signature = workspace + "trackocity"
     return jsonify({'key': hashlib.sha256(signature.encode('utf-8')).hexdigest()}), 200
 
+
 @channel_bp.route('/pabblycredentials', methods=['POST'])
 @cross_origin()
 def pabbly_integration():
     header = request.headers
     _body = json.loads(request.get_data())
-    print(f'body:{_body}')
     workspace = header.get('workspaceId')
 
     tablename = 'order_'+workspace

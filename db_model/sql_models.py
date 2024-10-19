@@ -27,6 +27,7 @@ class UserRegister(db.Model):
     product_type = db.Column(db.String(16))
     account_type = db.Column(db.String(16))
     subdomain = db.Column(db.String(16))
+    agencyid = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.now)
     last_activity = db.Column(db.DateTime, default=datetime.now)
 
@@ -37,21 +38,21 @@ class UserSubdomain(db.Model):
     status = db.Column(db.Boolean, default=False)
 
 
-# class AgencyRegister(db.Model):
-#     __tablename__ = "agency_register"
-#     id = db.Column(db.Integer, primary_key=True)
-#     complete_name = db.Column(db.String(255))
-#     email = db.Column(db.String(64))
-#     phone = db.Column(db.String(16))
-#     _password = db.Column(db.String(255))
-#     workspace = db.Column(db.String(64), unique=True)
-#     productid = db.Column(db.String(16), unique=True)
-#     timezone = db.Column(db.String(128))
-#     company = db.Column(db.String(128))
-#     currency = db.Column(db.String(8))
-#     isverify = db.Column(db.Boolean, default=False)
-#     isactive = db.Column(db.Boolean, default=False)
-#     created_at = db.Column(db.DateTime, default=datetime.now)
+class AgencyRegister(db.Model):
+    __tablename__ = "agency_register"
+    id = db.Column(db.Integer, primary_key=True)
+    complete_name = db.Column(db.String(255))
+    email = db.Column(db.String(64))
+    phone = db.Column(db.String(16))
+    _password = db.Column(db.String(255))
+    workspace = db.Column(db.String(64), unique=True)
+    productid = db.Column(db.String(16), unique=True)
+    timezone = db.Column(db.String(128))
+    company = db.Column(db.String(128))
+    currency = db.Column(db.String(8))
+    isverify = db.Column(db.Boolean, default=False)
+    isactive = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
 
 
@@ -75,6 +76,14 @@ class RazorpayConfiguration(db.Model):
     razorpay_api_secret = db.Column(db.String(128))
     razorpay_api_key = db.Column(db.String(128))
     razorpay_client_secret = db.Column(db.String(64))
+    active = db.Column(db.Boolean, default=False)
+
+
+class PlatformConfiguration(db.Model):
+    __tablename__ = "platform_config"
+    id = db.Column(db.Integer, primary_key=True)
+    workspace = db.Column(db.String(64))
+    platform = db.Column(db.String(64)),
     active = db.Column(db.Boolean, default=False)
 
 
@@ -174,6 +183,29 @@ def order_table_dynamic(tablename):
         event_type = db.Column(db.String(32))
         created_at = db.Column(db.DateTime, default=datetime.now)
         updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
+        # encryption_key = "my_secure_encryption_key"  # Replace this with a secure key
+        # # Custom setter to encrypt the email
+        # @property
+        # def email(self):
+        #     # Decrypt email when accessed
+        #     result = db.session.execute(
+        #         text("SELECT pgp_sym_decrypt(:email_encrypted, :key)"),
+        #         {'email_encrypted': self.email_encrypted, 'key': self.encryption_key}
+        #     ).scalar()
+
+        #     return result
+
+        # @email.setter
+        # def email(self, value):
+        #     # Encrypt email when setting it
+        #     encrypted_email = db.session.execute(
+        #         text("SELECT pgp_sym_encrypt(:email, :key)"),
+        #         {'email': value, 'key': self.encryption_key}
+        #     ).scalar()
+
+        #     self.email_encrypted = encrypted_email
+        
 
     return OrderTable
     
@@ -288,7 +320,6 @@ def facebookads_table(tablename):
 
 
 def facebookcreative_table(tablename):
-    # Define a table with googleads name and columns
     metadata = MetaData()
     facebookcreative_table = Table(
 			tablename,
