@@ -772,6 +772,7 @@ def get_dashboardtraffic():
             # If the date is not found, append a new dictionary with the date and value
             if not date_found:
                 trafficdata[metric]['data'].append({'date': date, 'value': value})
+            trafficdata[metric]['data'].sort(key=lambda x: x['date'])
 
         metric_cmp = MongoMetric.query.filter(MongoMetric.dated>=startdate_prev, MongoMetric.dated<=enddate_prev, MongoMetric.workspace==userid, MongoMetric.metric==metric).all()
         for entry in metric_cmp:
