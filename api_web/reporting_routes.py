@@ -38,10 +38,10 @@ def get_all_user():
 def update_metrics(metrics, row, indexes):
     metrics["Impression"] += row[indexes["Impression"]]
     metrics["Clicks"] += row[indexes["Clicks"]]
-    metrics["Spend"] += float(row[indexes["Spend"]])
+    metrics["Spend"] += round(float(row[indexes["Spend"]]),1)
     metrics["Sales"] += int(row[indexes["Sales"]])
-    metrics["Revenue"] += float(row[indexes["Revenue"]])
-    metrics["Profit"] += (float(row[indexes["Revenue"]]) - float(row[indexes["Spend"]]))
+    metrics["Revenue"] += round(float(row[indexes["Revenue"]]),1)
+    metrics["Profit"] += round((float(row[indexes["Revenue"]]) - float(row[indexes["Spend"]])),1)
     metrics["CancelOrder"] += int(row[indexes["CancelOrder"]])
     metrics["CancelRev"] += float(row[indexes["CancelRev"]])
     metrics["nSales"] += int(row[indexes["nSales"]])
@@ -51,21 +51,21 @@ def update_metrics(metrics, row, indexes):
     metrics["visitor"] += (int(row[indexes["nvisitor"]]) + int(row[indexes["nWV"]]))
 
     # Calculate new metrics
-    metrics["CPM"] = round(metrics["Spend"] *1000 / max(metrics["Impression"],1), 2)
+    metrics["CPM"] = round(metrics["Spend"] *1000 / max(metrics["Impression"],1), 1)
     metrics["ROAS"] = round(metrics["Revenue"] / max(metrics["Spend"], 1),2)
-    metrics["AOV"] = round(metrics["Revenue"] / max(metrics["Sales"], 1),2)
-    metrics["CPA"] = round(metrics["Spend"] / max(metrics["Sales"], 1),2)
-    metrics["CPC"] = round(metrics["Spend"] / max(metrics["Clicks"], 1),2)
-    metrics["CTR %"] = round(metrics["Clicks"]*100 / max(metrics["Impression"], 1),2)
-    metrics["CR %"] = round(metrics["Sales"]*100 / max(metrics["Clicks"], 1),2)
+    metrics["AOV"] = round(metrics["Revenue"] / max(metrics["Sales"], 1),1)
+    metrics["CPA"] = 'n/a' if metrics["Sales"] == 0 else round(metrics["Spend"] / metrics["Sales"],1)
+    metrics["CPC"] = 'n/a' if metrics["Clicks"] == 0 else round(metrics["Spend"] / metrics["Clicks"],2)
+    metrics["CTR %"] = 'n/a' if metrics["Impression"] == 0 else round(metrics["Clicks"]*100 / metrics["Impression"],2)
+    metrics["CR %"] = 'n/a' if metrics["Clicks"] == 0 else round(metrics["Sales"]*100 / metrics["Clicks"],2)
 	
-    metrics["nSpend"] = float(metrics["Spend"]) * min(metrics["Clicks"], metrics["visitor"]) / max(1, metrics["Clicks"], metrics["visitor"])
-    metrics["nROAS"] = round(metrics["nRevenue"] / max(metrics["Spend"], 1),2)
-    metrics["nAOV"] = round(metrics["nRevenue"] / max(metrics["nSales"], 1),2)
-    metrics["nCPA"] = round(metrics["Spend"] / max(metrics["nSales"], 1),2)
-    metrics["nCPC"] = round(metrics["Spend"] / max(metrics["visitor"], 1),2)
-    metrics["nCR %"] = round(metrics["nSales"]*100 / max(metrics["visitor"], 1),2)
-    metrics["nWV %"] = round(metrics["nWV"]*100 / max(metrics["Clicks"],1) ,2)
+    metrics["nSpend"] = float(metrics["Clicks"]) * min(metrics["Clicks"], metrics["visitor"]) / max(1, metrics["Clicks"], metrics["visitor"])
+    metrics["nROAS"] = 'n/a' if metrics["Spend"] == 0 else round(metrics["nRevenue"] / metrics["Spend"],2)
+    metrics["nAOV"] = 'n/a' if metrics["nSales"] == 0 else round(metrics["nRevenue"] / metrics["nSales"],1)
+    metrics["nCPA"] = 'n/a' if metrics["nSales"] == 0 else round(metrics["Spend"] / metrics["nSales"],1)
+    metrics["nCPC"] = 'n/a' if metrics["visitor"] == 0 else round(metrics["Spend"] / metrics["visitor"],2)
+    metrics["nCR %"] = 'n/a' if metrics["visitor"] == 0 else round(metrics["nSales"]*100 / metrics["visitor"],2)
+    metrics["nWV %"] = 'n/a' if metrics["Clicks"] == 0 else round(metrics["nWV"]*100 / metrics["Clicks"] ,2)
     # metrics["eCPNV"] = round(metrics["Spend"] / max(metrics["nWV"], 1),2)
 
 # Utility function to initialize campaign and ad set
@@ -109,17 +109,17 @@ def process_ads(data, fbadsdata, row, indexes):
         "ad_name": row[indexes["ad_name"]],
         "Impression": row[indexes["Impression"]],
         "Clicks": row[indexes["Clicks"]],
-        "Spend": round(float(row[indexes["Spend"]]),2),
+        "Spend": round(float(row[indexes["Spend"]]),1),
         "Sales": int(row[indexes["Sales"]]),
-        "Revenue": float(row[indexes["Revenue"]]),
-		"Profit" : round(float(row[indexes["Revenue"]]) - float(row[indexes["Spend"]]),2),
-		"CPM": round(float(row[indexes["Spend"]]*1000 / max(row[indexes["Impression"]],1)),2),
-		"ROAS": round(float(row[indexes["Revenue"]]) / max(float(row[indexes["Spend"]]), 1),2),
-        "AOV": round(float(row[indexes["Revenue"]]) / max(int(row[indexes["Sales"]]), 1),2),
-        "CPA": round(float(row[indexes["Spend"]]) / max(int(row[indexes["Sales"]]), 1),2),
-        "CPC": round(float(row[indexes["Spend"]]) / max(int(row[indexes["Clicks"]]), 1),2),
-		"CTR %": round(float(row[indexes["Clicks"]])*100 / max(int(row[indexes["Impression"]]), 1),2),
-        "CR %": round(int(row[indexes["Sales"]])*100 / max(int(row[indexes["Clicks"]]), 1),2),
+        "Revenue": round(float(row[indexes["Revenue"]]),0),
+		"Profit" : round(float(row[indexes["Revenue"]]) - float(row[indexes["Spend"]]),0),
+		"CPM": 'n/a' if row[indexes["Impression"]] == 0 else round(float(row[indexes["Spend"]]*1000 / row[indexes["Impression"]]),1),
+		"ROAS": 'n/a' if row[indexes["Spend"]] == 0 else round(float(row[indexes["Revenue"]]) / float(row[indexes["Spend"]]),2),
+        "AOV": 'n/a' if row[indexes["Sales"]] == 0 else round(float(row[indexes["Revenue"]]) / int(row[indexes["Sales"]]),1),
+        "CPA": 'n/a' if row[indexes["Sales"]] == 0 else round(float(row[indexes["Spend"]]) / int(row[indexes["Sales"]]),1),
+        "CPC": 'n/a' if row[indexes["Clicks"]] == 0 else round(float(row[indexes["Spend"]]) / int(row[indexes["Clicks"]]),2),
+		"CTR %": 'n/a' if row[indexes["Impression"]] == 0 else round(float(row[indexes["Clicks"]])*100 / int(row[indexes["Impression"]]),2),
+        "CR %": 'n/a' if row[indexes["Clicks"]] == 0 else round(int(row[indexes["Sales"]])*100 / int(row[indexes["Clicks"]]),2),
         "CancelOrder": int(row[indexes["CancelOrder"]]),
         "CancelRev": float(row[indexes["CancelRev"]]),
         "nSales": int(row[indexes["nSales"]]),
@@ -128,12 +128,12 @@ def process_ads(data, fbadsdata, row, indexes):
         "nvisitor": int(row[indexes["nvisitor"]]),
         "visitor": int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]),
         "nSpend": nspend,
-        "nROAS": round(float(row[indexes["nRevenue"]]) / max(float(nspend), 1),2),
-        "nAOV": round(float(row[indexes["nRevenue"]]) / max(int(row[indexes["nSales"]]), 1),2),
-        "nCPA": round(float(row[indexes["Spend"]]) / max(int(row[indexes["nSales"]]), 1),2),
-        "nCPC": round(float(row[indexes["Spend"]]) / max(int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]), 1),2),
-        "nCR %": round(int(row[indexes["nSales"]])*100 / max(int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]), 1),2),
-		"nWV %": round(min(int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]), row[indexes["Clicks"]])*100 / max(row[indexes["Clicks"]],1) ,2)
+        "nROAS": 'n/a' if row[indexes["Spend"]] == 0 else round(float(row[indexes["nRevenue"]]) / float(row[indexes["Spend"]]),2),
+        "nAOV": 'n/a' if row[indexes["nSales"]] == 0 else round(float(row[indexes["nRevenue"]]) / int(row[indexes["nSales"]]),1),
+        "nCPA": 'n/a' if row[indexes["nSales"]] == 0 else round(float(row[indexes["Spend"]]) /int(row[indexes["nSales"]]),1),
+        "nCPC": 'n/a' if row[indexes["nWV"]] == 0 else round(float(row[indexes["Spend"]]) / int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]),2),
+        "nCR %": 'n/a' if row[indexes["nWV"]] == 0 else round(int(row[indexes["nSales"]])*100 / int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]),2),
+		"nWV %": 'n/a' if row[indexes["Clicks"]] == 0 else round(min(int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]), row[indexes["Clicks"]])*100 / row[indexes["Clicks"]] ,2)
     })
     
     # Update metrics for campaign, ad set, and overall
