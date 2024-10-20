@@ -46,7 +46,7 @@ def update_metrics(metrics, row, indexes):
     metrics["CancelRev"] += float(row[indexes["CancelRev"]])
     metrics["nSales"] += int(row[indexes["nSales"]])
     metrics["nRevenue"] += float(row[indexes["nRevenue"]])
-    metrics["nWV"] += min((int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]])), row[indexes["Clicks"]])
+    metrics["nWV"] += min(int(row[indexes["nWV"]]), row[indexes["Clicks"]])
     metrics["nvisitor"] += int(row[indexes["nvisitor"]])
     metrics["visitor"] += (int(row[indexes["nvisitor"]]) + int(row[indexes["nWV"]]))
 
@@ -66,7 +66,8 @@ def update_metrics(metrics, row, indexes):
     metrics["nCPC"] = 'n/a' if metrics["visitor"] == 0 else round(metrics["Spend"] / metrics["visitor"],2)
     metrics["nCR %"] = 'n/a' if metrics["visitor"] == 0 else round(metrics["nSales"]*100 / metrics["visitor"],2)
     metrics["nWV %"] = 'n/a' if metrics["Clicks"] == 0 else round(metrics["nWV"]*100 / metrics["Clicks"] ,2)
-    # metrics["eCPNV"] = round(metrics["Spend"] / max(metrics["nWV"], 1),2)
+    metrics["eCPNV"] = 'n/a' if metrics["nWV"] == 0 else round(metrics["Spend"] / metrics["nWV"] ,1)
+
 
 # Utility function to initialize campaign and ad set
 def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
@@ -80,7 +81,8 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
 			"CPC": 0.0, "CPA":0.0, "CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
             "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
             "nWV": 0, "nvisitor": 0, "visitor": 0, "nSpend": 0.0,
-            "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "nWV %": 0.0
+            "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "nWV %": 0.0,
+            "eCPNV": 0.0
         }
     if ad_set_id not in data[campaign_id]["ad_sets"]:
         data[campaign_id]["ad_sets"][ad_set_id] = {
@@ -92,7 +94,8 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
 			"CPC": 0.0, "CPA":0.0, "CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
             "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
             "nWV": 0, "nvisitor": 0, "visitor": 0, "nSpend": 0.0,
-            "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "nWV %": 0.0
+            "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "nWV %": 0.0,
+            "eCPNV": 0.0
         }
 
 # Utility function to process ads
@@ -101,8 +104,7 @@ def process_ads(data, fbadsdata, row, indexes):
     
     # Initialize campaign and ad set
     initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id)
-    nspend = float(row[indexes["Spend"]]) * min(row[indexes["Clicks"]], int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]])) / max(1, row[indexes["Clicks"]], int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]))
-    
+   
     # Add ad details
     data[campaign_id]["ad_sets"][ad_set_id]["ads"].append({
         "ad_id": ad_id,
@@ -124,16 +126,16 @@ def process_ads(data, fbadsdata, row, indexes):
         "CancelRev": float(row[indexes["CancelRev"]]),
         "nSales": int(row[indexes["nSales"]]),
         "nRevenue": float(row[indexes["nRevenue"]]),
-        "nWV": min(int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]), row[indexes["Clicks"]]),
+        "nWV": min(row[indexes["nWV"]], row[indexes["Clicks"]]),
         "nvisitor": int(row[indexes["nvisitor"]]),
         "visitor": int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]),
-        "nSpend": nspend,
         "nROAS": 'n/a' if row[indexes["Spend"]] == 0 else round(float(row[indexes["nRevenue"]]) / float(row[indexes["Spend"]]),2),
         "nAOV": 'n/a' if row[indexes["nSales"]] == 0 else round(float(row[indexes["nRevenue"]]) / int(row[indexes["nSales"]]),1),
         "nCPA": 'n/a' if row[indexes["nSales"]] == 0 else round(float(row[indexes["Spend"]]) /int(row[indexes["nSales"]]),1),
         "nCPC": 'n/a' if row[indexes["nWV"]] == 0 else round(float(row[indexes["Spend"]]) / int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]),2),
         "nCR %": 'n/a' if row[indexes["nWV"]] == 0 else round(int(row[indexes["nSales"]])*100 / int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]),2),
-		"nWV %": 'n/a' if row[indexes["Clicks"]] == 0 else round(min(int(row[indexes["nWV"]]) + int(row[indexes["nvisitor"]]), row[indexes["Clicks"]])*100 / row[indexes["Clicks"]] ,2)
+		"nWV %": 'n/a' if row[indexes["Clicks"]] == 0 else round(min(row[indexes["nWV"]], row[indexes["Clicks"]])*100 / row[indexes["Clicks"]] ,2),
+        "eCPNV": 'n/a' if row[indexes["nWV"]] == 0 else round(row[indexes["Spend"]] / row[indexes["nWV"]] ,1)
     })
     
     # Update metrics for campaign, ad set, and overall
