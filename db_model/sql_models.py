@@ -160,6 +160,17 @@ class MongoMetric(db.Model):
     metric = db.Column(db.String(16))
     value = db.Column(db.INTEGER)
 
+
+class ProductTable(db.Model):
+    __tablename__ = "product_table"
+    id = db.Column(db.Integer, primary_key=True)
+    workspaceid = db.Column(db.String(32))
+    productid = db.Column(db.String(16))
+    product_name = db.Column(db.String(128))
+    cost_price = db.Column(db.NUMERIC)
+    sale_price = db.Column(db.NUMERIC)
+
+
 def order_table_dynamic(tablename):
     class OrderTable(db.Model):
         __tablename__ = tablename
@@ -211,28 +222,6 @@ def order_table_dynamic(tablename):
     
 
 
-# class OrderTable(db.Model):
-#     # __tablename__ = tablename
-#     id = db.Column(db.Integer, primary_key=True)
-#     order_date = db.Column(db.DateTime)
-#     transcation_id = db.Column(db.String(128))
-#     first_name = db.Column(db.String(128))
-#     last_name = db.Column(db.String(128))
-#     email = db.Column(db.String(128))
-#     payment_method = db.Column(db.String(64))
-#     customer_ip = db.Column(db.String(32))
-#     customer_user_agent = db.Column(db.String(128))
-
-# def order_table_dynamic(tablename):
-#         class DynamicOrderTable(OrderTable):
-#             __tablename__ = tablename
-#             extend_existing = True
-
-#         return DynamicOrderTable()
-
-
-    
-
 def ordertable(tablename):
     # Define a table with order name and columns
     metadata = MetaData()
@@ -260,6 +249,28 @@ def ordertable(tablename):
 			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now)
 		)
     return order_table
+
+
+
+def orderlinetable(tablename):
+    # Define a table with order name and columns
+    metadata = MetaData()
+    orderline_table = Table(
+			tablename,
+			metadata,
+			Column('id', Integer, primary_key=True),
+            Column('channel', String(32)),
+			Column('shopify_productid', Integer),
+			Column('product_name', String(128), unique=True),
+			Column('quantity', Integer),
+			Column('price', Numeric),
+			Column('title', String(128)),
+            Column('variant_title', String(128)),
+            Column('cost', Numeric),
+			Column('created_at', DateTime, default=datetime.now),
+			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now)
+		)
+    return orderline_table
 
 
 def googleads_table(tablename):

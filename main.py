@@ -3,6 +3,7 @@
 from flask import Flask,jsonify,request,redirect
 
 from .api_web.login_routes import auth_bp
+from .api_web.setting_route import setting_bp
 from .external.routes import external_bp
 from .client_auth_bridge.google.google_service_handler import google_bp
 from .client_auth_bridge.facebook.facebook_service_handler import facebook_bp
@@ -38,6 +39,7 @@ CORS(app)
 
 # Register blueprints
 app.register_blueprint(auth_bp, url_prefix='/auth')
+app.register_blueprint(setting_bp, url_prefix='/setting')
 app.register_blueprint(intgration_cd, url_prefix='/integration')
 app.register_blueprint(external_bp, url_prefix='/external')
 app.register_blueprint(google_bp, url_prefix='/google')

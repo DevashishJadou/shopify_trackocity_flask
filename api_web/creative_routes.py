@@ -1,21 +1,15 @@
-from ..db_model.sql_models import UserRegister, order_table_dynamic, ClientFacebookredentials, ClientGoogleCredentials, MongoMetric
-from ..db_model.mongo_models import CustomerInfo
+from ..db_model.sql_models import UserRegister
 from ..connection import db
 
 from flask import Blueprint, request, jsonify
-from .schema import FB
 from flask_cors import cross_origin
-import json
 
-from datetime import datetime, timedelta
-from collections import defaultdict
 
 creative_bp = Blueprint('creative', __name__)
 
-
 @creative_bp.route('/creativetabledata', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
-def get_dashboardgraphdata():
+def get_creativetabledata():
 
 	headers = request.headers
 	body = request.args

@@ -6,7 +6,7 @@ from flask_cors import cross_origin
 
 
 from .woocommerce import channel_bp
-from ...db_model.sql_models import Shopify, order_table_dynamic, ordertable
+from ...db_model.sql_models import Shopify, order_table_dynamic, ordertable, orderlinetable
 from ...connection import db
 from ...dbrule import dup_order_rule
 
@@ -36,6 +36,7 @@ def shopifyintegration():
 	else:
 		user_make = Shopify(base_url=base_url, access_key=access_token, workspace=workspace, active=True)
 		tablename = 'order_'+workspace
+		orderlinetablename = 'orderline_'+workspace
 		try:
 			if not metadata.tables.get(tablename):
 				shopify_table = ordertable(tablename)
@@ -43,9 +44,20 @@ def shopifyintegration():
 					shopify_table.create(bind=db.engine)
 					db.session.add(user_make)
 					# dup_order_rule(tablename)
+				except Exception as e:
+					pass
+			db.session.commit()
+
+			if not metadata.tables.get(orderlinetablename):
+				shopify_orderline_table = orderlinetable(orderlinetablename)
+				try:
+					shopify_orderline_table.create(bind=db.engine)
+					db.session.add(user_make)
+					# dup_order_rule(tablename)
 				except:
 					pass
 			db.session.commit()
+
 		except Exception as e:
 			print(f'Shopify client secret: {e.msg}')
 			return jsonify({'error': 'Something went Wrong'}), 500
