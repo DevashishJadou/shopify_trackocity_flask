@@ -124,6 +124,9 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
 # Utility function to process ads
 def process_ads(data, fbadsdata, row, indexes, traffic):
     campaign_id, ad_set_id, ad_id = row[0], row[2], row[4]
+    if traffic not in ('Facebook', 'Google'):
+        row[indexes["Clicks"]] += (int(row[indexes["nvisitor"]]) + int(row[indexes["New Visits"]]))
+
     
     # Initialize campaign and ad set
     initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id)
