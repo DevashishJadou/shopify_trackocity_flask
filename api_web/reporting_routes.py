@@ -1,6 +1,6 @@
 # reporting_routes
 
-from ..db_model.sql_models import UserRegister, order_table_dynamic, ClientFacebookredentials, ClientGoogleCredentials, MongoMetric
+from ..db_model.sql_models import UserRegister, ClientFacebookredentials, ClientGoogleCredentials, MongoMetric, UTMSource
 from ..db_model.mongo_models import CustomerInfo
 from ..connection import db
 
@@ -34,10 +34,28 @@ def get_all_user():
 		}), 200 
 
 
+@report_bp.route('/source', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def get_all_source():
+    headers = request.headers
+    userid = headers.get('workspaceId')
+      
+    src = UTMSource.query.filter_by(workspace=userid).all()
+    unique_src = {record.displayname for record in src}
+    src_list = list(unique_src)
+
+    return jsonify(src_list), 200
+      
+
 # Utility function to update metrics
-def update_metrics(metrics, row, indexes):
+def update_metrics(metrics, row, indexes, traffic):
+
+    if traffic not in ('Facebook', 'Google'):
+        metrics["Clicks"] += (int(row[indexes["nvisitor"]]) + int(row[indexes["New Visits"]]))
+    else:
+        metrics["Clicks"] += row[indexes["Clicks"]]  
+
     metrics["Impression"] += row[indexes["Impression"]]
-    metrics["Clicks"] += row[indexes["Clicks"]]
     metrics["Spend"] += round(float(row[indexes["Spend"]]),1)
     metrics["Sales"] += int(row[indexes["Sales"]])
     metrics["Revenue"] += round(float(row[indexes["Revenue"]]),1)
@@ -49,6 +67,8 @@ def update_metrics(metrics, row, indexes):
     metrics["New Visits"] += min(int(row[indexes["New Visits"]]), row[indexes["Clicks"]])
     metrics["nvisitor"] += int(row[indexes["nvisitor"]])
     metrics["visitor"] += (int(row[indexes["nvisitor"]]) + int(row[indexes["New Visits"]]))
+    metrics["ReportedRev"] += round(float(row[indexes["ReportedRev"]]),2)
+    metrics["Cost"] += round(float(row[indexes["Cost"]]),2)
 
     # Calculate new metrics
     metrics["CPM"] = round(metrics["Spend"] *1000 / max(metrics["Impression"],1), 1)
@@ -68,6 +88,9 @@ def update_metrics(metrics, row, indexes):
     metrics["New Visits %"] = 'n/a' if metrics["Clicks"] == 0 else round(metrics["New Visits"]*100 / metrics["Clicks"] ,2)
     metrics["eCPNV"] = 'n/a' if metrics["New Visits"] == 0 else round(metrics["Spend"] / metrics["New Visits"] ,1)
 
+    metrics["Gross Margin %"] = 'n/a' if (row[indexes["Revenue"]]) == 0 else round((row[indexes["Revenue"]] - (row[indexes["Spend"]]+row[indexes["Cost"]]))*100 / row[indexes["Revenue"]] ,1)
+    metrics["Gross Profit"] = round((row[indexes["Revenue"]] - (row[indexes["Spend"]]+row[indexes["Cost"]])),1)
+
 
 # Utility function to initialize campaign and ad set
 def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
@@ -82,7 +105,7 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
             "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
             "New Visits": 0, "nvisitor": 0, "visitor": 0, "nSpend": 0.0,
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "New Visits %": 0.0,
-            "eCPNV": 0.0
+            "eCPNV": 0.0, "ReportedRev":0.0, "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0
         }
     if ad_set_id not in data[campaign_id]["ad_sets"]:
         data[campaign_id]["ad_sets"][ad_set_id] = {
@@ -95,11 +118,11 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
             "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
             "New Visits": 0, "nvisitor": 0, "visitor": 0, "nSpend": 0.0,
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "New Visits %": 0.0,
-            "eCPNV": 0.0
+            "eCPNV": 0.0, "ReportedRev":0.0, "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0
         }
 
 # Utility function to process ads
-def process_ads(data, fbadsdata, row, indexes):
+def process_ads(data, fbadsdata, row, indexes, traffic):
     campaign_id, ad_set_id, ad_id = row[0], row[2], row[4]
     
     # Initialize campaign and ad set
@@ -124,6 +147,8 @@ def process_ads(data, fbadsdata, row, indexes):
         "CR %": 'n/a' if row[indexes["Clicks"]] == 0 else round(int(row[indexes["Sales"]])*100 / int(row[indexes["Clicks"]]),2),
         "CancelOrder": int(row[indexes["CancelOrder"]]),
         "CancelRev": float(row[indexes["CancelRev"]]),
+        "ReportedRev": float(row[indexes["ReportedRev"]]),
+        "Cost": float(row[indexes["Cost"]]),
         "nSales": int(row[indexes["nSales"]]),
         "nRevenue": float(row[indexes["nRevenue"]]),
         "nvisitor": int(row[indexes["nvisitor"]]),
@@ -135,16 +160,18 @@ def process_ads(data, fbadsdata, row, indexes):
         "nCR %": 'n/a' if row[indexes["New Visits"]] == 0 else round(int(row[indexes["nSales"]])*100 / int(row[indexes["New Visits"]]) + int(row[indexes["nvisitor"]]),2),
 		"New Visits %": 'n/a' if row[indexes["Clicks"]] == 0 else round(min(row[indexes["New Visits"]], row[indexes["Clicks"]])*100 / row[indexes["Clicks"]] ,2),
         "New Visits": min(row[indexes["New Visits"]], row[indexes["Clicks"]]),
-        "eCPNV": 'n/a' if row[indexes["New Visits"]] == 0 else round(row[indexes["Spend"]] / row[indexes["New Visits"]] ,1)
+        "eCPNV": 'n/a' if row[indexes["New Visits"]] == 0 else round(row[indexes["Spend"]] / row[indexes["New Visits"]] ,1),
+        "Gross Margin %": 'n/a' if (row[indexes["Revenue"]]) == 0 else round((row[indexes["Revenue"]] - (row[indexes["Spend"]]+row[indexes["Cost"]]))*100 / row[indexes["Revenue"]] ,1),
+        "Gross Profit": round((row[indexes["Revenue"]] - (row[indexes["Spend"]]+row[indexes["Cost"]])),1)
     })
     
     # Update metrics for campaign, ad set, and overall
-    update_metrics(fbadsdata, row, indexes)
-    update_metrics(data[campaign_id], row, indexes)
-    update_metrics(data[campaign_id]["ad_sets"][ad_set_id], row, indexes)
+    update_metrics(fbadsdata, row, indexes, traffic)
+    update_metrics(data[campaign_id], row, indexes, traffic)
+    update_metrics(data[campaign_id]["ad_sets"][ad_set_id], row, indexes, traffic)
 	
 
-@report_bp.route('/fbtable', methods=['GET', 'OPTIONS'])
+@report_bp.route('/table', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_reporttabledatafacebook():
     headers = request.headers
@@ -152,96 +179,64 @@ def get_reporttabledatafacebook():
     startdate = body.get('startdate')
     enddate = body.get('enddate')
     attribute = body.get('attribute')
+    traffic = body.get('traffic')
     userid = headers.get('workspaceId')
     user = UserRegister.query.filter_by(workspace=userid).first()
 
+
     if user:
         sort = 'ASC' if attribute == 'first' else 'DESC'
-        sql_query = text("SELECT * FROM table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort)")
-        result = db.session.execute(sql_query, {
-            'workspace': userid, 'productid': user.productid,
-            'startdate': startdate, 'enddate': enddate, 'sort': sort
-        })
-        data = result.fetchall()
+        if traffic == 'Facebook':
+            sql_query = text("SELECT * FROM table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort)")
+            result = db.session.execute(sql_query, {
+	            'workspace': userid, 'productid': user.productid,
+	            'startdate': startdate, 'enddate': enddate, 'sort': sort
+	        })
+            data = result.fetchall()
+        elif traffic == 'Google':
+            sql_query = text("SELECT * FROM table_googleattribute(:workspace, :productid, :startdate, :enddate, :sort)")
+            result = db.session.execute(sql_query, {
+	            'workspace': userid, 'productid': user.productid,
+	            'startdate': startdate, 'enddate': enddate, 'sort': sort
+	        })
+            data = result.fetchall()
+        else:
+            sql_query = text("SELECT * FROM table_otherattribute(:workspace, :productid, :startdate, :enddate, :sort, :src)")
+            result = db.session.execute(sql_query, {
+	            'workspace': userid, 'productid': user.productid,
+	            'startdate': startdate, 'enddate': enddate, 'sort': sort, 'src':traffic
+	        })
+            data = result.fetchall()
 
-        fbdata = {}
-        fbadsdata = {
+        record = {}
+        adsdata = {
             "Impression": 0, "Clicks": 0, "Spend": 0.0, "Profit":0.0,
             "Sales": 0, "Revenue": 0.0, "ROAS": 0.0, "AOV": 0.0,
 			"CPC": 0.0, "CPA":0.0, "CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
             "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
             "New Visits": 0, "nvisitor":0, "visitor":0,
-            "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "New Visits %":0.0
+            "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "New Visits %":0.0,
+            "ReportedSale":0, "ReportedRev":0.0, "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0
         }
 
         # Process each row of data
         for row in data:
-            process_ads(fbdata, fbadsdata, row, {
+            process_ads(record, adsdata, row, {
                 "ad_name": 5, "Impression": 6, "Clicks": 7, "Spend": 8,
                 "Sales": 9, "Revenue": 10, "CancelOrder": 11, 
                 "CancelRev": 12, "nSales": 13, "nRevenue": 14, 
-                "New Visits": 15, "nvisitor":16, "visitor":17
-            })
+                "New Visits": 15, "nvisitor":16, "visitor":17,
+                "ReportedSale":18, "ReportedRev":19, "Cost":20
+            }, traffic)
 
         # Convert ad_sets to list in campaigns
-        campaign_list = list(fbdata.values())
+        campaign_list = list(record.values())
         for campaign in campaign_list:
             campaign["ad_sets"] = list(campaign["ad_sets"].values())
 
-        fbadsdata["campaign"] = campaign_list
+        adsdata["campaign"] = campaign_list
 
-        return jsonify(fbadsdata)
-    else:
-        return jsonify({"msg": "No Data Found"}), 404
-
-
-@report_bp.route('/ggtable', methods=['GET', 'OPTIONS'])
-@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
-def get_reporttabledatagoogle():
-    headers = request.headers
-    body = request.args
-    startdate = body.get('startdate')
-    enddate = body.get('enddate')
-    attribute = body.get('attribute')
-    userid = headers.get('workspaceId')
-    user = UserRegister.query.filter_by(workspace=userid).first()
-
-    if user:
-        sort = 'ASC' if attribute == 'first' else 'DESC'
-        sql_query = text("SELECT * FROM table_googleattribute(:workspace, :productid, :startdate, :enddate, :sort)")
-        result = db.session.execute(sql_query, {
-            'workspace': userid, 'productid': user.productid,
-            'startdate': startdate, 'enddate': enddate, 'sort': sort
-        })
-        data = result.fetchall()
-
-        ggdata = {}
-        ggadsdata = {
-            "Impression": 0, "Clicks": 0, "Spend": 0.0, "Profit":0.0,
-            "Sales": 0, "Revenue": 0.0, "ROAS": 0.0, "AOV": 0.0,
-			"CPC": 0.0, "CPA":0.0, "CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
-            "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
-            "New Visits": 0, "nvisitor":0, "visitor":0,
-            "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "New Visits %":0.0
-        }
-
-        # Process each row of data
-        for row in data:
-            process_ads(ggdata, ggadsdata, row, {
-                "ad_name": 5, "Impression": 6, "Clicks": 7, "Spend": 8,
-                "Sales": 9, "Revenue": 10, "CancelOrder": 11, 
-                "CancelRev": 12, "nSales": 13, "nRevenue": 14, 
-                "New Visits": 15, "nvisitor":16, "visitor":17
-            })
-
-        # Convert ad_sets to list in campaigns
-        campaign_list = list(ggdata.values())
-        for campaign in campaign_list:
-            campaign["ad_sets"] = list(campaign["ad_sets"].values())
-
-        ggadsdata["campaign"] = campaign_list
-
-        return jsonify(ggadsdata)
+        return jsonify(adsdata)
     else:
         return jsonify({"msg": "No Data Found"}), 404
 
@@ -267,8 +262,8 @@ def get_reportgraphdata():
 	sale_data = {'revenue':0.0, 'sales':0, 'data':{}}
 	for row in data:
 		key = row[0].strftime("%Y-%m-%d")
-		sale_data['data'][key] = [{"revenue":float(row[1]), "sales": int(row[2])}]
-		sale_data['revenue'] = sale_data['revenue'] + float(row[1])
+		sale_data['data'][key] = [{"revenue":round(row[1],0), "sales": int(row[2])}]
+		sale_data['revenue'] = round(sale_data['revenue'] + float(row[1]),0)
 		sale_data['sales'] = sale_data['sales'] + int(row[2])
 
 	return jsonify(sale_data), 200
@@ -291,6 +286,8 @@ def get_reporttablesaledata():
 
 	output = []
 	if user:
+		if channel in ('Facebook', 'Google'):
+			channel = channel.lower()
 		sort = 'ASC' if attribute == 'First' else 'DESC'
 		sql_query = db.text("select * from table_salesdata(:workspace, :productid, :startdate, :enddate, :channel, :adid, :sort)")
 

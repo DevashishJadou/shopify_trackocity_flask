@@ -1,4 +1,4 @@
-from ..db_model.sql_models import ProductTable
+from ..db_model.sql_models import ProductTable, UTMSource, UserRegister
 from ..connection import db
 
 from flask import Blueprint, request, jsonify
@@ -8,6 +8,31 @@ import json
 
 setting_bp = Blueprint('setting', __name__)
 
+
+@setting_bp.route('/taxrate/getrate', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def get_taxrate():
+
+	headers = request.headers
+	userid = headers.get('workspaceId')
+	tax = UserRegister.query.filter_by(workspace=userid).first()
+	return jsonify({"taxrate": tax.tax_rate*100, "tax_on": tax.tax_on}), 200
+
+
+@setting_bp.route('/taxrate/updaterate', methods=['POST', 'OPTIONS'])
+@cross_origin(origins='*', methods=['POST'], headers=['Content-Type'])
+def update_taxrate():
+
+	headers = request.headers
+	userid = headers.get('workspaceId')
+	data = json.loads(request.data)
+	tax = UserRegister.query.filter_by(workspace=userid).first()
+	tax.tax_rate = round(data.get('taxrate')/100,3)
+	tax.tax_on = data.get('tax_on')
+	db.session.commit()
+	return jsonify(message="Updated Successfully"), 200
+
+	
 
 @setting_bp.route('/product/getproduct', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
@@ -58,6 +83,11 @@ def put_updateproduct():
 	userid = headers.get('workspaceId')
 	data = json.loads(request.data)
 	id = data.get('id')
+	sale_price = data.get('sale_price')
+	product = ProductTable.query.filter_by(workspaceid=userid, sale_price=sale_price).first()
+	if product:
+		if product.id != id:       
+			return jsonify(message='Each sale price must be unique and can be assigned to only one product'), 409
 	product = ProductTable.query.filter_by(workspaceid=userid, id=id).first()
 	if not product:       
 		return jsonify(message='Something went wrong. Try after sometime'), 409
@@ -72,10 +102,10 @@ def put_updateproduct():
 
 @setting_bp.route('/product/deleteproduct', methods=['PUT', 'OPTIONS'])
 @cross_origin(origins='*', methods=['PUT', 'OPTIONS'], headers=['Content-Type'])
-def integration_google_account_delete():
+def put_delete_product():
     headers = request.headers
     workspace = headers.get('workspaceId')
-    body = request.args
+    body = json.loads(request.data)
     id = body.get('id')
     row_to_delete = ProductTable.query.filter_by(id=id, workspaceid=workspace).first()
 
@@ -87,3 +117,94 @@ def integration_google_account_delete():
     else:
         # Return an appropriate message if the row doesn't exist
         return jsonify({"message": "No Such Product found"}), 404
+	
+
+
+
+@setting_bp.route('/utm_source/get_utmsource', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def get_utmsource_data():
+
+	headers = request.headers
+	userid = headers.get('workspaceId')
+	utm_sources = UTMSource.query.filter_by(workspace=userid).all()
+	
+	utm_source_data = []
+	for utm_source in utm_sources:        
+        # Store the data for each client in a nested dictionary
+		utm_source_data.append({
+			'id': utm_source.id,
+			'displayname': utm_source.displayname,
+			'utm_field': utm_source.utm_field,
+			'value': utm_source.value,
+			'utm_subfield': utm_source.utm_sub_field
+		})
+
+	return jsonify(utm_source_data), 200
+
+
+@setting_bp.route('/utm_source/create_utmsource', methods=['POST', 'OPTIONS'])
+@cross_origin(origins='*', methods=['POST'], headers=['Content-Type'])
+def post_create_utmsource():
+
+	headers = request.headers
+	userid = headers.get('workspaceId')
+	data = json.loads(request.data)
+	utm_source = UTMSource.query.filter_by(workspace=userid, utm_field=data.get('utm_field'), value=data.get('value'), utm_sub_field=data.get('utm_subfield')).first()
+	if utm_source:       
+		return jsonify(message='The combination alread exists'), 409
+	utm_source = UTMSource(workspace=userid, utm_field=data.get('utm_field'), value=data.get('value'), utm_sub_field=data.get('utm_subfield'), displayname=data.get('displayname'))
+	
+	db.session.add(utm_source)
+	db.session.commit()
+
+	return jsonify(message='Product Added', id=utm_source.id), 201
+
+
+
+@setting_bp.route('/utm_source/update_utmsource', methods=['PUT', 'OPTIONS'])
+@cross_origin(origins='*', methods=['PUT'], headers=['Content-Type'])
+def put_update_utmsource():
+
+	headers = request.headers
+	userid = headers.get('workspaceId')
+	data = json.loads(request.data)
+	id = data.get('id')
+	utm_source = UTMSource.query.filter_by(workspace=userid, id=id).first()
+	if not utm_source:       
+		return jsonify(message='Something went wrong. Try after sometime'), 409
+	utm_source.utm_field = data.get('utm_field')
+	utm_source.value = data.get('value')
+	utm_source.utm_sub_field = data.get('utm_subfield')
+	utm_source.displayname = data.get('displayname')
+	
+	db.session.commit()
+
+	return jsonify(message='Product Updated'), 201
+
+
+@setting_bp.route('/utm_source/delete_utmsource', methods=['PUT', 'OPTIONS'])
+@cross_origin(origins='*', methods=['PUT', 'OPTIONS'], headers=['Content-Type'])
+def put_delete_utmsource():
+    headers = request.headers
+    workspace = headers.get('workspaceId')
+    body = json.loads(request.data)
+    id = body.get('id')
+    row_to_delete = UTMSource.query.filter_by(id=id, workspace=workspace).first()
+
+    if row_to_delete:
+        # If the row exists, delete it
+        db.session.delete(row_to_delete)
+        db.session.commit()  # Commit the transaction to delete the row
+        return jsonify({"message": "Source Removed Successfully"}), 200
+    else:
+        # Return an appropriate message if the row doesn't exist
+        return jsonify({"message": "No Such Product found"}), 404
+
+
+
+
+
+
+
+

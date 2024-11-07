@@ -28,6 +28,8 @@ class UserRegister(db.Model):
     account_type = db.Column(db.String(16))
     subdomain = db.Column(db.String(16))
     agencyid = db.Column(db.Integer)
+    tax_rate = db.Column(db.Numeric)
+    tax_on = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
     last_activity = db.Column(db.DateTime, default=datetime.now)
 
@@ -142,6 +144,16 @@ class Payment(db.Model):
     expireon = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
+class UTMSource(db.Model):
+    __tablename__ = "utm_source"
+    id = db.Column(db.Integer, primary_key=True)
+    workspace = db.Column(db.String(64))
+    productid = db.Column(db.String(16))
+    utm_field = db.Column(db.String(64))
+    value = db.Column(db.String(64))
+    utm_sub_field = db.Column(db.String(64))
+    displayname = db.Column(db.String(64))
 
 
 class EmailChange(db.Model):

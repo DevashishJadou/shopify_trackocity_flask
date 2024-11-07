@@ -7,9 +7,9 @@ from flask_cors import cross_origin
 
 creative_bp = Blueprint('creative', __name__)
 
-@creative_bp.route('/creativetabledata', methods=['GET', 'OPTIONS'])
+@creative_bp.route('/creativetabledata/facebook', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
-def get_creativetabledata():
+def get_creativetabledatafacebook():
 
 	headers = request.headers
 	body = request.args
@@ -23,7 +23,7 @@ def get_creativetabledata():
 	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'sort':'desc'})
 	data = result.fetchall()
 
-	crdata = {"creative": [], "click": 0, "impression": 0, "revenue": 0, "sales":0, "spend":0, "engagement":0, "roas":0, "cpa":0, "aov":0, "cpc":0, "cpm":0}
+	crdata = {"creative": [], "click": 0, "impression": 0, "revenue":0, "spend":0, "sales":0, "engagement":0, "roas":0, "cpa":0, "aov":0, "cpc":0, "cpm":0}
 	for row in data:
 		creativeid = row[0];       thumbnail_id = row[1]; creativename = row[2]
 		status = row[3]	;	       adtype = row[4];         thumbnail = row[5]
@@ -38,17 +38,17 @@ def get_creativetabledata():
 			adtype = 'VIDEO'
 
 		roas = round(rev / max(spend,1), 2)
-		cpa = round(spend / max(orders,1), 2)
-		aov = round(rev / max(orders,1), 2)
-		cpc = round(spend / max(click, 1))
+		cpa = 0 if orders == 0 else round(spend / max(orders,1), 2)
+		aov =  round(rev / max(orders,1), 2)
+		cpc = 0 if click == 0 else round(spend / max(click, 1))
 		cpm = round(spend*1000/ max(impression,1)) 
 		ctr = round(click*100 / max(impression, 1),2)
 		hookrate = round(vv3s*100 / max(impression, 1),2)
-		holdrate = round(thruplay*100 / max(vv3s, 1),2)
+		holdrate = 0 if vv3s == 0 else round(thruplay*100 / max(vv3s, 1),2)
 		engage_rate = round(engagement*100 / max(impression, 1),2)
-		completion_rate = round(p100 / max(vv3s, 1),2)
-		cr = round(orders*100 / max(click, 1),2)
-		cpnv = round(spend / max(engagement, 1),2)
+		completion_rate = 0 if vv3s == 0 else round(p100 / max(vv3s, 1),2)
+		cr = 0 if click == 0 else  round(orders*100 / max(click, 1),2)
+		cpnv = 0 if engagement == 0 else  round(spend / max(engagement, 1),2)
 
 		creative_data = {
         "creativeid": creativeid, "thumbnail_id": thumbnail_id, "creativename": creativename, 
@@ -72,19 +72,19 @@ def get_creativetabledata():
 	crdata["revenue"] = round(crdata["revenue"])
 	crdata["spend"] = round(crdata["spend"])
 	crdata["roas"] = round(crdata["revenue"] / max(crdata["spend"], 1), 2)
-	crdata["cpa"] = round(crdata["spend"] / max(crdata["sales"], 1))
+	crdata["cpa"] = 0 if crdata["sales"] == 0 else round(crdata["spend"] / max(crdata["sales"], 1))
 	crdata["aov"] = round(crdata["revenue"] / max(crdata["sales"], 1))
-	crdata["cpc"] = round(crdata["spend"] / max(crdata["click"], 1),2)
+	crdata["cpc"] = 0 if crdata["click"] == 0 else round(crdata["spend"] / max(crdata["click"], 1),2)
 	crdata["cpm"] = round(crdata["spend"]*1000 / max(crdata["impression"], 1),2)
 	crdata["ctr"] = round(crdata["click"]*100 / max(crdata["impression"], 1),2)
-	crdata["cr"] = round(crdata["sales"]*100 / max(crdata["click"], 1),2)
-	crdata["cpnv"] = round(crdata["spend"] / max(crdata["engagement"], 1),2)
+	crdata["cr"] = 0 if crdata["click"] == 0 else round(crdata["sales"]*100 / max(crdata["click"], 1),2)
+	crdata["cpnv"] = 0 if crdata["engagement"] == 0 else round(crdata["spend"] / max(crdata["engagement"], 1),2)
 
 	return jsonify(crdata), 200
 
 
 
-@creative_bp.route('/adtable', methods=['GET', 'OPTIONS'])
+@creative_bp.route('/adtable/facebook', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_reporttabledatafacebook():
 
@@ -132,7 +132,78 @@ def get_reporttabledatafacebook():
 		# Convert to JSON
 		json_data = fbadsdata
 
-
 		return jsonify(json_data)
 	else:
 		return jsonify({"msg":"No Data Found"}), 404
+
+
+
+@creative_bp.route('/creativetabledata/youtube', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def get_creativetabledatayoutube():
+
+	headers = request.headers
+	body = request.args
+	startdate = body.get('startdate')
+	enddate = body.get('enddate')
+	userid = headers.get('workspaceId')
+
+	sql_query = db.text("""select workspace, creative_id, creative_name, sum(impression) impression, sum(spend) spend,
+					sum(purchase) purchase, sum(purchase_value) purchase_value, sum(engagement) engagement, sum(video_views) video_views,
+					sum(video_p25_watched_actions) video_p25_watched_actions, sum(video_p50_watched_actions) video_p50_watched_actions,
+					sum(video_p75_watched_actions) video_p75_watched_actions, sum(video_p100_watched_actions) video_p100_watched_actions,
+					video_length, ad_type, thumbnail_url, preview  
+					from googlecreative
+					where workspace = :workspace and dated >= :startdate and dated <= :enddate
+					group by 1,2,3,14,15,16,17
+					 """)
+
+	result = db.session.execute(sql_query, {'workspace': userid, 'startdate':startdate, 'enddate':enddate})
+	data = result.fetchall()
+
+	crdata = {"creative": [], "click": 0, "impression": 0, "sales":0, "spend":0, "engagement":0, "cpc":0, "cpm":0, "cpa":0}
+	for row in data:
+		creativeid = row[1];         creativename = row[2];        impression = int(row[3])
+		spend = float(row[4]);	     sales = float(row[6]);          engagement = row[7]
+		video_views = row[8];     	 p25 = row[9];                p50 = row[10]       
+		p75 = row[11];               p100 = row[12];               videolength = row[13]
+		adtype = row[14];          thumbnail_id = row[15];      preview = row[16]
+		click = row[5];            
+
+
+
+		cpc = 0 if click == 0 else round(spend / max(click, 1))
+		cpm = round(spend*1000/ max(impression,1)) 
+		ctr = round(click*100 / max(impression, 1),2)
+		cpa = round(float(spend) / max(float(sales), 1),2)
+		engage_rate = round(engagement*100 / max(impression, 1),2)
+		cpnv = 0 if engagement == 0 else  round(spend / max(engagement, 1),2)
+		hookrate = 0 if impression == 0 else round(video_views / impression * 100, 2)
+		holdrate = 0 if video_views ==0 else  p25* 100/video_views 
+		completion_rate = 0 if video_views ==0 else p100* 100/video_views 
+
+		creative_data = {
+        "creativeid": creativeid, "thumbnail_id": thumbnail_id, "creativename": creativename, 
+		"adtype": "VIDEO", "sales":sales,
+        "thumbnail": thumbnail_id, "preview": preview,
+        "spend": spend, "impression": impression,
+        "click": click, "engagement": engagement, "video_views": video_views, "p25": p25,
+        "p50": p50, "p75":p75, "p100": p100,  "videolength":videolength,
+		"cpc": cpc, "cpm": cpm, "ctr": ctr, "cpa":cpa,
+		"hookrate": hookrate, "holdrate": holdrate, "engage_rate":engage_rate, "cpnv": cpnv,
+		"completion_rate":completion_rate
+    }
+
+		crdata["creative"].append(creative_data)
+		crdata["click"] += click
+		crdata["impression"] += impression
+		crdata["spend"] += spend
+		crdata["sales"] += sales
+		crdata["engagement"] += engagement
+	crdata["spend"] = round(crdata["spend"])
+	crdata["cpc"] = 0 if crdata["click"] == 0 else round(crdata["spend"] / max(crdata["click"], 1),2)
+	crdata["cpm"] = round(crdata["spend"]*1000 / max(crdata["impression"], 1),2)
+	crdata["ctr"] = round(crdata["click"]*100 / max(crdata["impression"], 1),2)
+	crdata["cpnv"] = 0 if crdata["engagement"] == 0 else round(crdata["spend"] / max(crdata["engagement"], 1),2)
+
+	return jsonify(crdata), 200
