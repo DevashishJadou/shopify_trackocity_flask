@@ -130,7 +130,14 @@ def checkout_webhook(workspace):
     payment_method = payment_info.get('payment_group')
 
     # Convert event_time to correct timezone
-    event_time = datetime.strptime(event_time, '%Y-%m-%dT%H:%M:%S%z') + timedelta(hours=float(user.timezone_value))
+    try:
+        event_time = datetime.strptime(event_time, '%Y-%m-%dT%H:%M:%S%z')
+        try:
+            event_time = datetime.strptime(event_time, '%Y-%m-%d %H:%M:%S%')
+        except:
+            print(f'event_tome:{event_time}')
+    except:
+        print(f'event_tome:{event_time}')
 
     tablename = 'order_' + workspace
     orderTable = order_table_dynamic(tablename)

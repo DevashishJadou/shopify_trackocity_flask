@@ -113,4 +113,7 @@ def integrationed_plaform():
     woocommerce = WooCommerce.query.filter_by(workspace=workspace).first()
     integation['woocommerce'] = True if woocommerce else False
 
+    cashfree = PlatformConfiguration.query.filter_by(workspace=workspace, platform='cashfree').first()
+    integation['cashfree'] = True if cashfree else False
+
     return jsonify(integation), 200
