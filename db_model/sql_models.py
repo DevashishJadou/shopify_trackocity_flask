@@ -204,6 +204,7 @@ def order_table_dynamic(tablename):
         customer_ip = db.Column(db.String(32))
         customer_user_agent = db.Column(db.Text)
         event_type = db.Column(db.String(32))
+        thankyou_page = db.Column(db.Text)
         created_at = db.Column(db.DateTime, default=datetime.now)
         updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 

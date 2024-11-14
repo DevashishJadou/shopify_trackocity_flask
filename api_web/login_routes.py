@@ -261,6 +261,7 @@ def profile_user():
     data['timezone'] = user.timezone
     data['company'] = user.company
     data['currency'] = user.currency
+    data['plan_till'] = user.plan_till
 
     return jsonify(data), 200
 

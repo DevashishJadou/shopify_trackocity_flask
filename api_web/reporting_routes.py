@@ -67,7 +67,8 @@ def update_metrics(metrics, row, indexes, traffic):
     metrics["New Visits"] += min(int(row[indexes["New Visits"]]), row[indexes["Clicks"]])
     metrics["nvisitor"] += int(row[indexes["nvisitor"]])
     metrics["visitor"] += (int(row[indexes["nvisitor"]]) + int(row[indexes["New Visits"]]))
-    metrics["ReportedRev"] += round(float(row[indexes["ReportedRev"]]),0)
+    metrics["Reported Rev"] += round(float(row[indexes["Reported Rev"]]),0)
+    metrics["Reported Sale"] += round(float(row[indexes["Reported Sale"]]),0)
     metrics["Cost"] += round(float(row[indexes["Cost"]]),2)
 
     # Calculate new metrics
@@ -78,6 +79,7 @@ def update_metrics(metrics, row, indexes, traffic):
     metrics["CPC"] = 'n/a' if metrics["Clicks"] == 0 else round(metrics["Spend"] / metrics["Clicks"],2)
     metrics["CTR %"] = 'n/a' if metrics["Impression"] == 0 else round(metrics["Clicks"]*100 / metrics["Impression"],2)
     metrics["CR %"] = 'n/a' if metrics["Clicks"] == 0 else round(metrics["Sales"]*100 / metrics["Clicks"],2)
+    metrics["Reported ROAS"] = round(metrics["Reported Rev"] / max(metrics["Spend"], 1),2)
 	
     metrics["nSpend"] = float(metrics["Clicks"]) * min(metrics["Clicks"], metrics["visitor"]) / max(1, metrics["Clicks"], metrics["visitor"])
     metrics["nROAS"] = 'n/a' if metrics["Spend"] == 0 else round(metrics["nRevenue"] / metrics["Spend"],2)
@@ -105,7 +107,8 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
             "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
             "New Visits": 0, "nvisitor": 0, "visitor": 0, "nSpend": 0.0,
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "New Visits %": 0.0,
-            "eCPNV": 0.0, "ReportedRev":0.0, "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0
+            "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0, 
+            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0
         }
     if ad_set_id not in data[campaign_id]["ad_sets"]:
         data[campaign_id]["ad_sets"][ad_set_id] = {
@@ -118,7 +121,8 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
             "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
             "New Visits": 0, "nvisitor": 0, "visitor": 0, "nSpend": 0.0,
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "New Visits %": 0.0,
-            "eCPNV": 0.0, "ReportedRev":0.0, "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0
+            "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0,
+            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0
         }
 
 # Utility function to process ads
@@ -152,7 +156,10 @@ def process_ads(data, fbadsdata, row, indexes, traffic):
         "CR %": 'n/a' if row[indexes["Clicks"]] == 0 else round(int(row[indexes["Sales"]])*100 / int(row[indexes["Clicks"]]),2),
         "CancelOrder": int(row[indexes["CancelOrder"]]),
         "CancelRev": float(row[indexes["CancelRev"]]),
-        "ReportedRev": float(row[indexes["ReportedRev"]]),
+        "Reported Rev": float(row[indexes["Reported Rev"]]),
+        "Reported Sale": float(row[indexes["Reported Sale"]]),
+        "Reported ROAS": 'n/a' if row[indexes["Spend"]] == 0 else round(float(row[indexes["Reported Rev"]]) / float(row[indexes["Spend"]]),2),
+        "Reported CPA": 'n/a' if row[indexes["Reported Sale"]] == 0 else round(float(row[indexes["Spend"]]) /int(row[indexes["Reported Sale"]]),1),
         "Cost": float(row[indexes["Cost"]]),
         "nSales": int(row[indexes["nSales"]]),
         "nRevenue": float(row[indexes["nRevenue"]]),
@@ -221,7 +228,8 @@ def get_reporttabledatafacebook():
             "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
             "New Visits": 0, "nvisitor":0, "visitor":0,
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "New Visits %":0.0,
-            "ReportedSale":0, "ReportedRev":0.0, "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0
+            "Reported Sale":0, "Reported Rev":0.0, "Reported ROAS":0.0, "Reported CPA": 0.0,
+            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0
         }
 
         # Process each row of data
@@ -231,7 +239,7 @@ def get_reporttabledatafacebook():
                 "Sales": 9, "Revenue": 10, "CancelOrder": 11, 
                 "CancelRev": 12, "nSales": 13, "nRevenue": 14, 
                 "New Visits": 15, "nvisitor":16, 
-                "ReportedSale":17, "ReportedRev":18, "Cost":19
+                "Reported Sale":17, "Reported Rev":18, "Cost":19
             }, traffic)
 
         # Convert ad_sets to list in campaigns
