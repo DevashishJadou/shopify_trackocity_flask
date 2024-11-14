@@ -79,8 +79,8 @@ def update_metrics(metrics, row, indexes, traffic):
     metrics["CPC"] = 'n/a' if metrics["Clicks"] == 0 else round(metrics["Spend"] / metrics["Clicks"],2)
     metrics["CTR %"] = 'n/a' if metrics["Impression"] == 0 else round(metrics["Clicks"]*100 / metrics["Impression"],2)
     metrics["CR %"] = 'n/a' if metrics["Clicks"] == 0 else round(metrics["Sales"]*100 / metrics["Clicks"],2)
-    metrics["Reported ROAS"] = round(metrics["Reported Rev"] / max(metrics["Spend"], 1),2)
-    metrics["Reported CPA"] = round(metrics["Reported Spend"] / max(metrics["Reported Sale"], 1),2)
+    metrics["Reported ROAS"] = 'n/a' if metrics["Spend"] == 0 else round(metrics["Reported Rev"] / max(metrics["Spend"], 1),2)
+    metrics["Reported CPA"] = 'n/a' if metrics["Reported Sale"] == 0 else round(metrics["Spend"] / max(metrics["Reported Sale"], 1),2)
 	
     metrics["nSpend"] = float(metrics["Clicks"]) * min(metrics["Clicks"], metrics["visitor"]) / max(1, metrics["Clicks"], metrics["visitor"])
     metrics["nROAS"] = 'n/a' if metrics["Spend"] == 0 else round(metrics["nRevenue"] / metrics["Spend"],2)
