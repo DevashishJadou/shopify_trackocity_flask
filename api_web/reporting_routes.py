@@ -107,7 +107,7 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
             "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
             "New Visits": 0, "nvisitor": 0, "visitor": 0, "nSpend": 0.0,
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "New Visits %": 0.0,
-            "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0, 
+            "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0, "Reported CPA":0.0, 
             "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0
         }
     if ad_set_id not in data[campaign_id]["ad_sets"]:
@@ -121,7 +121,7 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
             "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
             "New Visits": 0, "nvisitor": 0, "visitor": 0, "nSpend": 0.0,
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "New Visits %": 0.0,
-            "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0,
+            "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0, "Reported CPA":0.0,
             "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0
         }
 

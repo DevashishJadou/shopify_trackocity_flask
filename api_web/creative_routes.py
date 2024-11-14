@@ -37,7 +37,7 @@ def get_creativetabledatafacebook():
 		if adtype == 'SHARE' and vv3s>0:
 			adtype = 'VIDEO'
 
-		roas = round(rev / max(spend,1), 2)
+		roas = 0 if spend == 0 else round(rev / max(spend,1), 2)
 		cpa = 0 if orders == 0 else round(spend / max(orders,1), 2)
 		aov =  round(rev / max(orders,1), 2)
 		cpc = 0 if click == 0 else round(spend / max(click, 1))
@@ -71,7 +71,7 @@ def get_creativetabledatafacebook():
 		crdata["engagement"] += engagement
 	crdata["revenue"] = round(crdata["revenue"])
 	crdata["spend"] = round(crdata["spend"])
-	crdata["roas"] = round(crdata["revenue"] / max(crdata["spend"], 1), 2)
+	crdata["roas"] = 0 if crdata["spend"] == 0 else round(crdata["revenue"] / max(crdata["spend"], 1), 2)
 	crdata["cpa"] = 0 if crdata["sales"] == 0 else round(crdata["spend"] / max(crdata["sales"], 1))
 	crdata["aov"] = round(crdata["revenue"] / max(crdata["sales"], 1))
 	crdata["cpc"] = 0 if crdata["click"] == 0 else round(crdata["spend"] / max(crdata["click"], 1),2)
@@ -179,8 +179,8 @@ def get_creativetabledatayoutube():
 		engage_rate = round(engagement*100 / max(impression, 1),2)
 		cpnv = 0 if engagement == 0 else  round(spend / max(engagement, 1),2)
 		hookrate = 0 if impression == 0 else round(video_views / impression * 100, 2)
-		holdrate = 0 if video_views ==0 else  p25* 100/video_views 
-		completion_rate = 0 if video_views ==0 else p100* 100/video_views 
+		holdrate = 0 if video_views ==0 else  round(p25* 100/video_views ,2)
+		completion_rate = 0 if video_views ==0 else round(p100* 100/video_views ,2)
 
 		creative_data = {
         "creativeid": creativeid, "thumbnail_id": thumbnail_id, "creativename": creativename, 
