@@ -216,7 +216,7 @@ def page_limit_get():
 					SELECT workspace, complete_name, product_type::int*1000 page_limit,
 						CASE 
 							WHEN EXTRACT(DAY FROM ur.plan_till) >= EXTRACT(DAY FROM NOW()) 
-							THEN DATE_TRUNC('month', NOW()) - INTERVAL '3 month' + INTERVAL '1 day' * (EXTRACT(DAY FROM ur.plan_till) - 1)
+							THEN DATE_TRUNC('month', NOW()) - INTERVAL '1 month' + INTERVAL '1 day' * (EXTRACT(DAY FROM ur.plan_till) - 1)
 							ELSE DATE_TRUNC('month', NOW()) + INTERVAL '1 day' * (EXTRACT(DAY FROM ur.plan_till) - 1)
 						END AS adjusted_plan_till
 					FROM 
@@ -229,7 +229,9 @@ def page_limit_get():
 				group by page_limit
 					 """)
     result = db.session.execute(sql_query, {'workspace': workspace})
-    return jsonify({"data":result.fetchall()[0][0]})
+    xx =  result.fetchall()
+    page_view_usage = xx[0][0] if xx else 0
+    return jsonify({"data":page_view_usage})
 
 
 
