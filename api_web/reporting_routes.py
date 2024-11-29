@@ -50,7 +50,7 @@ def get_all_source():
 # Utility function to update metrics
 def update_metrics(metrics, row, indexes, traffic):
 
-    if traffic not in ('Facebook', 'Google'):
+    if traffic not in ('Facebook', 'Google', 'LinkedIn'):
         metrics["Clicks"] += (int(row[indexes["nvisitor"]]) + int(row[indexes["New Visits"]]))
     else:
         metrics["Clicks"] += row[indexes["Clicks"]]  
@@ -129,7 +129,7 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
 # Utility function to process ads
 def process_ads(data, fbadsdata, row, indexes, traffic):
     campaign_id, ad_set_id, ad_id = row[0], row[2], row[4]
-    if traffic not in ('Facebook', 'Google'):
+    if traffic not in ('Facebook', 'Google', 'Linkedin'):
         row = list(row)
         row[indexes["Clicks"]] = (int(row[indexes["nvisitor"]]) + int(row[indexes["New Visits"]]))
         row = tuple(row)
@@ -196,7 +196,6 @@ def get_reporttabledatafacebook():
     userid = headers.get('workspaceId')
     user = UserRegister.query.filter_by(workspace=userid).first()
 
-
     if user:
         sort = 'ASC' if attribute == 'first' else 'DESC'
         if traffic == 'Facebook':
@@ -211,6 +210,13 @@ def get_reporttabledatafacebook():
             result = db.session.execute(sql_query, {
 	            'workspace': userid, 'productid': user.productid,
 	            'startdate': startdate, 'enddate': enddate, 'sort': sort
+	        })
+            data = result.fetchall()
+        elif traffic == 'LinkedIn':
+            sql_query = text("SELECT * FROM table_mediaattribute(:workspace, :productid, :startdate, :enddate, :sort, :channel)")
+            result = db.session.execute(sql_query, {
+	            'workspace': userid, 'productid': user.productid,
+	            'startdate': startdate, 'enddate': enddate, 'sort': sort, 'channel': 'linkedin'
 	        })
             data = result.fetchall()
         else:
@@ -300,7 +306,7 @@ def get_reporttablesaledata():
 
 	output = []
 	if user:
-		if channel in ('Facebook', 'Google'):
+		if channel in ('Facebook', 'Google', 'LinkedIn'):
 			channel = channel.lower()
 		sort = 'ASC' if attribute == 'First' else 'DESC'
 		sql_query = db.text("select * from table_salesdata(:workspace, :productid, :startdate, :enddate, :channel, :adid, :sort)")

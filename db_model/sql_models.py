@@ -109,6 +109,21 @@ class ClientFacebookredentials(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
 
+class ClientLinkedinCredentials(db.Model):
+    __tablename__ = "client_linkedin_credentials"
+    id = db.Column(db.Integer, primary_key=True)
+    workspace = db.Column(db.String(64))
+    access_token = db.Column(db.Text)
+    account = db.Column(db.String(32))
+    account_name = db.Column(db.String(64))
+    expire_in = db.Column(db.Date)
+    active = db.Column(db.Boolean)
+    refresh_token = db.Column(db.Text)
+    refresh_token_expire_in = db.Column(db.Date)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
+
 class WooCommerce(db.Model):
     __tablename__ = "channel_woocommerce_integration"
     id = db.Column(db.Integer, primary_key=True)
@@ -271,17 +286,15 @@ def orderlinetable(tablename):
     orderline_table = Table(
 			tablename,
 			metadata,
-			Column('id', Integer, primary_key=True),
-            Column('channel', String(32)),
+			Column('orderid', Integer, primary_key=True),
 			Column('shopify_productid', Integer),
-			Column('product_name', String(128), unique=True),
+			Column('sku', String(128), unique=True),
+            Column('variant_title', String(128)),
 			Column('quantity', Integer),
 			Column('price', Numeric),
 			Column('title', String(128)),
             Column('variant_title', String(128)),
-            Column('cost', Numeric),
-			Column('created_at', DateTime, default=datetime.now),
-			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now)
+            Column('cost', Numeric)
 		)
     return orderline_table
 
@@ -341,6 +354,33 @@ def facebookads_table(tablename):
     return facebookads_table
 
 
+
+def otherads_table(tablename):
+    # Define a table with googleads name and columns
+    metadata = MetaData()
+    otherads_table = Table(
+			tablename,
+			metadata,
+            Column('channel', String(64)),
+            Column('dated', Date),
+            Column('account', String(32)),
+            Column('account_name', String(64)),
+            Column('campaignid', String(32)),
+			Column('campaign_name', String(128)),
+			Column('adsetid', String(32)),
+            Column('adset_name', String(128)),
+            Column('adid', String(32)),
+            Column('ad_name', String(128)),
+            Column('impression', Integer),
+            Column('clicks', Integer),
+            Column('spend', Numeric),
+            Column('purchase_roas', Numeric),
+            Column('purchase', Integer),
+			Column('created_at', DateTime, default=datetime.now),
+			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now),
+            UniqueConstraint('channel','dated', 'adid', name=uuid.uuid4().hex)
+		)
+    return otherads_table
 
 
 def facebookcreative_table(tablename):

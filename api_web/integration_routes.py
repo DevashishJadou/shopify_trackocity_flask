@@ -2,6 +2,8 @@
 
 from ..db_model.sql_models import *
 from ..connection import db
+from sqlalchemy import MetaData
+
 
 from flask import Blueprint, request, jsonify
 from flask_cors import cross_origin
@@ -97,6 +99,43 @@ def integration_google_account_delete():
         return jsonify({"message": "No account found"}), 404
 
 
+
+@intgration_cd.route('/linkedin', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET', 'OPTIONS'], headers=['Content-Type'])
+def integration_linkedin():
+    headers = request.headers
+    workspace = headers.get('workspaceId')
+
+    user = ClientLinkedinCredentials.query.filter_by(workspace=workspace).all()
+    if user:
+        accounts = []
+        for acc in user:
+            value = {'id':acc.id, 'accountname':acc.account_name, 'accountid':acc.account}
+            accounts.append(value)
+        return jsonify({"accounts":accounts}), 200
+    else:
+        return jsonify({"message":"no account found"}), 400
+    
+
+@intgration_cd.route('/linkedin/deleteaccount', methods=['PUT', 'OPTIONS'])
+@cross_origin(origins='*', methods=['PUT', 'OPTIONS'], headers=['Content-Type'])
+def integration_linkedin_account_delete():
+    headers = request.headers
+    workspace = headers.get('workspaceId')
+    body = request.args
+    id = body.get('id')
+    row_to_delete = ClientLinkedinCredentials.query.filter_by(id=id, workspace=workspace).first()
+    if row_to_delete:
+        # If the row exists, delete it
+        db.session.delete(row_to_delete)
+        db.session.commit()  # Commit the transaction to delete the row
+        return jsonify({"message": "Account successfully deleted"}), 200
+    else:
+        # Return an appropriate message if the row doesn't exist
+        return jsonify({"message": "No account found"}), 404
+
+
+
 @intgration_cd.route('/integration', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET', 'OPTIONS'], headers=['Content-Type'])
 def integrationed_plaform():
@@ -117,3 +156,6 @@ def integrationed_plaform():
     integation['cashfree'] = True if cashfree else False
 
     return jsonify(integation), 200
+
+
+

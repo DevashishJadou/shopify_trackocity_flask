@@ -7,6 +7,7 @@ from .api_web.setting_route import setting_bp
 from .external.routes import external_bp
 from .client_auth_bridge.google.google_service_handler import google_bp
 from .client_auth_bridge.facebook.facebook_service_handler import facebook_bp
+from .client_auth_bridge.linkedin.linkedinads_service_handler import linkedinads_bp
 from .integration.payment_gateway.razorpay import payment_bp
 from .integration.payment_gateway.instamojo import payment_bp
 from .integration.payment_gateway.cashfree import payment_bp
@@ -15,6 +16,7 @@ from .integration.channel.shopify import channel_bp
 from .integration.channel.pabbly import channel_bp
 from .api_web.reporting_routes import report_bp
 from .api_web.creative_routes import creative_bp
+from .api_web.behaviour_routes import behaviour_bp
 from .api_web.integration_routes import intgration_cd
 from .payment import trackocitypayment_bp
 from .connection import create_app, jwt, db
@@ -44,8 +46,10 @@ app.register_blueprint(intgration_cd, url_prefix='/integration')
 app.register_blueprint(external_bp, url_prefix='/external')
 app.register_blueprint(google_bp, url_prefix='/google')
 app.register_blueprint(facebook_bp, url_prefix='/facebook')
+app.register_blueprint(linkedinads_bp, url_prefix='/linkedinads')
 app.register_blueprint(report_bp, url_prefix='/reporting')
 app.register_blueprint(creative_bp, url_prefix='/creative')
+app.register_blueprint(behaviour_bp, url_prefix='/behaviour')
 app.register_blueprint(payment_bp, url_prefix='/clientpayment')
 app.register_blueprint(channel_bp, url_prefix='/clientchannel')
 app.register_blueprint(trackocitypayment_bp, url_prefix='/trackocitypayment')

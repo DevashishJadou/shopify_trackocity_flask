@@ -4,6 +4,7 @@ from ..connection import db
 from flask import Blueprint, request, jsonify
 from flask_cors import cross_origin
 import json
+from sqlalchemy import text
 
 
 setting_bp = Blueprint('setting', __name__)
@@ -203,6 +204,32 @@ def put_delete_utmsource():
 
 
 
+@setting_bp.route('/resource_useage', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET', 'OPTIONS'], headers=['Content-Type', 'Authorization'])
+def page_limit_get():
+    headers = request.headers
+    workspace = headers.get('workspaceId')
+    sql_query = text("""
+				select sum(value)*100.0 / page_limit
+				from mongo_metric mm 
+				left join (
+					SELECT workspace, complete_name, product_type::int*1000 page_limit,
+						CASE 
+							WHEN EXTRACT(DAY FROM ur.plan_till) >= EXTRACT(DAY FROM NOW()) 
+							THEN DATE_TRUNC('month', NOW()) - INTERVAL '3 month' + INTERVAL '1 day' * (EXTRACT(DAY FROM ur.plan_till) - 1)
+							ELSE DATE_TRUNC('month', NOW()) + INTERVAL '1 day' * (EXTRACT(DAY FROM ur.plan_till) - 1)
+						END AS adjusted_plan_till
+					FROM 
+						user_register ur
+					WHERE 
+						isactive = true
+					) as u on u.workspace = mm.workspace 
+				where metric = 'page_view' and mm.dated >= u.adjusted_plan_till
+				and mm.workspace = :workspace
+				group by page_limit
+					 """)
+    result = db.session.execute(sql_query, {'workspace': workspace})
+    return jsonify({"data":result.fetchall()[0][0]})
 
 
 
