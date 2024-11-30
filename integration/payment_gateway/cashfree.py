@@ -121,7 +121,7 @@ def checkout_webhook(workspace):
 
     payment_id = payment_info.get('cf_payment_id')
     try:
-        amount = payment_info.get('payment_amount') / 100.0  # Assuming amount is in paisa
+        amount = payment_info.get('payment_amount')
     except:
         amount = payment_info.get('payment_amount')
     currency = payment_info.get('payment_currency')
