@@ -204,18 +204,21 @@ def scustomer_cohort():
                 "nltv": row["nltv"],
                 "multiorder": row["multiorder"],
                 "firstpurchase": row["firstpurchase"],
-                "day7": row["day7"] if week_diff >= 1 else None,
-                "day14": row["day14"] if week_diff >= 2 else None,
-                "days30": row["days30"] if week_diff >= 4 else None,
-                "day60": row["day60"] if week_diff >= 8 else None,
-                "day90": row["day90"] if week_diff >= 12 else None,
-                "day180": row["day180"] if week_diff >= 26 else None,
-                "day365": row["day365"] if week_diff >= 52 else None,
+                "day7": row["day7"],
+                "day14": row["day14"] if week_diff >= 1 else None,
+                "days30": row["days30"] if week_diff >= 2 else None,
+                "day60": row["day60"] if week_diff >= 4 else None,
+                "day90": row["day90"] if week_diff >= 8 else None,
+                "day180": row["day180"] if week_diff >= 12 else None,
+                "day365": row["day365"] if week_diff >= 26 else None,
                 "day365plus": row["day365plus"] if week_diff >= 52 else None,
             }
         else:
             row_date = datetime.strptime(row["_period"], "%Y-%m")
             month_diff = (today.year - row_date.year) * 12 + today.month - row_date.month
+            days_in_current_month = (today - row_date.replace(year=today.year, month=today.month)).days
+            partial_month = 0.5 if days_in_current_month >= 15 else 0
+            month_diff = month_diff + partial_month
             processed_row = {
                 "_period": row["_period"],
                 "new_customer": row["new_customer"],
@@ -224,13 +227,13 @@ def scustomer_cohort():
                 "nltv": row["nltv"],
                 "multiorder": row["multiorder"],
                 "firstpurchase": row["firstpurchase"],
-                "day7": row["day7"] if month_diff >= 1 else None,
-                "day14": row["day14"] if month_diff >= 1 else None,
-                "days30": row["days30"] if month_diff >= 1 else None,
-                "day60": row["day60"] if month_diff >= 2 else None,
-                "day90": row["day90"] if month_diff >= 3 else None,
-                "day180": row["day180"] if month_diff >= 6 else None,
-                "day365": row["day365"] if month_diff >= 12 else None,
+                "day7": row["day7"],
+                "day14": row["day14"],
+                "days30": row["days30"] if month_diff >= 0.5 else None,
+                "day60": row["day60"] if month_diff >= 1 else None,
+                "day90": row["day90"] if month_diff >= 2 else None,
+                "day180": row["day180"] if month_diff >= 3 else None,
+                "day365": row["day365"] if month_diff >= 6 else None,
                 "day365plus": row["day365plus"] if month_diff >= 12 else None,
             }
 

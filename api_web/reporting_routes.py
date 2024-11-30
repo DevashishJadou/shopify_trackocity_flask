@@ -355,6 +355,27 @@ def get_reporttablesalejourney():
 
 
 
+@report_bp.route('/tablesaleinteractions', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def table_saleinteractions():
+
+	headers = request.headers
+	body = request.args
+	userid = headers.get('workspaceId')
+	startdate =  body.get('startdate')
+	enddate = body.get('enddate')
+	user = UserRegister.query.filter_by(workspace=userid).first()
+      
+	sql_query = db.text("select * from table_saleinteractions(:workspace, :productid, :startdate, :enddate)")
+	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
+	data = result.fetchall()
+	columns = ["id", "order_date", "total", "transcation_id", "email", "phone", "first_adsource", "last_adsource", "interactions_count"]
+
+	results = [dict(zip(columns, row)) for row in data]
+	return jsonify(results),200
+      
+
+
 @report_bp.route('/dashboardgraphsales', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_dashboardgraphdata():
