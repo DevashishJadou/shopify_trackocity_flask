@@ -131,13 +131,14 @@ def checkout_webhook(workspace):
 
     # Convert event_time to correct timezone
     try:
-        event_time = datetime.strptime(event_time, '%Y-%m-%dT%H:%M:%S%z')
+        
+        event_time = datetime.strptime(event_time, '%Y-%m-%dT%H:%M:%S%z') + timedelta(hours=float(user.timezone_value)) 
         try:
-            event_time = datetime.strptime(event_time, '%Y-%m-%d %H:%M:%S%')
+            event_time = datetime.strptime(event_time, '%Y-%m-%d %H:%M:%S%') + timedelta(hours=float(user.timezone_value)) 
         except:
-            print(f'event_tome:{event_time}')
+            print(f'cashfree event_time:{event_time}')
     except:
-        print(f'event_tome:{event_time}')
+        print(f'cashfree event_time:{event_time}')
 
     tablename = 'order_' + workspace
     orderTable = order_table_dynamic(tablename)
