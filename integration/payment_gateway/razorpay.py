@@ -95,6 +95,7 @@ def razorpay_webhook(workspace):
 
     # Parse the JSON data from the request
     data = json.loads(request_data)
+    print(f'razorpay data:{workspace, data}')
 
     # Process the webhook event based on the event type
     event_type = data.get('event')
@@ -132,7 +133,7 @@ def razorpay_webhook(workspace):
             return jsonify({'status': 'success'}), 200
         except Exception as e:
             print(f'Error razorpay webhook:{e.args}')
-            return jsonify({'status': 'success'}), 200
+            return jsonify({'status': 'success'}), 400
 
 
     return jsonify({'status': 'success'}), 200

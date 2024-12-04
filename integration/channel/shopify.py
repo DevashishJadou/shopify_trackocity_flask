@@ -40,21 +40,13 @@ def shopifyintegration():
 		try:
 			if not metadata.tables.get(tablename):
 				shopify_table = ordertable(tablename)
+				shopify_orderline_table= orderlinetable(tablename)
 				try:
 					shopify_table.create(bind=db.engine)
-					db.session.add(user_make)
-					# dup_order_rule(tablename)
-				except Exception as e:
-					pass
-			db.session.commit()
-
-			if not metadata.tables.get(orderlinetablename):
-				shopify_orderline_table = orderlinetable(orderlinetablename)
-				try:
 					shopify_orderline_table.create(bind=db.engine)
 					db.session.add(user_make)
 					# dup_order_rule(tablename)
-				except:
+				except Exception as e:
 					pass
 			db.session.commit()
 
