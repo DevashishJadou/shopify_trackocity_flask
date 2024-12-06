@@ -64,7 +64,7 @@ def clientaccount():
     userid = headers.get("workSpaceId")
     token = request.args.get("refresh_token")
     systemid = request.args.get("systemid")
-    if systemid == 'undefined':
+    if systemid in ('undefined', 'Null', 'null'):
         systemid = None
     id = int(systemid) if systemid else None
     accounts = request.args.get("customerId")
