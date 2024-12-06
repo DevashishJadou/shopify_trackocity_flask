@@ -70,6 +70,7 @@ def razorpay_webhook(workspace):
     # "notes":{"order_signature":"55cefa46e2b7622026471e1393130056447cf9f4eb19b0b86811bbec21ddf026",
     # "sio_order_item_id":5659823},"created_at":1701769359}}},"created_at":1701769395}
 
+    
     user = UserRegister.query.filter_by(workspace=workspace).first()
     if not user.isactive:
         jsonify({'status': 'Unauthorized'}), 403
@@ -95,7 +96,6 @@ def razorpay_webhook(workspace):
 
     # Parse the JSON data from the request
     data = json.loads(request_data)
-    print(f'razorpay data:{workspace, data}')
 
     # Process the webhook event based on the event type
     event_type = data.get('event')

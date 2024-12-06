@@ -40,9 +40,7 @@ def fetch_sales_velocity(workspace, productid, startdate, enddate, channel=None,
 
 
 def process_sales_velocity_data(df, include_dayzero=False):
-    # Extract the relevant values from the data dictionary
-    sales_data = df[0]
-    
+
     # Mapping of days to the relevant fields in the data
     day_mapping = [
         ("1 Day", "day1", "total_day1"),
@@ -58,6 +56,32 @@ def process_sales_velocity_data(df, include_dayzero=False):
 
     if include_dayzero:
         day_mapping = [("0 Day", "day0", "total_day0")] + day_mapping
+
+        
+    # Extract the relevant values from the data dictionary
+    if len(df) == 0:
+        result = {
+        "sales_conversion": 0,
+        'traffic': 0,
+        "value": 0,
+        "table_data": []
+        }
+
+        for label, contact_key, value_key in day_mapping:
+            result["table_data"].append({
+            "days_to_first_sale": label,
+            "sales_conversion_rate": 0,
+            "average_sales_value": 0,
+            "percentage_contact": 0,
+            "percentage_sales": 0,
+            "cumulative_sales": 0,
+            "cumulative_contact": 0
+            })
+        return result
+
+    sales_data = df[0]
+    
+    
     
     # Calculate overall totals
     total_contacts = sum(sales_data[day] for _, day, _ in day_mapping)

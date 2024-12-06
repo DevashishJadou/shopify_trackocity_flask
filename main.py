@@ -85,7 +85,6 @@ def handle_invalid_token_error(error):
 @cross_origin(origins='*', methods=['GET', 'OPTIONS'], headers=['Content-Type'])
 def googlesheet_user():
     api_key = request.args.get('api_key')
-    print(f'api_key:{api_key}')
     if api_key != 'hisd8gi385ho0dfn49js80943tggbo934t90ge':
         return jsonify({"message":"Non Authorized"}), 400
 

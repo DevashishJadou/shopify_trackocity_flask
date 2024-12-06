@@ -111,7 +111,6 @@ def checkout_webhook(workspace):
         return jsonify({'status': 'Unauthorized'}), 403
 
     request_data = request.get_json()  # Load JSON data from the request
-    print(f'Cashfree data:{request_data}')
 
     # Extract relevant information from request data
     payment_info = request_data.get('data', {}).get('payment', {})
