@@ -272,6 +272,7 @@ def ordertable(tablename):
             Column('order_status', String(32)),
 			Column('customer_ip', String(64)),
 			Column('customer_user_agent', Text),
+            Column('thankyou_page', Text),
             Column('event_type', String(32)),
 			Column('created_at', DateTime, default=datetime.now),
 			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now)
@@ -293,7 +294,6 @@ def orderlinetable(tablename):
 			Column('quantity', Integer),
 			Column('price', Numeric),
 			Column('title', String(128)),
-            Column('variant_title', String(128)),
             Column('cost', Numeric)
 		)
     return orderline_table
@@ -421,3 +421,13 @@ def facebookcreative_table(tablename):
             UniqueConstraint('dated', 'adid', name=uuid.uuid4().hex)
 		)
     return facebookcreative_table
+
+
+
+# class CustomizeColumn(db.Model):
+#     __tablename__ = "customize_column"
+#     id = db.Column(db.Integer, primary_key=True)
+#     workspaceid = db.Column(db.String(32))
+#     report = db.Column(db.String(32))
+#     field = db.Column(db.String(64))
+#     sequence = db.Column(db.INTEGER)
