@@ -31,20 +31,20 @@ def woocommerceintegration():
     
     else:
         razorpay_register = WooCommerce(workspace=workspace, client_secret=_woocommerce_client_secret, active=True)
+        db.session.add(razorpay_register)
         tablename = 'order_'+workspace
         try:
             if not metadata.tables.get(tablename):
                 woocommerce_table = ordertable(tablename)
                 try:
                     woocommerce_table.create(bind=db.engine)
-                    db.session.add(razorpay_register)
-                    dup_order_rule(tablename)
+                    # dup_order_rule(tablename)
                 except:
                      pass
-            db.session.commit()
         except Exception as e:
             print(f'Woocommerce client secret: {e.msg}')
             return jsonify({'error': 'Something went Wrong'}), 500
+    db.session.commit()
     return jsonify({'message': 'success'}), 200
 
 

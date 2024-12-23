@@ -89,11 +89,11 @@ def googlesheet_user():
         return jsonify({"message":"Non Authorized"}), 400
 
     user = UserRegister.query.order_by(UserRegister.id.desc()).all()
-    header = ['id','complete_name','email','phone','created_at','isverify','plan_till','company','product_type','timezone']
+    header = ['id','complete_name','email','phone','created_at','plan_till','company','product_type',' tag']
     data = []
     data.append(header)
     for usr in user:
-        row = [usr.id, usr.complete_name, usr.email, usr.phone, usr.created_at, usr.isverify, usr.plan_till, usr.company, usr.product_type, usr.timezone]
+        row = [usr.id, usr.complete_name, usr.email, usr.phone, usr.created_at, usr.plan_till, usr.product_type, usr.tag]
         data.append(row)
     return jsonify(data), 200
 
@@ -112,7 +112,7 @@ def refresh():
 def before_request():
     headers = request.headers
     userid = headers.get('workspaceId', None)
-    if request.endpoint not in ('refresh', 'googlesheetuser'):
+    if request.endpoint not in ('refresh', 'googlesheetuser','googlesheet_user'):
         if userid:
             verify_jwt_in_request()
             user = UserRegister.query.filter_by(workspace=userid).first()
@@ -143,8 +143,6 @@ def handle_cors_error(e):
 
 
 def payment_order_creation(name, workspace, plan_till, email, phone='1212121212', currency='INR', product='standard'):
-    # import pdb
-    # pdb.set_trace()
     payment = Payment.query.filter(workspace==workspace).first()
     if payment:
         return payment.link

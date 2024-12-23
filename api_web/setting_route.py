@@ -1,4 +1,4 @@
-from ..db_model.sql_models import ProductTable, UTMSource, UserRegister
+from ..db_model.sql_models import ProductTable, UTMSource, UserRegister, CustomizeColumn
 from ..connection import db
 
 from flask import Blueprint, request, jsonify
@@ -232,6 +232,43 @@ def page_limit_get():
     xx =  result.fetchall()
     page_view_usage = xx[0][0] if xx else 0
     return jsonify({"data":page_view_usage})
+
+
+
+@setting_bp.route('/reporting/get_customize_column', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET', 'OPTIONS'], headers=['Content-Type', 'Authorization'])
+def reporting_get_customize_column():
+	headers = request.headers
+	workspace = headers.get('workspaceId')
+	report = request.args
+
+	sql_query = db.text("select report, workspaceid, field, seq from customize_column where workspaceid = :workspace and report = :report")
+	result = db.session.execute(sql_query, {'workspace': workspace, 'report':report.get('report')})
+	data = result.fetchall()
+	columns = ["report", "workspace", "field", "seq"]
+	results = [dict(zip(columns, row)) for row in data]
+	return jsonify(results),200
+
+
+@setting_bp.route('/reporting/update_customize_column', methods=['POST', 'OPTIONS'])
+@cross_origin(origins='*', methods=['POST', 'OPTIONS'], headers=['Content-Type', 'Authorization'])
+def reporting_update_customize_column():
+	headers = request.headers
+	workspace = headers.get('workspaceId')
+	param = request.args
+	body = json.loads(request.data)
+	report = param.get('report')
+	CustomizeColumn.query.filter_by(workspaceid=workspace).delete()
+	for row in body:
+		ff = CustomizeColumn(workspaceid=workspace, report=report, field=row.get('field'), seq=row.get('seq'))
+		db.session.add(ff)
+	db.session.commit()
+	
+	return jsonify({"message":"Updated"}), 201
+
+
+
+
 
 
 

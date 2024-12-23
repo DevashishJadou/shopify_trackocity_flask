@@ -13,7 +13,7 @@ from ...dbrule import dup_order_rule
 
 from sqlalchemy import MetaData
 
-metadata = MetaData()
+metadata = MetaData(schema="public")
 
 # channel_bp = Blueprint('clientchannel', __name__)
 
@@ -35,19 +35,18 @@ def shopifyintegration():
 
 	else:
 		user_make = Shopify(base_url=base_url, access_key=access_token, workspace=workspace, active=True)
+		db.session.add(user_make)
 		tablename = 'order_'+workspace
 		orderlinetablename = 'orderline_'+workspace
 		try:
 			if not metadata.tables.get(tablename):
 				shopify_table = ordertable(tablename)
-				shopify_orderline_table= orderlinetable(tablename)
+				shopify_orderline_table= orderlinetable(orderlinetablename)
 				try:
 					shopify_table.create(bind=db.engine)
 					shopify_orderline_table.create(bind=db.engine)
-					db.session.add(user_make)
-					# dup_order_rule(tablename)
 				except Exception as e:
-					pass
+					print(f'Error order table creation:{e.args}')
 			db.session.commit()
 
 		except Exception as e:

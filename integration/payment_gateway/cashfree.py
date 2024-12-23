@@ -18,21 +18,23 @@ def checkout_params():
     header = request.headers
     _body = json.loads(request.get_data())
     workspace = header.get('workspaceId')
+    platform = _body.get('platform')
+    platform = 'cashfree'
 
 
-    user = PlatformConfiguration.query.filter_by(workspace=workspace).filter_by(platform='cashfree').first()
+    user = PlatformConfiguration.query.filter_by(workspace=workspace).filter_by(platform=platform).first()
     if user:
         return 200
 
     else:
-        razorpay_register = PlatformConfiguration(workspace=workspace, platform='cashfree', active=True)
+        razorpay_register = PlatformConfiguration(workspace=workspace, platform=platform, active=True)
+        db.session.add(razorpay_register)
         tablename = 'order_'+workspace
         try:
             if not metadata.tables.get(tablename):
                 razorpay_table = ordertable(tablename)
                 try:
                     razorpay_table.create(bind=db.engine)
-                    db.session.add(razorpay_register)
                 except:
                     pass
         except Exception as e:
@@ -118,7 +120,7 @@ def checkout_webhook(workspace):
     order_info = request_data.get('data', {}).get('order', {})
     event_time = request_data.get('event_time')
 
-    payment_id = payment_info.get('cf_payment_id')
+    payment_id = str(payment_info.get('cf_payment_id'))
     try:
         amount = payment_info.get('payment_amount')
     except:
@@ -143,18 +145,35 @@ def checkout_webhook(workspace):
     orderTable = order_table_dynamic(tablename)
     orderTable.metadata = db.Model.metadata
 
-    order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
-    if order_obj is None:
-        order_make = orderTable(
-            order_date=event_time,
-            transcation_id=payment_id,
-            email=email,
-            phone=phone,
-            payment_method=payment_method,
-            total=amount,
-            currency=currency
-        )
-        db.session.add(order_make)
+    if user.isleadgen:
+        order_obj = orderTable.query.filter_by(email=email).first()
+        if not order_obj:
+            order_obj = orderTable.query.filter_by(phone=phone).first()
+        if order_obj:
+            order_obj.transcation_id = payment_id
+            order_obj.total = amount
+            order_obj.currency = currency
+            order_obj.email = email
+            order_obj.phone = phone
+            order_obj.converted_date = event_time
+        else:
+            order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
+            if order_obj is None:
+                order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency)
+                db.session.add(order_make)
+    else:
+        order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
+        if order_obj is None:
+            order_make = orderTable(
+                order_date=event_time,
+                transcation_id=payment_id,
+                email=email,
+                phone=phone,
+                payment_method=payment_method,
+                total=amount,
+                currency=currency
+            )
+            db.session.add(order_make)
     db.session.commit()
 
     return jsonify({'status': 'success'}), 200

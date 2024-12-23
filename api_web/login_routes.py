@@ -72,6 +72,7 @@ def cros_handle():
 def user_registor():
     data = json.loads(request.data)
     email = data['email'].lower()
+    islead = data.get('isLead', None)
 
     # Check if the user exists
     user = UserRegister.query.filter_by(email=email).first() is not None
@@ -105,7 +106,7 @@ def user_registor():
         subdomain = UserSubdomain.query.filter_by(status=False).first()
         subdomain.status = True
 
-        user = UserRegister(complete_name=data['name'], email=email, phone=data['phone'], _password=_hassed_password, workspace=workspace, productid=productid, plan_till=plantill, subdomain=subdomain.subdomain)
+        user = UserRegister(complete_name=data['name'], email=email, phone=data['phone'], _password=_hassed_password, workspace=workspace, productid=productid, plan_till=plantill, subdomain=subdomain.subdomain, isleadgen=islead)
         db.session.add(user)
         db.session.commit()
 
@@ -138,7 +139,8 @@ def login_user():
                 "access":create_access_token(identity=username, expires_delta=timedelta(hours=6)),
                 "refresh": create_refresh_token(identity=username, expires_delta=timedelta(days=15))
             },
-            "user_id":user.workspace
+            "user_id":user.workspace,
+            "isleadgen": user.isleadgen
             }), 200
 
         if not check_password_hash(user._password, str(password)):
@@ -153,7 +155,8 @@ def login_user():
                     "access":access_token,
                     "refresh": refresh_token
                 },
-                "user_id":user.workspace
+                "user_id":user.workspace,
+                "isleadgen": user.isleadgen
                 }), 200
     if agency:
         user = UserRegister.query.filter_by(agencyid=agency.id).order_by(desc(UserRegister.last_activity)).first()
@@ -308,6 +311,7 @@ def profile_client_create():
     userid = headers.get('workspaceId')
     data = json.loads(request.data)
     email = data.get('email',None)
+    islead = data.get('isLead', None)
 
     agency = UserRegister.query.filter_by(email=email).first() is not None
     if agency:       
@@ -316,11 +320,12 @@ def profile_client_create():
     workspace = uuid4().hex
     productid = random.randint(100000000, 999999999)
     plantill = datetime.now() + timedelta(days=4)
-    
     if not email:
         email = workspace + "@client.com"
     agency = AgencyRegister.query.filter_by(workspace=userid).first()
-    user = UserRegister(complete_name=data['name'], email=email, phone=data.get('phone',None), workspace=workspace, productid=productid, account_type='individual', agencyid=agency.id, isactive=True, plan_till=plantill, timezone=data['timezone'], company=data['company'], currency=data['currency'])
+    subdomain = UserSubdomain.query.filter_by(status=False).first()
+    subdomain.status = True
+    user = UserRegister(complete_name=data['name'], email=email, phone=data.get('phone',None), workspace=workspace, productid=productid, account_type='individual', agencyid=agency.id, isactive=True, plan_till=plantill, timezone=data['timezone'], company=data['company'], currency=data['currency'], subdomain=subdomain.subdomain, isleadgen=islead)
     db.session.add(user)
     db.session.commit()
 
@@ -347,7 +352,8 @@ def profile_client():
             'timezone': user.timezone,
             'company': user.company,
             'currency': user.currency,
-            'workspace': user.workspace
+            'workspace': user.workspace,
+            'isleadgen': user.isleadgen
         })
 
     return jsonify(client_data), 200
@@ -365,9 +371,10 @@ def client_switch():
     clients = UserRegister.query.filter_by(agencyid = user.agencyid).order_by(asc(UserRegister.id)).all()
 
     for client in clients:
-        client_data.append({"name":client.complete_name, "workspace":client.workspace})
+        client_data.append({"name":client.complete_name, "workspace":client.workspace, "isleadgen": client.isleadgen})
 
     return jsonify(client_data), 200
+
 
 def generate_otp(length=4):
     """Generate a random OTP of given length."""

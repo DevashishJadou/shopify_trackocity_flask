@@ -369,7 +369,7 @@ def table_saleinteractions():
 	sql_query = db.text("select * from table_saleinteractions(:workspace, :productid, :startdate, :enddate)")
 	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
 	data = result.fetchall()
-	columns = ["id", "order_date", "total", "transcation_id", "email", "phone", "first_adsource", "last_adsource", "interactions_count"]
+	columns = ["id", "order_date", "total", "transcation_id", "name", "email", "phone", "first_adsource", "last_adsource", "interactions_count"]
 
 	results = [dict(zip(columns, row)) for row in data]
 	return jsonify(results),200
@@ -814,7 +814,10 @@ def get_dashboardtraffic():
                 trafficdata[metric]['data'].append({'date': date, 'value': value})
             trafficdata[metric]['data'].sort(key=lambda x: x['date'])
 
-        metric_cmp = MongoMetric.query.filter(MongoMetric.dated>=startdate_prev, MongoMetric.dated<=enddate_prev, MongoMetric.workspace==userid, MongoMetric.metric==metric).all()
+        if metric == 'pageview':
+            metric_cmp = MongoMetric.query.filter(MongoMetric.dated>=startdate_prev, MongoMetric.dated<=enddate_prev, MongoMetric.workspace==userid, MongoMetric.metric=='page_view').all()
+        else:
+            metric_cmp = MongoMetric.query.filter(MongoMetric.dated>=startdate_prev, MongoMetric.dated<=enddate_prev, MongoMetric.workspace==userid, MongoMetric.metric==metric).all()       
         for entry in metric_cmp:
             total_cmp += entry.value
         trafficdata[metric]['compare'] = (100.0*(total - total_cmp) / max(total_cmp,1)) if (total_cmp) != 0 else 0

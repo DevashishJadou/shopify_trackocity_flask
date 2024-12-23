@@ -28,8 +28,10 @@ class UserRegister(db.Model):
     account_type = db.Column(db.String(16))
     subdomain = db.Column(db.String(16))
     agencyid = db.Column(db.Integer)
+    isleadgen = db.Column(db.Boolean, default=False)
     tax_rate = db.Column(db.Numeric)
     tax_on = db.Column(db.Boolean, default=False)
+    tag = db.Column(db.String(16))
     created_at = db.Column(db.DateTime, default=datetime.now)
     last_activity = db.Column(db.DateTime, default=datetime.now)
 
@@ -85,7 +87,7 @@ class PlatformConfiguration(db.Model):
     __tablename__ = "platform_config"
     id = db.Column(db.Integer, primary_key=True)
     workspace = db.Column(db.String(64))
-    platform = db.Column(db.String(64)),
+    platform = db.Column(db.String(64))
     active = db.Column(db.Boolean, default=False)
 
 
@@ -220,6 +222,9 @@ def order_table_dynamic(tablename):
         customer_user_agent = db.Column(db.Text)
         event_type = db.Column(db.String(32))
         thankyou_page = db.Column(db.Text)
+        first_stage_date = db.Column(db.DateTime)
+        second_stage_date = db.Column(db.DateTime)
+        converted_date = db.Column(db.DateTime)
         created_at = db.Column(db.DateTime, default=datetime.now)
         updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
@@ -250,9 +255,11 @@ def order_table_dynamic(tablename):
     
 
 
+
+
 def ordertable(tablename):
     # Define a table with order name and columns
-    metadata = MetaData()
+    metadata = MetaData(schema='public')
     order_table = Table(
 			tablename,
 			metadata,
@@ -273,6 +280,9 @@ def ordertable(tablename):
 			Column('customer_ip', String(64)),
 			Column('customer_user_agent', Text),
             Column('thankyou_page', Text),
+            Column('first_stage_date', DateTime),
+            Column('second_stage_date', DateTime),
+            Column('converted_date', DateTime),
             Column('event_type', String(32)),
 			Column('created_at', DateTime, default=datetime.now),
 			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now)
@@ -283,11 +293,11 @@ def ordertable(tablename):
 
 def orderlinetable(tablename):
     # Define a table with order name and columns
-    metadata = MetaData()
+    metadata = MetaData(schema='public')
     orderline_table = Table(
 			tablename,
 			metadata,
-			Column('orderid', Integer, primary_key=True),
+			Column('order_id', Integer, primary_key=True),
 			Column('shopify_productid', Integer),
 			Column('sku', String(128), unique=True),
             Column('variant_title', String(128)),
@@ -301,7 +311,7 @@ def orderlinetable(tablename):
 
 def googleads_table(tablename):
     # Define a table with googleads name and columns
-    metadata = MetaData()
+    metadata = MetaData(schema='public')
     googleads_table = Table(
 			tablename,
 			metadata,
@@ -329,7 +339,7 @@ def googleads_table(tablename):
 
 def facebookads_table(tablename):
     # Define a table with googleads name and columns
-    metadata = MetaData()
+    metadata = MetaData(schema='public')
     facebookads_table = Table(
 			tablename,
 			metadata,
@@ -357,7 +367,7 @@ def facebookads_table(tablename):
 
 def otherads_table(tablename):
     # Define a table with googleads name and columns
-    metadata = MetaData()
+    metadata = MetaData(schema='public')
     otherads_table = Table(
 			tablename,
 			metadata,
@@ -384,7 +394,7 @@ def otherads_table(tablename):
 
 
 def facebookcreative_table(tablename):
-    metadata = MetaData()
+    metadata = MetaData(schema='public')
     facebookcreative_table = Table(
 			tablename,
 			metadata,
@@ -423,11 +433,10 @@ def facebookcreative_table(tablename):
     return facebookcreative_table
 
 
-
-# class CustomizeColumn(db.Model):
-#     __tablename__ = "customize_column"
-#     id = db.Column(db.Integer, primary_key=True)
-#     workspaceid = db.Column(db.String(32))
-#     report = db.Column(db.String(32))
-#     field = db.Column(db.String(64))
-#     sequence = db.Column(db.INTEGER)
+class CustomizeColumn(db.Model):
+    __tablename__ = "customize_column"
+    id = db.Column(db.Integer, primary_key=True)
+    workspaceid = db.Column(db.String(32))
+    report = db.Column(db.String(32))
+    field = db.Column(db.String(64))
+    seq = db.Column(db.INTEGER)

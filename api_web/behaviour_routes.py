@@ -105,8 +105,8 @@ def process_sales_velocity_data(df, include_dayzero=False):
         sales_value = sales_data[value_key] if sales_data[value_key] is not None else Decimal(0)
         
         # Calculate metrics
-        sales_conversion_rate = contacts / total_contacts if total_contacts > 0 else 0
-        average_sales_value = float(sales_value / contacts) if contacts > 0 else 0
+        sales_conversion_rate = contacts
+        average_sales_value = sales_value
         percentage_contact = round((contacts / sales_data["traffic"]) * 100.0 if sales_data["traffic"] > 0 else 0,2)
         percentage_sales = round((sales_value  / total_sales_value * 100) if total_sales_value > 0 else 0,2)
         cumulative_sales += percentage_sales

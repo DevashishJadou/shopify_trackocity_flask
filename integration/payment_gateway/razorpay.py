@@ -100,7 +100,33 @@ def razorpay_webhook(workspace):
     # Process the webhook event based on the event type
     event_type = data.get('event')
 
-    if razorpay_client.active and event_type in ('order.paid', 'payment.captured', 'subscription.charged'):
+    if user.isleadgen:
+        payload = data.get('payload').get('payment').get('entity')
+        if razorpay_client.active and event_type in ('order.paid', 'payment.captured', 'subscription.charged'):
+            order_obj = orderTable.query.filter_by(email=payload.get('email')).first()
+            payment_id = payload.get('id')
+            total = payload.get('amount')/100.0
+            currency = payload.get('currency')
+            email = payload.get('email')
+            phone = payload.get('contact')
+            event_time = datetime.fromtimestamp(data.get('created_at')) + timedelta(hours=float(user.timezone_value))
+            if not order_obj:
+                order_obj = orderTable.query.filter_by(phone=payload.get('contact')).first()
+            if order_obj:
+                order_obj.transcation_id = payment_id
+                order_obj.total = total
+                order_obj.currency = currency
+                order_obj.email = email
+                order_obj.phone = phone
+                order_obj.converted_date = event_time
+            else:
+                order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
+                if order_obj is None:
+                    order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency)
+                    db.session.add(order_make)
+            db.session.commit()
+
+    elif razorpay_client.active and event_type in ('order.paid', 'payment.captured', 'subscription.charged'):
         try:
             # Handle payment captured event
             payload = data.get('payload').get('payment').get('entity')
