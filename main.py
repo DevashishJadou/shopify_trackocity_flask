@@ -89,7 +89,7 @@ def googlesheet_user():
         return jsonify({"message":"Non Authorized"}), 400
 
     user = UserRegister.query.order_by(UserRegister.id.desc()).all()
-    header = ['id','complete_name','email','phone','created_at','plan_till','company','product_type',' tag']
+    header = ['id','complete_name','email','phone','created_at','plan_till','product_type',' tag']
     data = []
     data.append(header)
     for usr in user:
