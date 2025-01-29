@@ -35,13 +35,13 @@ def razorpay_params():
 
     else:
         razorpay_register = RazorpayConfiguration(workspace=workspace, razorpay_api_secret=_razorpay_api_secret, razorpay_api_key=_razorpay_api_key, razorpay_client_secret=_razorpay_client_secret, active=True)
+        db.session.add(razorpay_register)
         tablename = 'order_'+workspace
         try:
             if not metadata.tables.get(tablename):
                 razorpay_table = ordertable(tablename)
                 try:
                     razorpay_table.create(bind=db.engine)
-                    db.session.add(razorpay_register)
                 except:
                     pass
         except Exception as e:

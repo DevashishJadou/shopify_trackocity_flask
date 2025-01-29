@@ -11,6 +11,8 @@ from .client_auth_bridge.linkedin.linkedinads_service_handler import linkedinads
 from .integration.payment_gateway.razorpay import payment_bp
 from .integration.payment_gateway.instamojo import payment_bp
 from .integration.payment_gateway.cashfree import payment_bp
+from .integration.payment_gateway.paypal import payment_bp
+from .integration.payment_gateway.stripe import payment_bp
 from .integration.channel.woocommerce import channel_bp
 from .integration.channel.shopify import channel_bp
 from .integration.channel.pabbly import channel_bp
@@ -18,6 +20,8 @@ from .api_web.reporting_routes import report_bp
 from .api_web.creative_routes import creative_bp
 from .api_web.behaviour_routes import behaviour_bp
 from .api_web.integration_routes import intgration_cd
+from .chat_bot.mongo_bot import chatbot_cd
+from .chat_bot.sql_bot import chatbot_cd
 from .payment import trackocitypayment_bp
 from .connection import create_app, jwt, db
 from .db_model.sql_models import UserRegister, Payment
@@ -52,6 +56,7 @@ app.register_blueprint(creative_bp, url_prefix='/creative')
 app.register_blueprint(behaviour_bp, url_prefix='/behaviour')
 app.register_blueprint(payment_bp, url_prefix='/clientpayment')
 app.register_blueprint(channel_bp, url_prefix='/clientchannel')
+app.register_blueprint(chatbot_cd, url_prefix='/chatbot')
 app.register_blueprint(trackocitypayment_bp, url_prefix='/trackocitypayment')
 
 # health-check

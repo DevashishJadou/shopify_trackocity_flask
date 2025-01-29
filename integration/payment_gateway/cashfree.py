@@ -3,7 +3,6 @@ import json, os
 from datetime import datetime, timedelta
 from flask_cors import cross_origin
 
-import razorpay
 from sqlalchemy import MetaData
 
 from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable

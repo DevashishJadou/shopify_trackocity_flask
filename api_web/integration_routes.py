@@ -156,6 +156,14 @@ def integrationed_plaform():
     cashfree = PlatformConfiguration.query.filter_by(workspace = workspace).filter_by(platform=plaform_cashfree).first()
     integation['cashfree'] = True if cashfree else False
 
+    plaform_stripe= 'stripe'
+    stripe = PlatformConfiguration.query.filter_by(workspace = workspace).filter_by(platform=plaform_stripe).first()
+    integation['stripe'] = True if stripe else False
+
+    plaform_paypal= 'paypal'
+    paypal = PlatformConfiguration.query.filter_by(workspace = workspace).filter_by(platform=plaform_paypal).first()
+    integation['paypal'] = True if paypal else False
+
     return jsonify(integation), 200
 
 

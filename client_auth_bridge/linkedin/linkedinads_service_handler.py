@@ -20,22 +20,29 @@ metadata = MetaData()
 @cross_origin(origins='*', methods=['POST', 'OPTIONS'], headers=['Content-Type'])
 def fetch_authenticated_user_details():
     headers = request.headers
-    workspace = headers.get('workspaceId')
     body = request.args
     token = body.get('token')
-    # token = f"AQX3I-nZUjvRiFp0MU5eka7TAxMT0AZx3etESEf1M2qTBQU8-keNaHL6L1zEQNklhsOlBBuYgj7gxuB-4LNL4wCf3BTi_t3yLe47UnmBRMhu7V7tx8LndMsUI55eIruXDZrSD8v6bDz8V2iRnit0WzFIZ_74obNuooEYpW2fOM19c32YVfdAMBSl7Q9jWQdg9XI_cJRin1Yzu0Fhsy1O8VYagC2MrN8St6KvLFpKmgRV_nGnp5APy9uxa8O-23Q9TIXz9mFGV2bsCgoIs-InAAzf-ZfkrCZVVuzrxCftHQiA4vX1rKOfYseUpW1fJOIZyXXP7Gn4IaJzMFnG8SR2N_5756UgJg"
+    op = {}
+
+    url_accesstoken = "https://www.linkedin.com/oauth/v2/accessToken?grant_type=authorization_code&code="+token+"&redirect_uri=https%3A%2F%2Fapp.trackocity.io%2Fintegration&client_id=86ldwctf7zb6a0&client_secret=WPL_AP1.63N7ClabLLvPTMJX.7dHt6A=="
+    response = requests.get(url_accesstoken)
+    result = response.json()
+    
+    access_token = result.get('access_token')
+    
     
     url = 'https://api.linkedin.com/rest/adAccountUsers?q=authenticatedUser'
     headers = {
         'X-Restli-Protocol-Version': '2.0.0',
         'LinkedIn-Version': '202409',
-        'Authorization': f'Bearer {token}'
+        'Authorization': f'Bearer {access_token}'
     }
 
     try:
         response = requests.get(url, headers=headers)
-        response.raise_for_status()  # Raise an error for HTTP codes 4xx/5xx
-        return response.json()
+        op['account'] = response.json()
+        op['auth'] = result
+        return op
     except requests.exceptions.RequestException as e:
         print(f"Error fetching authenticated user details: {e}")
         return {"error": str(e)}

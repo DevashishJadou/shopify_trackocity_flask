@@ -10,6 +10,39 @@ from ..connection import db
 # Define the Blueprint
 behaviour_bp = Blueprint('behaviour', __name__)
 
+
+def fetch_salesvelocity_sales(workspace, productid, startdate, enddate, startday, endday, channel=None, adid=None):
+    """
+    Fetches data for sales velocity from the behaviour_sale_velocity function in the database.
+    """
+
+    # Adjust channel and adid parameters as needed
+    if channel in ('Facebook', 'Google'):
+        channel = channel.lower()
+    elif channel and channel.lower() == 'all':
+        channel = None
+    
+    if adid and adid.lower() == 'all':
+        adid = None
+
+    # SQL Query with parameters for the stored function
+    sql_query = text("SELECT * FROM behaviour_salevel_salesdata(:workspace, :productid, :startdate, :enddate, :startday, :endday, :channel, :adid)")
+    result = db.session.execute(sql_query, {
+        'workspace': workspace, 
+        'productid': productid,
+        'startdate': startdate, 
+        'enddate': enddate,
+        'startday': startday,
+        'endday': endday,
+        'channel': channel, 
+        'adid': adid
+    })
+    columns = result.keys()
+    data = [dict(zip(columns, row)) for row in result.fetchall()]
+    return data
+
+
+
 def fetch_sales_velocity(workspace, productid, startdate, enddate, channel=None, adid=None):
     """
     Fetches data for sales velocity from the behaviour_sale_velocity function in the database.
@@ -108,7 +141,8 @@ def process_sales_velocity_data(df, include_dayzero=False):
         sales_conversion_rate = contacts
         average_sales_value = sales_value
         percentage_contact = round((contacts / sales_data["traffic"]) * 100.0 if sales_data["traffic"] > 0 else 0,2)
-        percentage_sales = round((sales_value  / total_sales_value * 100) if total_sales_value > 0 else 0,2)
+        percentage_sales = round((contacts  / total_contacts * 100) if total_contacts > 0 else 0,2)
+        percentage_value = round(float(sales_value  / total_sales_value * 100) if total_sales_value > 0 else 0,2)
         cumulative_sales += percentage_sales
         cumulative_contact += percentage_contact
 
@@ -116,9 +150,10 @@ def process_sales_velocity_data(df, include_dayzero=False):
         result["table_data"].append({
             "days_to_first_sale": label,
             "sales_conversion_rate": round(sales_conversion_rate, 2),
-            "average_sales_value": round(average_sales_value, 2),
+            "average_sales_value": round(float(average_sales_value), 2),
             "percentage_contact": round(percentage_contact, 2),
             "percentage_sales": round(percentage_sales, 2),
+            "percentage_value": round(percentage_value, 2),
             "cumulative_sales": round(cumulative_sales, 2),
             "cumulative_contact": round(cumulative_contact, 2)
         })
@@ -165,6 +200,44 @@ def sales_velocity():
 
     return jsonify(final_data)
 
+
+
+@behaviour_bp.route('/salesvelocity_salesdata', methods=['GET'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def salesvelocity_salesdata():
+    """
+    Endpoint to get sales velocity data as a JSON response.
+    """
+    headers = request.headers
+    body = request.args
+
+    # Retrieve request parameters
+    startdate = body.get('startdate')
+    enddate = body.get('enddate')
+    userid = headers.get('workspaceId')
+    adid = body.get('campaign')
+    channel = body.get('channel')
+    startday = body.get('startday')
+    endday = body.get('endday')
+
+    # Get user info to obtain product ID
+    user = UserRegister.query.filter_by(workspace=userid).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    # Fetch data from the function
+    df = fetch_salesvelocity_sales(
+        workspace=userid, 
+        productid=user.productid, 
+        startdate=startdate, 
+        enddate=enddate, 
+        startday = startday,
+        endday = endday,
+        channel=channel, 
+        adid=adid
+    )
+
+    return jsonify(df)
 
 
 

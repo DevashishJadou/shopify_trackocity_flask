@@ -93,6 +93,7 @@ def update_metrics(metrics, row, indexes, traffic):
 
     metrics["Gross Margin %"] = 'n/a' if metrics["Revenue"] == 0 else round((metrics["Revenue"]  - (metrics["Spend"]+metrics["Cost"]))*100 / metrics["Revenue"] ,1)
     metrics["Gross Profit"] = round((metrics["Revenue"]  - (metrics["Spend"]+metrics["Cost"])),0)
+    metrics["Product Name"] = row[indexes["Product Name"]]
 
 
 # Utility function to initialize campaign and ad set
@@ -109,7 +110,7 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
             "New Visits": 0, "nvisitor": 0, "visitor": 0, "nSpend": 0.0,
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "New Visits %": 0.0,
             "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0, "Reported CPA":0.0, 
-            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0
+            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name": None
         }
     if ad_set_id not in data[campaign_id]["ad_sets"]:
         data[campaign_id]["ad_sets"][ad_set_id] = {
@@ -123,7 +124,7 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
             "New Visits": 0, "nvisitor": 0, "visitor": 0, "nSpend": 0.0,
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "New Visits %": 0.0,
             "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0, "Reported CPA":0.0,
-            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0
+            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name":None
         }
 
 # Utility function to process ads
@@ -175,7 +176,8 @@ def process_ads(data, fbadsdata, row, indexes, traffic):
         "New Visits": min(row[indexes["New Visits"]], row[indexes["Clicks"]]),
         "eCPNV": 'n/a' if row[indexes["New Visits"]] == 0 else round(row[indexes["Spend"]] / row[indexes["New Visits"]] ,1),
         "Gross Margin %": 'n/a' if (row[indexes["Revenue"]]) == 0 else round((row[indexes["Revenue"]] - (row[indexes["Spend"]]+row[indexes["Cost"]]))*100 / row[indexes["Revenue"]] ,1),
-        "Gross Profit": round((row[indexes["Revenue"]] - (row[indexes["Spend"]]+row[indexes["Cost"]])),1)
+        "Gross Profit": round((row[indexes["Revenue"]] - (row[indexes["Spend"]]+row[indexes["Cost"]])),1),
+        "Product Name": row[indexes["Product Name"]]
     })
     
     # Update metrics for campaign, ad set, and overall
@@ -193,37 +195,44 @@ def get_reporttabledatafacebook():
     enddate = body.get('enddate')
     attribute = body.get('attribute')
     traffic = body.get('traffic')
+    product_list = body.get('product', None)
+    product_list = None if product_list == '' else product_list
+    print('Product:{product_list}')
     userid = headers.get('workspaceId')
     user = UserRegister.query.filter_by(workspace=userid).first()
 
     if user:
         sort = 'ASC' if attribute == 'first' else 'DESC'
         if traffic == 'Facebook':
-            sql_query = text("SELECT * FROM table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort)")
+            sql_query = text("SELECT * FROM table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort, :product_list)")
             result = db.session.execute(sql_query, {
 	            'workspace': userid, 'productid': user.productid,
-	            'startdate': startdate, 'enddate': enddate, 'sort': sort
+	            'startdate': startdate, 'enddate': enddate, 'sort': sort,
+                'product_list': product_list
 	        })
             data = result.fetchall()
         elif traffic == 'Google':
-            sql_query = text("SELECT * FROM table_googleattribute(:workspace, :productid, :startdate, :enddate, :sort)")
+            sql_query = text("SELECT * FROM table_googleattribute(:workspace, :productid, :startdate, :enddate, :sort, :product_list)")
             result = db.session.execute(sql_query, {
 	            'workspace': userid, 'productid': user.productid,
-	            'startdate': startdate, 'enddate': enddate, 'sort': sort
+	            'startdate': startdate, 'enddate': enddate, 'sort': sort,
+                'product_list': product_list
 	        })
             data = result.fetchall()
         elif traffic == 'LinkedIn':
-            sql_query = text("SELECT * FROM table_mediaattribute(:workspace, :productid, :startdate, :enddate, :sort, :channel)")
+            sql_query = text("SELECT * FROM table_mediaattribute(:workspace, :productid, :startdate, :enddate, :sort, :channel. :product_list)")
             result = db.session.execute(sql_query, {
 	            'workspace': userid, 'productid': user.productid,
-	            'startdate': startdate, 'enddate': enddate, 'sort': sort, 'channel': 'linkedin'
+	            'startdate': startdate, 'enddate': enddate, 'sort': sort, 'channel': 'linkedin',
+                'product_list': product_list
 	        })
             data = result.fetchall()
         else:
-            sql_query = text("SELECT * FROM table_otherattribute(:workspace, :productid, :startdate, :enddate, :sort, :src)")
+            sql_query = text("SELECT * FROM table_otherattribute(:workspace, :productid, :startdate, :enddate, :sort, :src, :product_list)")
             result = db.session.execute(sql_query, {
 	            'workspace': userid, 'productid': user.productid,
-	            'startdate': startdate, 'enddate': enddate, 'sort': sort, 'src':traffic
+	            'startdate': startdate, 'enddate': enddate, 'sort': sort, 'src':traffic,
+                'product_list': product_list
 	        })
             data = result.fetchall()
 
@@ -236,17 +245,16 @@ def get_reporttabledatafacebook():
             "New Visits": 0, "nvisitor":0, "visitor":0,
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "New Visits %":0.0,
             "Reported Sale":0, "Reported Rev":0.0, "Reported ROAS":0.0, "Reported CPA": 0.0,
-            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0
+            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name":None
         }
 
         # Process each row of data
         for row in data:
             process_ads(record, adsdata, row, {
-                "ad_name": 5, "Impression": 6, "Clicks": 7, "Spend": 8,
-                "Sales": 9, "Revenue": 10, "CancelOrder": 11, 
-                "CancelRev": 12, "nSales": 13, "nRevenue": 14, 
-                "New Visits": 15, "nvisitor":16, 
-                "Reported Sale":17, "Reported Rev":18, "Cost":19
+                "ad_name": 5, "Product Name":6, "Impression": 7, "Clicks": 8, "Spend": 9,
+                "Sales": 10, "Revenue": 11, "CancelOrder": 12, "CancelRev": 13, "nSales": 14, 
+                "nRevenue": 15, "New Visits": 16, "nvisitor":17, 
+                "Reported Sale":18, "Reported Rev":19, "Cost":20
             }, traffic)
 
         # Convert ad_sets to list in campaigns
@@ -302,6 +310,7 @@ def get_reporttablesaledata():
 	adid = body.get('adid')
 	channel = body.get('channel')
 	attribute = body.get('attribute')
+	product_list = body.get('product', None)
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
 	output = []
@@ -309,9 +318,9 @@ def get_reporttablesaledata():
 		if channel in ('Facebook', 'Google', 'LinkedIn'):
 			channel = channel.lower()
 		sort = 'ASC' if attribute == 'First' else 'DESC'
-		sql_query = db.text("select * from table_salesdata(:workspace, :productid, :startdate, :enddate, :channel, :adid, :sort)")
+		sql_query = db.text("select * from table_salesdata(:workspace, :productid, :startdate, :enddate, :channel, :adid, :sort, :product_list)")
 
-		result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'channel':channel, 'adid':adid, 'sort':sort})
+		result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'channel':channel, 'adid':adid, 'sort':sort, 'product_list':product_list})
 		data = result.fetchall()
 
 		for row in data:
@@ -924,3 +933,28 @@ def get_dashboardtraffic():
 
 
     return jsonify(trafficdata), 200
+
+
+
+@report_bp.route('/productdetail', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def get_productdetails():
+
+	headers = request.headers
+	userid = headers.get('workspaceId')
+	
+	sql_query = text("SELECT DISTINCT product_name FROM product_table WHERE workspaceid = :workspace")
+	result = db.session.execute(sql_query, { 'workspace': userid })
+	data = result.fetchall()
+
+	if len(data) > 0:
+		return [{"product": row[0]} for row in data]
+	else:
+		try:
+			sql_query = text(f"SELECT DISTINCT product_name FROM orderline_{userid}")
+			result = db.session.execute(sql_query)
+			data = result.fetchall()
+			return [{"product": row[0]} for row in data]
+		except:
+			return [{"product": None}]
+		

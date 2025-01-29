@@ -1,3 +1,4 @@
+
 from flask import request, jsonify
 import json, os
 from datetime import datetime, timedelta
@@ -11,9 +12,9 @@ from sqlalchemy import MetaData
 
 metadata = MetaData()
 
-@payment_bp.route('/paypalcredentials', methods=['POST'])
+@payment_bp.route('/stripecredentials', methods=['POST'])
 @cross_origin(origins='*', methods=['POST'])
-def paypal_params():
+def stripe_params():
     header = request.headers
     _body = json.loads(request.get_data())
     workspace = header.get('workspaceId')
@@ -24,14 +25,14 @@ def paypal_params():
     if user:
         return jsonify({'message': 'success'}), 200
     else:
-        paypal_register = PlatformConfiguration(workspace=workspace, platform=platform, active=True)
-        db.session.add(paypal_register)
+        stripe_register = PlatformConfiguration(workspace=workspace, platform=platform, active=True)
+        db.session.add(stripe_register)
         tablename = 'order_'+workspace
         try:
             if not metadata.tables.get(tablename):
-                paypal_table = ordertable(tablename)
+                stripe_table = ordertable(tablename)
                 try:
-                    paypal_table.create(bind=db.engine)
+                    stripe_table.create(bind=db.engine)
                 except:
                     pass
         except Exception as e:
@@ -42,8 +43,11 @@ def paypal_params():
     return jsonify({'message': 'success'}), 200
 
 
-@payment_bp.route('/<workspace>/paypalwebhook', methods=['POST'])
-def paypal_webhook_endpoint(workspace):
+
+@payment_bp.route('/<workspace>/stripewebhook', methods=['POST'])
+@cross_origin()
+def strip_webhook(workspace):
+    
     user = UserRegister.query.filter_by(workspace=workspace).first()
     if not user.isactive:
         jsonify({'status': 'Unauthorized'}), 403
@@ -55,28 +59,23 @@ def paypal_webhook_endpoint(workspace):
     # The library needs to be configured with your account's secret key.
     event = None
     payload = request.data
-
     event = json.loads(payload.decode('utf-8'))
+
     # Handle the event
-    if event['event_type'] in ('CHECKOUT.ORDER.COMPLETED'):
-      resource = event['resource']
-      charge = resource['purchase_units'][0]
-      payment_id = event.get('id')
-      amount = charge.get('amount').get('value')
-      currency = charge.get('amount').get('currency_code')
-      email = resource.get('payer').get('email_address')
-      first_name = resource.get('payer').get('name').get('given_name')
-      last_name = resource.get('payer').get('name').get('surname')
-      phone = None
-      event_time = datetime.strptime(resource.get('create_time'), "%Y-%m-%dT%H:%M:%SZ") + timedelta(hours=float(user.timezone_value))
+    if event['type'] == 'charge.succeeded':
+      charge = event['data']['object']
+      payment_id = charge.get('id')
+      amount = charge.get('amount')/100.0
+      currency = charge.get('currency')
+      email = charge.get('receipt_email')
+      phone = charge.get('receipt_number')
+      event_time = datetime.fromtimestamp(charge.get('created')) + timedelta(hours=float(user.timezone_value))
       order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
       if order_obj is None:
-          order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency, first_name= first_name, last_name = last_name)
+          order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency)
           db.session.add(order_make)
       db.session.commit()
     else:
       print('Unhandled event type {}'.format(event['type']))
 
     return jsonify(success=True)
-
-    

@@ -125,6 +125,15 @@ class ClientLinkedinCredentials(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
+class ChatBotLog(db.Model):
+    __tablename__ = "chatbot_query_log"
+    id = db.Column(db.Integer, primary_key=True)
+    workspace = db.Column(db.String(64))
+    datetime = db.Column(db.DateTime, default=datetime.now)
+    question = db.Column(db.Text)
+    query = db.Column(db.Text)
+    result = db.Column(db.Text)
+
 
 class WooCommerce(db.Model):
     __tablename__ = "channel_woocommerce_integration"
