@@ -310,6 +310,7 @@ def get_reporttablesaledata():
 	channel = body.get('channel')
 	attribute = body.get('attribute')
 	product_list = body.get('product', None)
+	product_list = None if product_list == '' else product_list
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
 	output = []
