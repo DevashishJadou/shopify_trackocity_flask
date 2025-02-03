@@ -20,7 +20,6 @@ def stripe_params():
     workspace = header.get('workspaceId')
     platform = _body.get('platform')
 
-
     user = PlatformConfiguration.query.filter_by(workspace=workspace).filter_by(platform=platform).first()
     if user:
         return jsonify({'message': 'success'}), 200
@@ -63,19 +62,29 @@ def strip_webhook(workspace):
 
     # Handle the event
     if event['type'] == 'charge.succeeded':
-      charge = event['data']['object']
-      payment_id = charge.get('id')
-      amount = charge.get('amount')/100.0
-      currency = charge.get('currency')
-      email = charge.get('receipt_email')
-      phone = charge.get('receipt_number')
-      event_time = datetime.fromtimestamp(charge.get('created')) + timedelta(hours=float(user.timezone_value))
-      order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
-      if order_obj is None:
-          order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency)
-          db.session.add(order_make)
-      db.session.commit()
+        charge = event['data']['object']
+        payment_id = charge.get('id')
+        currency = charge.get('currency')
+        amount = charge.get('amount')/100.0
+        if currency.lower() == 'usd':
+            if user.currency == 'INR':
+                amount = amount * 86
+            if user.currency == 'GBP':
+                amount = amount * 0.8
+        if currency.lower() == 'gbp':
+            if user.currency == 'INR':
+                amount = amount * 103
+            if user.currency == 'USD':
+                amount = amount * 1.24
+        email = charge.get('receipt_email')
+        phone = charge.get('receipt_number')
+        event_time = datetime.fromtimestamp(charge.get('created')) + timedelta(hours=float(user.timezone_value))
+        order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
+        if order_obj is None:
+            order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency)
+            db.session.add(order_make)
+        db.session.commit()
     else:
-      print('Unhandled event type {}'.format(event['type']))
+        print('Unhandled event type {}'.format(event['type']))
 
     return jsonify(success=True)

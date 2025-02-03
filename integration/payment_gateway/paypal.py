@@ -59,23 +59,33 @@ def paypal_webhook_endpoint(workspace):
     event = json.loads(payload.decode('utf-8'))
     # Handle the event
     if event['event_type'] in ('CHECKOUT.ORDER.COMPLETED'):
-      resource = event['resource']
-      charge = resource['purchase_units'][0]
-      payment_id = event.get('id')
-      amount = charge.get('amount').get('value')
-      currency = charge.get('amount').get('currency_code')
-      email = resource.get('payer').get('email_address')
-      first_name = resource.get('payer').get('name').get('given_name')
-      last_name = resource.get('payer').get('name').get('surname')
-      phone = None
-      event_time = datetime.strptime(resource.get('create_time'), "%Y-%m-%dT%H:%M:%SZ") + timedelta(hours=float(user.timezone_value))
-      order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
-      if order_obj is None:
-          order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency, first_name= first_name, last_name = last_name)
-          db.session.add(order_make)
-      db.session.commit()
+        resource = event['resource']
+        charge = resource['purchase_units'][0]
+        payment_id = event.get('id')
+        amount = charge.get('amount').get('value')
+        currency = charge.get('amount').get('currency_code')
+        if currency.lower() == 'usd':
+            if user.currency == 'INR':
+                amount = amount * 86
+            if user.currency == 'GBP':
+                amount = amount * 0.8
+        if currency.lower() == 'gbp':
+            if user.currency == 'INR':
+                amount = amount * 103
+            if user.currency == 'USD':
+                amount = amount * 1.24
+        email = resource.get('payer').get('email_address')
+        first_name = resource.get('payer').get('name').get('given_name')
+        last_name = resource.get('payer').get('name').get('surname')
+        phone = None
+        event_time = datetime.strptime(resource.get('create_time'), "%Y-%m-%dT%H:%M:%SZ") + timedelta(hours=float(user.timezone_value))
+        order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
+        if order_obj is None:
+            order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency, first_name= first_name, last_name = last_name)
+            db.session.add(order_make)
+        db.session.commit()
     else:
-      print('Unhandled event type {}'.format(event['type']))
+        print('Unhandled event type {}'.format(event['type']))
 
     return jsonify(success=True)
 

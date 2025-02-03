@@ -123,7 +123,7 @@ class SmartQueryHandler:
                 - If no date range is specified, default to the last 6 months.  
             3.Prefix: Use `horizon.` as the schema prefix for all tables.  
             4. Aggregations and Metrics:  
-                - Use `SUM`, `AVG`, `ROUND(..., 2)`, and `COALESCE` to avoid division by zero or NULL values.  
+                - Use `SUM`, `AVG`, `ROUND(..., 2)`, and `NULL IF` to avoid division by zero or NULL values.  
                 - Group by relevant dimensions (e.g., campaign_name, channel, month).  
             5. Performance:  
                 - If needed, use subqueries for clarity.  
@@ -137,9 +137,11 @@ class SmartQueryHandler:
             3. CR (Conversion Rate)
             4. CPA (Cost Per Acquisition)
             5. CPM (Cost Per Impression)
-            6. Impressions
-            7. Time to Conversion
-            8. Revenue Attribution
+            6. CPC (Cost Per Click)
+            7. Impressions
+            8. Time to Conversion
+            9. Revenue Attribution
+            10. Adtype
             Structure your queries to help evaluate performance and guide decision-making (e.g., identifying top-performing channels, optimizing spend, tracking conversions over time).
             
 
@@ -161,22 +163,23 @@ class SmartQueryHandler:
                         AND al.orderdate < '2024-10-01'
                         GROUP BY month, al.campaign_name
                         ORDER BY roas DESC;
-            2. question: Compare Jan 2025 vs Dec 2024 basis on  facebook ads level performance. Analysis which is better ads worked good and why?
+            2. question: Compare this month with previous basis on  facebook ads level performance. Analysis which is better ads worked and why?
                SQL Query: SELECT
                                 date_trunc('month', al.orderdate) AS month,
                                 SUM(al.purchase) AS total_purchases,
                                 ROUND(SUM(al.spend),2) AS total_spend,
-                                ROUND(SUM(al.purchase_value) / NULLIF(SUM(al.spend), 0), 2) AS roas,
-                                ROUND(COALESCE(SUM(al.spend)* 1000.0 / NULLIF(SUM(al.impression), 0), 0),2) AS cpm,
-                                ROUND(COALESCE(SUM(al.spend) / NULLIF(SUM(al.clicks), 0), 0),2) AS cpc,
-                                ROUND(COALESCE(SUM(al.clicks) / NULLIF(SUM(al.impression), 0), 0),2) AS ctr
+                                ROUND(SUM(spend) / NULLIF(SUM(purchase), 1), 2) AS cpa,
+                                ROUND(SUM(al.purchase_value) / NULLIF(SUM(al.spend), 1), 2) AS roas,
+                                ROUND(SUM(al.spend)* 1000.0 / NULLIF(SUM(al.impression), 1),2) AS cpm,
+                                ROUND(SUM(al.spend) / NULLIF(SUM(al.clicks), 1),2) AS cpc,
+                                ROUND(SUM(al.clicks) / NULLIF(SUM(al.impression), 1),2) AS ctr
                             FROM
                                 horizon.ads_lastattribute al
                             WHERE
                                 al.channel = 'facebook'
                                 AND al.workspace = '854e249d718e42cba341aa0559931c12'
-                                AND (al.orderdate >= '2025-01-01' AND al.orderdate < '2025-02-01')
-                                OR (al.orderdate >= '2024-12-01' AND al.orderdate < '2025-01-01')
+                                AND (al.orderdate >= DATE_TRUNC('month', CURRENT_DATE))
+                                OR (al.orderdate >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AND al.orderdate < DATE_TRUNC('month', CURRENT_DATE))
                             GROUP BY month
                             ORDER BY month;
 

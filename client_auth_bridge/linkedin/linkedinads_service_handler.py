@@ -68,7 +68,7 @@ def linkedinads_clientcreate():
         user.refresh_token_expire_in = row.get('refresh_token_expire_in')
         db.session.commit()
     else:
-        user = ClientLinkedinCredentials(workspace=workspace, access_token=row.get('token'), account_name=row.get('account_name'), account=row.get('account'), expire_in=row.get('expire_in'), refresh_token=row.get('refresh_token'), refresh_token_expire_in=row.get('refresh_token_expire_in'))
+        user = ClientLinkedinCredentials(workspace=workspace, access_token=row.get('token'), account_name=row.get('account_name'), account=row.get('account'), expire_in=row.get('expire_in'), refresh_token=row.get('refresh_token'), refresh_token_expire_in=row.get('refresh_token_expire_in'), active=True)
         tablename = 'otherads_'+workspace
         try:
             if not metadata.tables.get(tablename):

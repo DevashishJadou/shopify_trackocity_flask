@@ -197,7 +197,6 @@ def get_reporttabledatafacebook():
     traffic = body.get('traffic')
     product_list = body.get('product', None)
     product_list = None if product_list == '' else product_list
-    print('Product:{product_list}')
     userid = headers.get('workspaceId')
     user = UserRegister.query.filter_by(workspace=userid).first()
 
@@ -220,7 +219,7 @@ def get_reporttabledatafacebook():
 	        })
             data = result.fetchall()
         elif traffic == 'LinkedIn':
-            sql_query = text("SELECT * FROM table_mediaattribute(:workspace, :productid, :startdate, :enddate, :sort, :channel. :product_list)")
+            sql_query = text("SELECT * FROM table_mediaattribute(:workspace, :productid, :startdate, :enddate, :sort, :channel, :product_list)")
             result = db.session.execute(sql_query, {
 	            'workspace': userid, 'productid': user.productid,
 	            'startdate': startdate, 'enddate': enddate, 'sort': sort, 'channel': 'linkedin',
