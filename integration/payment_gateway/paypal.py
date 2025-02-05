@@ -69,13 +69,17 @@ def paypal_webhook_endpoint(workspace):
         if currency.lower() == 'usd':
             if user.currency == 'INR':
                 amount = amount * 86
+                currency = 'INR'
             if user.currency == 'GBP':
                 amount = amount * 0.8
+                currency = 'GBP'
         if currency.lower() == 'gbp':
             if user.currency == 'INR':
                 amount = amount * 103
+                currency = 'INR'
             if user.currency == 'USD':
                 amount = amount * 1.24
+                currency = 'USD'
         email = resource.get('payer').get('email_address')
         first_name = resource.get('payer').get('name').get('given_name')
         last_name = resource.get('payer').get('name').get('surname')

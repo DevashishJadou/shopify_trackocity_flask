@@ -71,19 +71,24 @@ def strip_webhook(workspace):
         if currency.lower() == 'usd':
             if user.currency == 'INR':
                 amount = amount * 86
+                currency = 'INR'
             if user.currency == 'GBP':
                 amount = amount * 0.8
+                currency = 'GBP'
         if currency.lower() == 'gbp':
             if user.currency == 'INR':
                 amount = amount * 103
+                currency = 'INR'
             if user.currency == 'USD':
                 amount = amount * 1.24
-        email = charge.get('receipt_email')
+                currency = 'USD'
+        email = charge.get('receipt_email', charge.get('metadata', {}).get('email'))
         phone = charge.get('receipt_number')
+        first_name = charge.get('billing_details', {}).get('name')
         event_time = datetime.fromtimestamp(charge.get('created')) + timedelta(hours=float(user.timezone_value))
         order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
         if order_obj is None:
-            order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency)
+            order_make = orderTable(order_date=event_time, transcation_id=payment_id, first_name=first_name, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency)
             db.session.add(order_make)
         db.session.commit()
     else:
