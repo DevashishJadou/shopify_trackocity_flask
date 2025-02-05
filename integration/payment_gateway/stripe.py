@@ -59,6 +59,7 @@ def strip_webhook(workspace):
     event = None
     payload = request.data
     event = json.loads(payload.decode('utf-8'))
+    print(f'Stripe Payload {workspace}:{event}')
 
     # Handle the event
     if event['type'] == 'charge.succeeded':

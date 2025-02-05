@@ -57,6 +57,7 @@ def paypal_webhook_endpoint(workspace):
     payload = request.data
 
     event = json.loads(payload.decode('utf-8'))
+    print(f'Paypal Payload {workspace}:{event}')
     # Handle the event
     if event['event_type'] in ('CHECKOUT.ORDER.COMPLETED'):
         resource = event['resource']
