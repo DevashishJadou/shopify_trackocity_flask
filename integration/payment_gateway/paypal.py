@@ -60,6 +60,7 @@ def paypal_webhook_endpoint(workspace):
     print(f'Paypal Payload {workspace}:{event}')
     # Handle the event
     if event['event_type'] in ('CHECKOUT.ORDER.COMPLETED'):
+        print(f'Paypal event {workspace}:{event}')
         resource = event['resource']
         charge = resource['purchase_units'][0]
         payment_id = event.get('id')

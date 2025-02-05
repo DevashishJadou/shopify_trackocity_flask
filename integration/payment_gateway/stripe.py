@@ -63,6 +63,7 @@ def strip_webhook(workspace):
 
     # Handle the event
     if event['type'] == 'charge.succeeded':
+        print(f'Stripe event {workspace}:{event}')
         charge = event['data']['object']
         payment_id = charge.get('id')
         currency = charge.get('currency')
