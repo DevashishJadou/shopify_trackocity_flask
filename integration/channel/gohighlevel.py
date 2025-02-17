@@ -83,7 +83,7 @@ def gohiglevel_webhook(workspace):
     phone = event.get('phone', event.get('user', {}).get('phone'))
     first_name = event.get('first_name', event.get('user', {}).get('firstName'))
     last_name = event.get('last_name', event.get('user', {}).get('firstName'))
-    event_time = datetime.strptime(event.get('created_at'), "%Y-%m-%dT%H:%M:%S.%fZ")
+    event_time = datetime.strptime(event.get('date_created'), "%Y-%m-%dT%H:%M:%S.%fZ") + timedelta(hours=float(user.timezone_value))
     order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
     if payment_id == '001':
         payment_id = str(random.randint(1, 9999999))
