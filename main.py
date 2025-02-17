@@ -13,6 +13,7 @@ from .integration.payment_gateway.instamojo import payment_bp
 from .integration.payment_gateway.cashfree import payment_bp
 from .integration.payment_gateway.paypal import payment_bp
 from .integration.payment_gateway.stripe import payment_bp
+from .integration.channel.gohighlevel import channel_bp
 from .integration.channel.woocommerce import channel_bp
 from .integration.channel.shopify import channel_bp
 from .integration.channel.pabbly import channel_bp
