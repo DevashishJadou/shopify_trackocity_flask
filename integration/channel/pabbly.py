@@ -45,19 +45,38 @@ def pabbly_integration():
     return jsonify({'message': 'success'}), 200
 
 
+from datetime import datetime
+
 def parse_date(date_str):
     if isinstance(date_str, datetime):
         return date_str
+    
     try:
         # First attempt to parse the date normally
         return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
     except ValueError:
-        try:
-            normalized_date_str = date_str.replace(" : ", ":").replace(": ", ":").replace(" :", ":")
-            return datetime.strptime(normalized_date_str, "%Y-%m-%d %H:%M:%S")
-        except ValueError as e:
-            print(f"Error parsing date: {date_str} - {e}")
-            return None
+        pass
+
+    try:
+        # Normalize spaces around colons and try again
+        normalized_date_str = date_str.replace(" : ", ":").replace(": ", ":").replace(" :", ":")
+        return datetime.strptime(normalized_date_str, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        pass
+
+    try:
+        # Handle ISO 8601 format with milliseconds and 'Z' suffix
+        return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+    except ValueError:
+        pass
+
+    try:
+        # Handle ISO 8601 format without milliseconds
+        return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError as e:
+        print(f"Error parsing date: {date_str} - {e}")
+        return None
+
 
 @channel_bp.route('/<workspace>/pabblyorderendpoint', methods=['POST'])
 def pabbly_webhook(workspace):

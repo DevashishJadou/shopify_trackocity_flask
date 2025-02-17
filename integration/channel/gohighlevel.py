@@ -64,7 +64,7 @@ def gohiglevel_webhook(workspace):
     # Handle the event
     payment_id = event.get('id', '001')
     currency = event.get('order',{}).get('currency_code', None)
-    amount = event.get('amount',0)/100.0
+    amount = event.get('total_price',0)
     if currency.lower() == 'usd':
         if user.currency == 'INR':
             amount = amount * 86
