@@ -125,8 +125,10 @@ def pabbly_webhook(workspace):
     payment_method = data.get('payment_method')
     order_date = data.get('order_date', datetime.now())  # Get order date or default to now
     event_time = parse_date(order_date)  # Parse the date
+
+    print(f'pabblydata:{data}')
     if data.get('timezone') == 'true':  # Apply timezone offset if required
-        timezone_offset = user.get('timezone_value',0) # Ensure safe access
+        timezone_offset = float(getattr(user, 'timezone_value', 0))  # Ensure safe access
         event_time += timedelta(hours=timezone_offset)
     event_time = event_time.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -134,7 +136,7 @@ def pabbly_webhook(workspace):
         payment_id = str(random.randint(1, 9999999))
     else:
         payment_id = data.get('order_number', str(random.randint(1, 9999999)))
-
+    
     order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
     if order_obj is None:
         try:
