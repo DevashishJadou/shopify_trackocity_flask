@@ -123,7 +123,13 @@ def pabbly_webhook(workspace):
     email = data.get('email')
     phone = data.get('phone')
     payment_method = data.get('payment_method')
-    event_time = parse_date(data.get('order_date', datetime.now()+timedelta(hours=5.5))).strftime("%Y-%m-%d %H:%M:%S")
+    order_date = data.get('order_date', datetime.now())  # Get order date or default to now
+    event_time = parse_date(order_date)  # Parse the date
+    if data.get('timezone') == 'true':  # Apply timezone offset if required
+        timezone_offset = user.get('timezone_value',0) # Ensure safe access
+        event_time += timedelta(hours=timezone_offset)
+    event_time = event_time.strftime("%Y-%m-%d %H:%M:%S")
+
     if data.get('order_number') == '001':
         payment_id = str(random.randint(1, 9999999))
     else:

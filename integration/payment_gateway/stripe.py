@@ -47,8 +47,8 @@ def stripe_params():
 @cross_origin()
 def strip_webhook(workspace):
     
-    user = UserRegister.query.filter_by(workspace=workspace).first()
-    if not user.isactive:
+    user = PlatformConfiguration.query.filter_by(workspace=workspace).filter_by(platform='stripe').first()
+    if not user or not user.active:
         jsonify({'status': 'Unauthorized'}), 403
 
     tablename = 'order_'+workspace
