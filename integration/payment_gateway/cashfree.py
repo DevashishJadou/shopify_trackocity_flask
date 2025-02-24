@@ -107,8 +107,8 @@ def checkout_webhook(workspace):
     #         "type": "PAYMENT_SUCCESS_WEBHOOK"  
     #     }
 
-    user = UserRegister.query.filter_by(workspace=workspace).first()
-    if not user.isactive:
+    user = PlatformConfiguration.query.filter_by(workspace=workspace).filter_by(platform='cashfree').first()
+    if not user or not user.active:
         return jsonify({'status': 'Unauthorized'}), 403
 
     request_data = request.get_json()  # Load JSON data from the request

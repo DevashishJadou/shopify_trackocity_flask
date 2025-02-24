@@ -2,9 +2,11 @@
 # from connection import db
 from ..connection import db
 from datetime import datetime
-import uuid
+import uuid, os
 from sqlalchemy import MetaData, Table, Column, Integer, String, DateTime, Text, Numeric, Date
 from sqlalchemy.schema import UniqueConstraint
+from sqlalchemy.dialects.postgresql import BYTEA
+from sqlalchemy.sql import func
 
 # db = SQLAlchemy()
 
@@ -236,33 +238,23 @@ def order_table_dynamic(tablename):
         converted_date = db.Column(db.DateTime)
         created_at = db.Column(db.DateTime, default=datetime.now)
         updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+        email_encrypt = db.Column(BYTEA)
+        phone_encrypt = db.Column(BYTEA)
+        email_secure = db.Column(db.Text)
+        phone_secure = db.Column(db.Text)
+        notes = db.Column(db.Text)
 
-        # encryption_key = "my_secure_encryption_key"  # Replace this with a secure key
-        # # Custom setter to encrypt the email
-        # @property
-        # def email(self):
-        #     # Decrypt email when accessed
-        #     result = db.session.execute(
-        #         text("SELECT pgp_sym_decrypt(:email_encrypted, :key)"),
-        #         {'email_encrypted': self.email_encrypted, 'key': self.encryption_key}
-        #     ).scalar()
+        @property
+        def decrypted_email(self):
+            return db.session.query(func.pgp_sym_decrypt(self.email_encrypt, os.environ.get('_ENCYPT_KEY'))).scalar()
 
-        #     return result
-
-        # @email.setter
-        # def email(self, value):
-        #     # Encrypt email when setting it
-        #     encrypted_email = db.session.execute(
-        #         text("SELECT pgp_sym_encrypt(:email, :key)"),
-        #         {'email': value, 'key': self.encryption_key}
-        #     ).scalar()
-
-        #     self.email_encrypted = encrypted_email
+        @property
+        def decrypted_phone(self):
+            return db.session.query(func.pgp_sym_decrypt(self.phone_encrypt, os.environ.get('_ENCYPT_KEY'))).scalar()
         
 
     return OrderTable
     
-
 
 
 
@@ -294,7 +286,12 @@ def ordertable(tablename):
             Column('converted_date', DateTime),
             Column('event_type', String(32)),
 			Column('created_at', DateTime, default=datetime.now),
-			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now)
+			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now),
+            Column('email_encrypt', BYTEA),
+            Column('phone_encrypt', BYTEA),
+            Column('email_secure', Text),
+            Column('phone_secure', Text),
+            Column('notes', Text)
 		)
     return order_table
 

@@ -180,7 +180,7 @@ def get_creativetabledatayoutube():
 		cpnv = 0 if engagement == 0 else  round(spend / max(engagement, 1),2)
 		hookrate = 0 if impression == 0 else round(video_views / impression * 100, 2)
 		holdrate = 0 if video_views ==0 else  round(p25* 100/video_views ,2)
-		completion_rate = 0 if video_views ==0 else round(p100* 100/video_views ,2)
+		completion_rate = 0 if video_views ==0 else round(p100* 10000/video_views ,2)
 
 		creative_data = {
         "creativeid": creativeid, "thumbnail_id": thumbnail_id, "creativename": creativename, 

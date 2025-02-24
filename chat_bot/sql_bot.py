@@ -40,150 +40,182 @@ def row_to_dict(row):
 class SmartQueryHandler:
     def __init__(self, openai_api_key):
         self.openai_api_key = openai_api_key
-        self.llm = ChatOpenAI(openai_api_key=openai_api_key, temperature=0.1, top_p=0.7, frequency_penalty=0.2,presence_penalty=0)
+        self.llm = ChatOpenAI(openai_api_key=openai_api_key, temperature=0.1, top_p=0.7, frequency_penalty=0.2, presence_penalty=0)
         
-        # Classifier system template
-        self.classifier_template = """You are a query classifier that determines whether a question requires database access or can be answered directly.
+        # Updated system template to classify question type based on context
+        self.classifier_template = """
+        You are a query classifier that determines:
+        1. Whether the question is a sequential follow-up to previous questions.
+        2. If not sequential, whether the question requires database access.
+        
+        Considerations for sequential classification:
+        - It logically follows from one of the previous questions..
+        - It references a concept, term, or request from previous questions.
+        - It asks for additional information, visualization, or formatting based on prior results.
+        
+        Considerations for database access:
+        - It asks for historical, numerical, or trend-based performance data.
+        - It requires an analysis of past metrics (e.g., CPA trends, ROAS shifts, best-performing campaigns).
+        - The question asks for data-driven insights or recommendations.  This includes questions about optimization, scaling, or strategy that necessitate looking at past performance.
 
-            For questions that need database access, they should:
-            1. Ask about specific metrics, data, or analytics
-            2. Reference business data, customer information, or performance metrics
-            3. Require calculations or aggregations
-            4. Need historical data analysis
-            5. Ask about ad performance, customer journey, or revenue metrics
+        Questions that don't need database access:
+        1. Purely theoretical or conceptual questions that do not require specific data to answer.
+        2. Greetings or casual conversation
+        3. Requests for formatting, visualization, or restructuring of previously retrieved data
 
-            Questions that don't need database access:
-            1. General knowledge questions
-            2. Greetings or casual conversation
-            3. Questions about common facts
-            4. Questions about your capabilities
-            5. Non-business related queries
+        
+        Question: {question}
+        Previous Questions: {prev_questions}
+        
+        Respond in the following JSON format:
+        {{
+            "is_sequential": boolean,
+            "reason": "Brief explanation of classification",
+            "needs_database": boolean,
+            "response": "No answer if no database needed, otherwise null"
+        }}
 
-            Please classify the question and provide a structured response.
+        """
 
-            Question: {question}
-
-            Respond in the following JSON format:
-            {{
-                "needs_database": boolean,
-                "reason": "Brief explanation of classification",
-                "response": "Direct response if no database needed, otherwise null"
-            }}
-            """
-
-    def classify_question(self, question):
-        """Determine if the question needs database access"""
+    def classify_question(self, question, prev_questions=None):
+        """Determine if the question is sequential or needs database access."""
+        prev_questions_str = " | ".join(prev_questions) if prev_questions else "None"
+        
         prompt = ChatPromptTemplate.from_messages([
             SystemMessagePromptTemplate.from_template(self.classifier_template)
         ])
         
         chain = prompt | self.llm | StrOutputParser()
         
-        result = chain.invoke({"question": question})
+        result = chain.invoke({"question": question, "prev_questions": prev_questions_str})
         try:
             return json.loads(result)
         except json.JSONDecodeError:
             return {
+                "is_sequential": False,
                 "needs_database": True,
                 "reason": "Classification failed, defaulting to database query",
                 "response": None
             }
 
+
+
     def get_query_template(self):
-        return """You are a specialized SQL Query Bot designed to help marketing analysts evaluate performance and make data-driven decisions. Your primary role is to generate valid PostgreSQL queries that answer specific marketing-related questions while considering key performance metrics and business needs, based on the provided schema and requirements.
+        return """You are an advanced Postgres SQL Query Generator specialized in Performance Marketing Analytics, with expertise in:
+            - Marketing data analysis
+            - PostgreSQL query optimization
+            - Marketing metrics calculation
+            - Campaign performance evaluation
+
+            Purpose of this Step
+            The SQL query you generate will be used as input for a data interpretation assistant in Step 2. Ensure that:
+            - The query retrieves all necessary performance metrics (CPA, ROAS, CTR, CPM, CR, AOV etc) for detailed analysis.
+            - Data is structured to enable insights into performance trends, comparisons, and key observations.
+            - If the user asks for a comparison (MoM, WoW) or segmentation, include the required breakdown with sufficient granularity.
+
                     
             Schema Information:
             {schema}
             
             Question: {question}
             
-            Internal Reasoning (Chain of Thought):
-            1. First, think step by step about which tables, columns, and filters to use.
-            2. Then, provide only the final SQL query as your answer, without revealing your internal reasoning.
+            
+            Step 1: Understanding the Query
+            Before generating the Postgres SQL query:
+            1. Identify the user's intent:
+            - Is it about account performance, ad performance, campaign trends, or conversion insights?
+            - Does it require trend analysis, forecasting, or segmentation?
+            
+            2. Extract essential details:
+            - Time period (last 7 days, 30 days, MoM, WoW, or all available data).
+            - Metrics mentioned or inferred (CPA, ROAS, CTR, CR, AOV, CPC, CPM, etc.).
+            - Requested breakdowns (by campaign, ad set, ad type, platform, creative type).
+            - Comparison logic (current period vs. previous period, winning vs. losing ads).
 
-            Available Tables and Key Metrics:  
-            1. horizon.ads_lastattribute
-               - Stores last-touch attribution data, conversions, and campaign performance metrics.     
-            2. horizon.ads_firstattribute
-               - Stores first-touch attribution data, revenue, and order metrics.
-            3. horizon.customer_journey
-                - orderid consider as foreign key from horizon.ads_lastattribute or horizon.ads_firstattribute
-                - customer journey analysis includes the paths and touchpoints where users or customers arrive on the website from various sources
-                - Use workspace and orderid combination to join with horizon.ads_lastattribute or horizon.ads_firstattribute
-            
-            
-            Column Defination:
-            1. purchase/order: Number of orders/sales
-            2. purchase_value/total/revenue: Total/revenue value of orders/sales
-                
-            Query Requirements: 
-            1. Workspace Filter: Always include `workspace = '{workspace}'` in the `WHERE` clause.  
-            2. Date Range:  
-                - Filter on `order_date`.  
-                - If no date range is specified, default to the last 6 months.  
-            3.Prefix: Use `horizon.` as the schema prefix for all tables.  
-            4. Aggregations and Metrics:  
-                - Use `SUM`, `AVG`, `ROUND(..., 2)`, and `NULL IF` to avoid division by zero or NULL values.  
-                - Group by relevant dimensions (e.g., campaign_name, channel, month).  
-            5. Performance:  
-                - If needed, use subqueries for clarity.  
-                - Ensure you only output the final SQL query—no explanations or step-by-step logic.
+            3. Determine table relationships:
+            - For user touchpoint or assist in order, join `horizon.customer_journey`.
+            - For first-click attribution, join `horizon.ads_firstattribute`.
+            - For conversion and ad spend focus, primarily use `horizon.ads_lastattribute`.
 
-            
-            Key Marketing Performance Metrics:
-            When generating queries, focus on metrics that matter most to marketing analysts:
-            1. ROAS (Return on Ad Spend)
-            2. CTR (Click-Through Rate
-            3. CR (Conversion Rate)
-            4. CPA (Cost Per Acquisition)
-            5. CPM (Cost Per Impression)
-            6. CPC (Cost Per Click)
-            7. Impressions
-            8. Time to Conversion
-            9. Revenue Attribution
-            10. Adtype
-            Structure your queries to help evaluate performance and guide decision-making (e.g., identifying top-performing channels, optimizing spend, tracking conversions over time).
-            
 
-            Example:
-            1. question: Analysis sept 2024 campaign for facebook platform and give suggestion to Improve ROAS
-               SQL Query: SELECT
+
+            Step 2: Constructing the Query
+            1. Select primary tables based on query type:
+            - Ad performance: Use `horizon.ads_lastattribute` (final conversions & spend).
+            - Customer journey insights: Join `horizon.customer_journey` for touchpoints.
+            - First-touch attribution analysis: Use `horizon.ads_firstattribute`.
+
+            2. Extract relevant metrics (based on direct request & inferred insights):
+            - Primary metrics: ROAS, CPA, CTR, CPC, AOV, Impression, CR.
+            - New customer insights: New orders (nOrders), new revenue (nROAS, nAOV, nCR).
+            - Engagement indicators: Fresh visitor % (fresh_visitor / click), video vs. image ad type performance.
+            - Granular breakdowns: Campaign name, ad set ID, ad ID, creative type (video/image).
+
+            3. Enhance analysis with additional insights:
+            - Account-level: Spend vs. revenue trends, impression & click volatility, channel mix.
+            - Campaign-level: MoM/WoW comparisons, top/bottom performers by ROAS or CPA.
+            - Ad-level: CTR vs. CR trends, ad fatigue indicators (e.g., declining CTR over time), creative metadata
+
+            4. Optimize SQL query for efficiency:
+            - Use workspace and time filters (default to last 6 months if unspecified).
+            - Apply date truncation (`date_trunc('month', orderdate)`) for grouping.
+            - Prevent division errors with `GREATEST(NULLIF(, 1), 1)`.
+            - Use subqueries/CTEs for complex logic readability
+            - Include raw data (e.g., clicks, impressions) alongside calculated metrics.
+            - Double cross verigy syntax of query.
+
+
+            Step 3: Generating the Final SQL Query
+            - The query should strictly return only SQL, without explanations.
+            - Ensure joins, groupings, and aggregations align with analysis objectives.
+            - Use consistent schema prefix (`horizon.`) for all tables.
+            - Always include `workspace = '{workspace}'` in the `WHERE` clause     
+
+            Example 1: Facebook Campaign Analysis for ROAS Improvement
+            question: How is my account performing?
+            SQL Query: SELECT
                         date_trunc('month', al.orderdate) AS month,
                         al.campaign_name AS campaign_name,
                         ROUND(SUM(al.total),2) AS total_revenue,
                         ROUND(SUM(al.spend),2) AS total_spend,
                         SUM(al.orders) AS tota_order,
-                        ROUND(AVG(al.purchase_roas), 2) AS roas
+                        ROUND(SUM(al.purchase_value) / GREATEST(NULLIF(SUM(al.spend), 1), 1), 2) AS roas,
+                        ROUND(SUM(al.new_revenue) / GREATEST(NULLIF(SUM(al.spend), 1), 1), 2) AS nroas,
+                        SUM(al.new_orders) AS new_total_order,
+                        SUM(al.fresh_visitor) AS fresh_visitor
                         FROM
                         horizon.ads_lastattribute al
                         WHERE
-                        al.channel = 'facebook'
+                        lower(al.channel) = 'facebook'
                         AND al.workspace = '854e249d718e42cba341aa0559931c12'
-                        AND al.orderdate >= '2024-09-01'
-                        AND al.orderdate < '2024-10-01'
-                        GROUP BY month, al.campaign_name
+                        AND al.orderdate >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '30 days')
+                        GROUP BY 1, 2
                         ORDER BY roas DESC;
-            2. question: Compare this month with previous basis on  facebook ads level performance. Analysis which is better ads worked and why?
-               SQL Query: SELECT
+            Example 2: Month-over-Month Facebook Ads Performance Comparison
+            question: Compare this month with previous basis on  facebook ads level performance. Analysis which is better ads worked and why?
+            SQL Query: SELECT
                                 date_trunc('month', al.orderdate) AS month,
                                 SUM(al.purchase) AS total_purchases,
                                 ROUND(SUM(al.spend),2) AS total_spend,
-                                ROUND(SUM(spend) / NULLIF(SUM(purchase), 1), 2) AS cpa,
-                                ROUND(SUM(al.purchase_value) / NULLIF(SUM(al.spend), 1), 2) AS roas,
-                                ROUND(SUM(al.spend)* 1000.0 / NULLIF(SUM(al.impression), 1),2) AS cpm,
-                                ROUND(SUM(al.spend) / NULLIF(SUM(al.clicks), 1),2) AS cpc,
-                                ROUND(SUM(al.clicks) / NULLIF(SUM(al.impression), 1),2) AS ctr
+                                ROUND(SUM(spend) / GREATEST(NULLIF(SUM(purchase), 1), 1), 2) AS cpa,
+                                ROUND(SUM(al.purchase_value) / GREATEST(NULLIF(SUM(al.spend), 1), 1), 2) AS roas,
+                                ROUND(SUM(al.spend)* 1000.0 / GREATEST(NULLIF(SUM(al.impression), 1), 1), 2) AS cpm,
+                                ROUND(SUM(al.spend) / GREATEST(NULLIF(SUM(al.clicks), 1), 1), 2) AS cpc,
+                                ROUND(SUM(al.clicks) / GREATEST(NULLIF(SUM(al.impression), 1), 1), 2) AS ctr,
+                                ROUND(SUM(al.new_revenue) / GREATEST(NULLIF(SUM(al.spend), 1), 1), 2) AS nroas
                             FROM
                                 horizon.ads_lastattribute al
                             WHERE
-                                al.channel = 'facebook'
+                                lower(al.channel) = 'facebook'
                                 AND al.workspace = '854e249d718e42cba341aa0559931c12'
                                 AND (al.orderdate >= DATE_TRUNC('month', CURRENT_DATE))
                                 OR (al.orderdate >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AND al.orderdate < DATE_TRUNC('month', CURRENT_DATE))
-                            GROUP BY month
+                            GROUP BY 1
                             ORDER BY month;
 
             SQL Query:"""
+
+
 
     def get_schema_info(self):
         """Fetch and format schema information"""
@@ -193,7 +225,7 @@ class SmartQueryHandler:
             array_agg(DISTINCT c.column_name || ' (' || c.data_type || ')') as columns
         FROM information_schema.tables t
         JOIN information_schema.columns c ON t.table_name = c.table_name
-        WHERE t.table_schema = 'horizon'
+        WHERE t.table_schema = 'horizon' AND t.table_name <> 'ads'
         GROUP BY t.table_name;
         """
         
@@ -234,32 +266,28 @@ class SmartQueryHandler:
         finally:
             pass
 
-    def handle_question(self, question, workspace):
+    def handle_question(self, question, workspace, prev_question):
         """Handle both database and non-database questions"""
-        classification = self.classify_question(question)
+        classification = self.classify_question(question, prev_question)
         
         if classification["needs_database"]:
-            try:
-                chain = self.create_query_chain(workspace)
-                query = chain.invoke({"question": question})
-                query = re.sub(r'```sql\s*|\s*```', '', query)
-                results = self.execute_query(query)
+            chain = self.create_query_chain(workspace)
+            query = chain.invoke({"question": question})
+            query = re.sub(r'```sql\s*|\s*```', '', query)
+            results = self.execute_query(query)
 
-                log = ChatBotLog(workspace=workspace, question = question, query=query, result=str(results))
-                db.session.add(log)
-                db.session.commit()
+            log = ChatBotLog(workspace=workspace, question = question, query=query, result=str(results))
+            db.session.add(log)
+            db.session.commit()
 
-                data = [row_to_dict(row) for row in results]
-                return jsonify_with_decimal(data)
-            except Exception as e:
-                log = ChatBotLog(workspace=workspace, question = question, query=query, result=str(e.args))
-                db.session.add(log)
-                db.session.commit()
+            data = [row_to_dict(row) for row in results]
+            return jsonify_with_decimal({"data": data, "is_sequential": classification['is_sequential']})
         else:
             return jsonify({
                 "type": "direct_response",
                 "response": classification["response"],
-                "reason": classification["reason"]
+                "reason": classification["reason"],
+                "is_sequential": classification['is_sequential']
             })
 
 # Flask route implementation
@@ -278,16 +306,17 @@ def chatwithsql():
     
     workspace = userid
     question = body.get('question')
+    prev_question = body.get('prevQuestions')
     
     try:
-        return handler.handle_question(question, workspace)
+        return handler.handle_question(question, workspace, prev_question)
     except Exception as e:
         # return jsonify({"error": str(e)}), 500
         try:
-            return handler.handle_question(question, workspace)
+            return handler.handle_question(question, workspace, prev_question)
         except Exception as e:
             try:
-                return handler.handle_question(question, workspace)
+                return handler.handle_question(question, workspace, prev_question)
             except Exception as e:
                 # return jsonify({"error": str(e)}), 500
                 return jsonify({"error": "Error in processing Request"}), 500

@@ -126,8 +126,7 @@ def pabbly_webhook(workspace):
     order_date = data.get('order_date', datetime.now())  # Get order date or default to now
     event_time = parse_date(order_date)  # Parse the date
 
-    print(f'pabblydata:{data}')
-    if data.get('timezone') == 'true':  # Apply timezone offset if required
+    if data.get('timezone') == 'true' or data.get('timezone'):  # Apply timezone offset if required
         timezone_offset = float(getattr(user, 'timezone_value', 0))  # Ensure safe access
         event_time += timedelta(hours=timezone_offset)
     event_time = event_time.strftime("%Y-%m-%d %H:%M:%S")
