@@ -238,19 +238,19 @@ def order_table_dynamic(tablename):
         converted_date = db.Column(db.DateTime)
         created_at = db.Column(db.DateTime, default=datetime.now)
         updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
-        email_encrypt = db.Column(BYTEA)
-        phone_encrypt = db.Column(BYTEA)
-        email_secure = db.Column(db.Text)
-        phone_secure = db.Column(db.Text)
+        # email_encrypt = db.Column(BYTEA)
+        # phone_encrypt = db.Column(BYTEA)
+        # email_secure = db.Column(db.Text)
+        # phone_secure = db.Column(db.Text)
         notes = db.Column(db.Text)
 
-        @property
-        def decrypted_email(self):
-            return db.session.query(func.pgp_sym_decrypt(self.email_encrypt, os.environ.get('_ENCYPT_KEY'))).scalar()
+        # @property
+        # def decrypted_email(self):
+        #     return db.session.query(func.pgp_sym_decrypt(self.email_encrypt, os.environ.get('_ENCYPT_KEY'))).scalar()
 
-        @property
-        def decrypted_phone(self):
-            return db.session.query(func.pgp_sym_decrypt(self.phone_encrypt, os.environ.get('_ENCYPT_KEY'))).scalar()
+        # @property
+        # def decrypted_phone(self):
+        #     return db.session.query(func.pgp_sym_decrypt(self.phone_encrypt, os.environ.get('_ENCYPT_KEY'))).scalar()
         
 
     return OrderTable
@@ -287,10 +287,10 @@ def ordertable(tablename):
             Column('event_type', String(32)),
 			Column('created_at', DateTime, default=datetime.now),
 			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now),
-            Column('email_encrypt', BYTEA),
-            Column('phone_encrypt', BYTEA),
-            Column('email_secure', Text),
-            Column('phone_secure', Text),
+            # Column('email_encrypt', BYTEA),
+            # Column('phone_encrypt', BYTEA),
+            # Column('email_secure', Text),
+            # Column('phone_secure', Text),
             Column('notes', Text)
 		)
     return order_table
