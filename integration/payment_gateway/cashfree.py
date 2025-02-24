@@ -107,8 +107,9 @@ def checkout_webhook(workspace):
     #         "type": "PAYMENT_SUCCESS_WEBHOOK"  
     #     }
 
-    user = PlatformConfiguration.query.filter_by(workspace=workspace).filter_by(platform='cashfree').first()
-    if not user or not user.active:
+    account = PlatformConfiguration.query.filter_by(workspace=workspace).filter_by(platform='cashfree').first()
+    user = UserRegister.query.filter_by(workspace=workspace).first()
+    if not account or not account.active:
         return jsonify({'status': 'Unauthorized'}), 403
 
     request_data = request.get_json()  # Load JSON data from the request
@@ -144,6 +145,7 @@ def checkout_webhook(workspace):
     orderTable = order_table_dynamic(tablename)
     orderTable.metadata = db.Model.metadata
 
+    
     if user.isleadgen:
         order_obj = orderTable.query.filter_by(email=email).first()
         if not order_obj:

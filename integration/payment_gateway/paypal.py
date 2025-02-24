@@ -44,8 +44,9 @@ def paypal_params():
 
 @payment_bp.route('/<workspace>/paypalwebhook', methods=['POST'])
 def paypal_webhook_endpoint(workspace):
-    user = PlatformConfiguration.query.filter_by(workspace=workspace).filter_by(platform='paypal').first()
-    if not user or not user.active:
+    account = PlatformConfiguration.query.filter_by(workspace=workspace).filter_by(platform='cashfree').first()
+    user = UserRegister.query.filter_by(workspace=workspace).first()
+    if not account or not account.active:
         jsonify({'status': 'Unauthorized'}), 403
 
     tablename = 'order_'+workspace
