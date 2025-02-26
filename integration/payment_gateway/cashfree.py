@@ -8,6 +8,10 @@ from sqlalchemy import MetaData
 from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable
 from ...connection import db
 from .razorpay import payment_bp
+from sqlalchemy.sql import func
+
+
+ENCRYPTION_KEY = os.environ.get('_ENCYPT_KEY')
 
 metadata = MetaData()
 
@@ -129,6 +133,10 @@ def checkout_webhook(workspace):
     email = customer_info.get('customer_email')
     phone = customer_info.get('customer_phone')
     payment_method = payment_info.get('payment_group')
+    email_encrypt = func.pgp_sym_encrypt(email, ENCRYPTION_KEY)
+    phone_encrypt = func.pgp_sym_encrypt(phone, ENCRYPTION_KEY)
+    email_secure = func.pgp_digest(email)
+    phone_secure = func.pgp_digest(phone)
 
     # Convert event_time to correct timezone
     try:
@@ -157,10 +165,14 @@ def checkout_webhook(workspace):
             order_obj.email = email
             order_obj.phone = phone
             order_obj.converted_date = event_time
+            order_obj.email_encrypt = func.pgp_sym_encrypt(email, ENCRYPTION_KEY)
+            order_obj.phone_encrypt = func.pgp_sym_encrypt(phone, ENCRYPTION_KEY)
+            order_obj.email_secure = func.pgp_digest(email)
+            order_obj.phone_secure = func.pgp_digest(phone)
         else:
             order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
             if order_obj is None:
-                order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency)
+                order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, email_encrypt=email_encrypt, phone_encrypt=phone_encrypt, email_secure=email_secure, phone_secure=phone_secure, payment_method='Prepaid', total=amount, currency=currency)
                 db.session.add(order_make)
     else:
         order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
@@ -170,6 +182,10 @@ def checkout_webhook(workspace):
                 transcation_id=payment_id,
                 email=email,
                 phone=phone,
+                email_encrypt=email_encrypt,
+                phone_encrypt=phone_encrypt,
+                email_secure=email_secure,
+                phone_secure=phone_secure,
                 payment_method=payment_method,
                 total=amount,
                 currency=currency

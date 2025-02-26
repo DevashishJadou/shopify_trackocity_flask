@@ -12,8 +12,11 @@ from ...db_model.sql_models import UserRegister, RazorpayConfiguration, order_ta
 from ...connection import db
 from ...dbrule import dup_order_rule
 
+from sqlalchemy.sql import func
+
 metadata = MetaData()
 payment_bp = Blueprint('clientpayment', __name__)
+ENCRYPTION_KEY = os.environ.get('_ENCYPT_KEY')
 
 @payment_bp.route('/razorpaycredentials', methods=['POST'])
 @cross_origin()
@@ -118,11 +121,19 @@ def razorpay_webhook(workspace):
                 order_obj.currency = currency
                 order_obj.email = email
                 order_obj.phone = phone
+                order_obj.email_encrypt = func.pgp_sym_encrypt(email, ENCRYPTION_KEY)
+                order_obj.phone_encrypt = func.pgp_sym_encrypt(phone, ENCRYPTION_KEY)
+                order_obj.email_secure = func.pgp_digest(email)
+                order_obj.phone_secure = func.pgp_digest(phone)
                 order_obj.converted_date = event_time
             else:
                 order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
+                email_encrypt = func.pgp_sym_encrypt(email, ENCRYPTION_KEY)
+                phone_encrypt = func.pgp_sym_encrypt(phone, ENCRYPTION_KEY)
+                email_secure = func.pgp_digest(email)
+                phone_secure = func.pgp_digest(phone)
                 if order_obj is None:
-                    order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency)
+                    order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, email_encrypt=email_encrypt, phone_encrypt=phone_encrypt, email_secure=email_secure, phone_secure=phone_secure, payment_method='Prepaid', total=amount, currency=currency)
                     db.session.add(order_make)
             db.session.commit()
 
@@ -139,7 +150,11 @@ def razorpay_webhook(workspace):
             
             order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
             if order_obj is None:
-                order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency)
+                email_encrypt = func.pgp_sym_encrypt(email, ENCRYPTION_KEY)
+                phone_encrypt = func.pgp_sym_encrypt(phone, ENCRYPTION_KEY)
+                email_secure = func.pgp_digest(email)
+                phone_secure = func.pgp_digest(phone)
+                order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, email_encrypt=email_encrypt, phone_encrypt=phone_encrypt, email_secure=email_secure, phone_secure=phone_secure, payment_method='Prepaid', total=amount, currency=currency)
                 db.session.add(order_make)
             db.session.commit()
             return jsonify({'status': 'success'}), 200
@@ -153,7 +168,11 @@ def razorpay_webhook(workspace):
             if order_obj:
                 order_obj.order_status = 'cancelled'
             else:
-                order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, payment_method='Prepaid', total=amount, currency=currency, order_status='cancelled')
+                email_encrypt = func.pgp_sym_encrypt(email, ENCRYPTION_KEY)
+                phone_encrypt = func.pgp_sym_encrypt(phone, ENCRYPTION_KEY)
+                email_secure = func.pgp_digest(email)
+                phone_secure = func.pgp_digest(phone)
+                order_make = orderTable(order_date=event_time, transcation_id=payment_id, email=email, phone=phone, email_encrypt=email_encrypt, phone_encrypt=phone_encrypt, email_secure=email_secure, phone_secure=phone_secure, payment_method='Prepaid', total=amount, currency=currency, order_status='cancelled')
                 db.session.add(order_make)
             db.session.commit()
             return jsonify({'status': 'success'}), 200
