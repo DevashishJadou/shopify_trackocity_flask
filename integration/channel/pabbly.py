@@ -125,7 +125,7 @@ def pabbly_webhook(workspace):
     amount = data.get('total')
     currency = data.get('currency')
     email = data.get('email')
-    phone = data.get('phone')
+    phone = str(data.get('phone'))
     payment_method = data.get('payment_method')
     order_date = data.get('order_date', datetime.now())  # Get order date or default to now
     event_time = parse_date(order_date)  # Parse the date
