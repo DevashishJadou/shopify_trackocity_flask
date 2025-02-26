@@ -10,6 +10,10 @@ from ...db_model.sql_models import UserRegister, order_table_dynamic, ordertable
 from .woocommerce import channel_bp
 from ...connection import db
 from ...dbrule import dup_order_rule
+from sqlalchemy.sql import func
+
+
+ENCRYPTION_KEY = os.environ.get('_ENCYPT_KEY')
 
 metadata = MetaData()
 
@@ -139,7 +143,11 @@ def pabbly_webhook(workspace):
     order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
     if order_obj is None:
         try:
-            order_make = orderTable(order_date=event_time, transcation_id=payment_id, first_name=first_name, last_name=last_name, email=email, phone=phone, payment_method=payment_method, total=amount, order_status=order_status)
+            email_encrypt = func.pgp_sym_encrypt(email, ENCRYPTION_KEY)
+            phone_encrypt = func.pgp_sym_encrypt(phone, ENCRYPTION_KEY)
+            email_secure = func.pgp_digest(email)
+            phone_secure = func.pgp_digest(phone)
+            order_make = orderTable(order_date=event_time, transcation_id=payment_id, first_name=first_name, last_name=last_name, email=email, phone=phone, email_encrypt=email_encrypt, phone_encrypt=phone_encrypt, email_secure=email_secure, phone_secure=phone_secure, payment_method=payment_method, total=amount, order_status=order_status)
             db.session.add(order_make)
         except:
             print(f'pabblydata:{data}')

@@ -8,7 +8,10 @@ from .woocommerce import channel_bp
 from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable
 from ...connection import db
 from sqlalchemy import MetaData
+from sqlalchemy.sql import func
 
+
+ENCRYPTION_KEY = os.environ.get('_ENCYPT_KEY')
 
 metadata = MetaData()
 
@@ -88,7 +91,11 @@ def gohiglevel_webhook(workspace):
     if payment_id == '001':
         payment_id = str(random.randint(1, 9999999))
     if order_obj is None:
-        order_make = orderTable(order_date=event_time, transcation_id=payment_id, first_name=first_name, email=email, phone=phone, last_name=last_name, payment_method='Prepaid', total=amount, currency=currency)
+        email_encrypt = func.pgp_sym_encrypt(email, ENCRYPTION_KEY)
+        phone_encrypt = func.pgp_sym_encrypt(phone, ENCRYPTION_KEY)
+        email_secure = func.pgp_digest(email)
+        phone_secure = func.pgp_digest(phone)
+        order_make = orderTable(order_date=event_time, transcation_id=payment_id, first_name=first_name, email=email, phone=phone, email_encrypt=email_encrypt, phone_encrypt=phone_encrypt, email_secure=email_secure, phone_secure=phone_secure, last_name=last_name, payment_method='Prepaid', total=amount, currency=currency)
         db.session.add(order_make)
     db.session.commit()
 
