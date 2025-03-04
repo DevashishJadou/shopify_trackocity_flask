@@ -3,6 +3,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 from langchain_core.runnables import RunnablePassthrough
 from sqlalchemy import text
+import sqlparse
 
 from decimal import Decimal
 from datetime import datetime, date
@@ -102,10 +103,10 @@ class SmartQueryHandler:
 
     def get_query_template(self):
         return """You are an advanced Postgres SQL Query Generator specialized in Performance Marketing Analytics, with expertise in:
-            - Marketing data analysis
             - PostgreSQL query optimization
             - Marketing metrics calculation
             - Campaign performance evaluation
+            - Marketing data analysis
 
             Purpose of this Step
             The SQL query you generate will be used as input for a data interpretation assistant in Step 2. Ensure that:
@@ -154,15 +155,16 @@ class SmartQueryHandler:
             3. Enhance analysis with additional insights:
             - Account-level: Spend vs. revenue trends, impression & click volatility, channel mix.
             - Campaign-level: MoM/WoW comparisons, top/bottom performers by ROAS or CPA.
-            - Ad-level: CTR vs. CR trends, ad fatigue indicators (e.g., declining CTR over time), creative metadata
+            - Adset/Ad-level: CTR vs. CR trends, ad fatigue indicators (e.g., declining CTR over time), creative metadata
 
             4. Optimize SQL query for efficiency:
-            - Use workspace and time filters (default to last 6 months if unspecified).
+            - Use workspace and time filters (default to last 7 days if unspecified).
             - Apply date truncation (`date_trunc('month', orderdate)`) for grouping.
-            - Prevent division errors with `GREATEST(NULLIF(, 1), 1)`.
+            - Prevent division errors with `NULLIF(, 0)` and SUM null with `COALESCE(,0)`.
             - Use subqueries/CTEs for complex logic readability
             - Include raw data (e.g., clicks, impressions) alongside calculated metrics.
             - Double cross verigy syntax of query.
+            - Give Perference to 'name' field over 'id' like adset_name or adsetid
 
 
             Step 3: Generating the Final SQL Query
@@ -172,46 +174,54 @@ class SmartQueryHandler:
             - Always include `workspace = '{workspace}'` in the `WHERE` clause     
 
             Example 1: Facebook Campaign Analysis for ROAS Improvement
-            question: How is my account performing?
+            Question: Can you analyze the performance of the ad '080125-1M3-VID14-C-LEM-C1' over the last 7 days? Identify any anomalies, provide actionable recommendations, suggest budget strategies if relevant, and forecast potential performance trends based on recent data.
             SQL Query: SELECT
-                        date_trunc('month', al.orderdate) AS month,
-                        al.campaign_name AS campaign_name,
-                        ROUND(SUM(al.total),2) AS total_revenue,
-                        ROUND(SUM(al.spend),2) AS total_spend,
-                        SUM(al.orders) AS tota_order,
-                        ROUND(SUM(al.purchase_value) / GREATEST(NULLIF(SUM(al.spend), 1), 1), 2) AS roas,
-                        ROUND(SUM(al.new_revenue) / GREATEST(NULLIF(SUM(al.spend), 1), 1), 2) AS nroas,
-                        SUM(al.new_orders) AS new_total_order,
-                        SUM(al.fresh_visitor) AS fresh_visitor
+                        ads.dated AS date,
+                        ads.ad_name AS ad_name,
+                        SUM(COALESCE(al.revenue,0)) AS total_revenue,
+                        SUM(COALESCE(al.spend,0)) AS total_spend,
+                        ROUND(SUM(COALESCE(al.revenue,0)) / NULLIF(SUM(ads.spend), 0), 2) AS roas,
+                        ROUND(SUM(COALESCE(al.revenue,0)) / NULLIF(SUM(COALESCE(al.orders,0)), 0), 2) AS cpa,
+                        ROUND(SUM(ads.spend) / NULLIF(SUM(ads.clicks), 0), 2) AS cpc,
+                        ROUND(SUM(ads.clicks)*100 / NULLIF(SUM(ads.impression), 0), 2) AS ctr,
+                        ROUND(SUM(COALESCE(al.new_revenue,0)) / NULLIF(SUM(ads.spend), 0), 2) AS nroas,
+                        ROUND(SUM(COALESCE(al.orders,0))*100 / NULLIF(SUM(ads.clicks), 0), 2) AS cr,
+                        SUM(COALESCE(al.orders,0)) AS total_orders,
+                        SUM(COALESCE(al.new_order,0)) AS new_orders
+                    from
+                        horizon.ads ads 
+                        left join horizon.ads_lastattribute al on COALESCE(ads.adid, ads.campaignid) = al.adid and ads.dated = al.dated  
+                    WHERE
+                        ads.ad_name = '080125-1M3-VID14-C-LEM-C1'
+                        AND ads.dated >= CURRENT_DATE - INTERVAL '7 days'
+                        AND ads.workspace = '854e249d718e42cba341aa0559931c12'
+                    GROUP BY
+                        1,2
+                    ORDER BY
+                        ads.dated;
+            Example 2: Month-over-Month Facebook Ads Performance Comparison
+            Question: How is my account performing?
+            SQL Query:  SELECT
+                            date_trunc('month', al.orderdate) AS month,
+                            al.campaign_name AS campaign_name,
+                            SUM(COALESCE(al.revenue,0)) AS total_revenue,
+                            SUM(COALESCE(al.spend,0)) AS total_spend,
+                            SUM(COALESCE(al.orders,0)) AS total_orders,
+                            ROUND(SUM(ads.spend)* 1000.0 / NULLIF(SUM(ads.impression), 0), 2) AS cpm,
+                            ROUND(SUM(ads.clicks)*100 / NULLIF(SUM(ads.impression), 0), 2) AS ctr,
+                            ROUND(SUM(COALESCE(al.revenue,0)) / NULLIF(SUM(ads.spend), 0), 2) AS roas,
+                            ROUND(SUM(al.new_revenue) / NULLIF(SUM(ads.spend), 0), 2) AS nroas,
+                            SUM(COALESCE(al.new_order,0)) AS new_total_order,
+                            SUM(COALESCE(al.fresh_visitor,0)) AS fresh_visitor
                         FROM
-                        horizon.ads_lastattribute al
+                            horizon.ads ads 
+                            left join horizon.ads_lastattribute al on COALESCE(ads.adid, ads.campaignid) = al.adid and ads.dated = al.dated  
                         WHERE
-                        lower(al.channel) = 'facebook'
-                        AND al.workspace = '854e249d718e42cba341aa0559931c12'
-                        AND al.orderdate >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '30 days')
+                            lower(al.channel) = 'facebook'
+                            AND al.workspace = '854e249d718e42cba341aa0559931c12'
+                            AND al.orderdate >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '60 days')
                         GROUP BY 1, 2
                         ORDER BY roas DESC;
-            Example 2: Month-over-Month Facebook Ads Performance Comparison
-            question: Compare this month with previous basis on  facebook ads level performance. Analysis which is better ads worked and why?
-            SQL Query: SELECT
-                                date_trunc('month', al.orderdate) AS month,
-                                SUM(al.purchase) AS total_purchases,
-                                ROUND(SUM(al.spend),2) AS total_spend,
-                                ROUND(SUM(spend) / GREATEST(NULLIF(SUM(purchase), 1), 1), 2) AS cpa,
-                                ROUND(SUM(al.purchase_value) / GREATEST(NULLIF(SUM(al.spend), 1), 1), 2) AS roas,
-                                ROUND(SUM(al.spend)* 1000.0 / GREATEST(NULLIF(SUM(al.impression), 1), 1), 2) AS cpm,
-                                ROUND(SUM(al.spend) / GREATEST(NULLIF(SUM(al.clicks), 1), 1), 2) AS cpc,
-                                ROUND(SUM(al.clicks) / GREATEST(NULLIF(SUM(al.impression), 1), 1), 2) AS ctr,
-                                ROUND(SUM(al.new_revenue) / GREATEST(NULLIF(SUM(al.spend), 1), 1), 2) AS nroas
-                            FROM
-                                horizon.ads_lastattribute al
-                            WHERE
-                                lower(al.channel) = 'facebook'
-                                AND al.workspace = '854e249d718e42cba341aa0559931c12'
-                                AND (al.orderdate >= DATE_TRUNC('month', CURRENT_DATE))
-                                OR (al.orderdate >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AND al.orderdate < DATE_TRUNC('month', CURRENT_DATE))
-                            GROUP BY 1
-                            ORDER BY month;
 
             SQL Query:"""
 
@@ -244,6 +254,27 @@ class SmartQueryHandler:
     def create_query_chain(self, workspace):
         """Create the chain for query generation"""
         prompt = ChatPromptTemplate.from_template(self.get_query_template())
+
+        def __init__(self):
+            self.counter = 0 
+
+        def validate_query(query):
+            try:
+                parsed = sqlparse.parse(query)
+                if not parsed:
+                    return False, "Invalid SQL syntax"
+                # Add more checks (e.g., field validation against schema)
+                return True, None
+            except Exception as e:
+                return False, str(e)
+        
+        def validate_and_clean(output):
+            query = re.sub(r'```sql\s*|\s*```', '', output)
+            is_valid, error = validate_query(query)  # Assume validate_query is defined
+            if not is_valid and self.counter < 3:
+                self.counter += 1
+                self.create_query_chain(workspace)
+            return query
         
         chain = (
             RunnablePassthrough.assign(
@@ -253,6 +284,7 @@ class SmartQueryHandler:
             | prompt
             | self.llm
             | StrOutputParser()
+            | validate_and_clean
         )
         
         return chain
@@ -273,7 +305,6 @@ class SmartQueryHandler:
         if classification["needs_database"]:
             chain = self.create_query_chain(workspace)
             query = chain.invoke({"question": question})
-            query = re.sub(r'```sql\s*|\s*```', '', query)
             results = self.execute_query(query)
 
             log = ChatBotLog(workspace=workspace, question = question, query=query, result=str(results))
@@ -311,12 +342,12 @@ def chatwithsql():
     try:
         return handler.handle_question(question, workspace, prev_question)
     except Exception as e:
-        # return jsonify({"error": str(e)}), 500
-        try:
-            return handler.handle_question(question, workspace, prev_question)
-        except Exception as e:
-            try:
-                return handler.handle_question(question, workspace, prev_question)
-            except Exception as e:
-                # return jsonify({"error": str(e)}), 500
-                return jsonify({"error": "Error in processing Request"}), 500
+        return jsonify({"error": "Error in processing Request"}), 500
+        # try:
+        #     return handler.handle_question(question, workspace, prev_question)
+        # except Exception as e:
+        #     try:
+        #         return handler.handle_question(question, workspace, prev_question)
+        #     except Exception as e:
+        #         # return jsonify({"error": str(e)}), 500
+        #         return jsonify({"error": "Error in processing Request"}), 500

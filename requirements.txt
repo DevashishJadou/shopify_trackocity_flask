@@ -16,3 +16,4 @@ cryptography
 Flask-Mail
 langchain_core
 langchain_openai
+sqlparse
