@@ -202,13 +202,21 @@ def get_reporttabledatafacebook():
 
     if user:
         sort = 'ASC' if attribute == 'first' else 'DESC'
-        if traffic == 'Facebook':
+        if traffic == 'Facebook' and userid == 'd0495b3eb79a453186cc92754685bb73':
+            sql_query = text("SELECT * FROM table_facebookattribute_wo_visitorid(:workspace, :productid, :startdate, :enddate, :sort, :product_list)")
+            result = db.session.execute(sql_query, {
+                'workspace': userid, 'productid': user.productid,
+                'startdate': startdate, 'enddate': enddate, 'sort': sort,
+                'product_list': product_list
+            })
+            data = result.fetchall()
+        elif traffic == 'Facebook':
             sql_query = text("SELECT * FROM table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort, :product_list)")
             result = db.session.execute(sql_query, {
-	            'workspace': userid, 'productid': user.productid,
-	            'startdate': startdate, 'enddate': enddate, 'sort': sort,
+                'workspace': userid, 'productid': user.productid,
+                'startdate': startdate, 'enddate': enddate, 'sort': sort,
                 'product_list': product_list
-	        })
+            })
             data = result.fetchall()
         elif traffic == 'Google':
             sql_query = text("SELECT * FROM table_googleattribute(:workspace, :productid, :startdate, :enddate, :sort, :product_list)")
