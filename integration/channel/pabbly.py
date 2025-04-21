@@ -129,7 +129,9 @@ def pabbly_webhook(workspace):
     payment_method = data.get('payment_method')
     order_date = data.get('order_date', datetime.now())  # Get order date or default to now
     event_time = parse_date(order_date)  # Parse the date
-
+    islead = False
+    if order_status == 'Lead':
+        islead = True
     if data.get('timezone') == 'true' or data.get('timezone') is True:  # Apply timezone offset if required
         timezone_offset = float(getattr(user, 'timezone_value', 0))  # Ensure safe access
         event_time += timedelta(hours=timezone_offset)
@@ -147,7 +149,7 @@ def pabbly_webhook(workspace):
             phone_encrypt = func.pgp_sym_encrypt(phone, ENCRYPTION_KEY)
             email_secure = func.pgp_digest(email)
             phone_secure = func.pgp_digest(phone)
-            order_make = orderTable(order_date=event_time, transcation_id=payment_id, first_name=first_name, last_name=last_name, email=email, phone=phone, email_encrypt=email_encrypt, phone_encrypt=phone_encrypt, email_secure=email_secure, phone_secure=phone_secure, payment_method=payment_method, total=amount, order_status=order_status)
+            order_make = orderTable(order_date=event_time, transcation_id=payment_id, first_name=first_name, last_name=last_name, email=email, phone=phone, email_encrypt=email_encrypt, phone_encrypt=phone_encrypt, email_secure=email_secure, phone_secure=phone_secure, payment_method=payment_method, total=amount, order_status=order_status, islead=islead)
             db.session.add(order_make)
         except:
             print(f'pabblydata:{data}')

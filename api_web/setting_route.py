@@ -241,12 +241,20 @@ def reporting_get_customize_column():
 	headers = request.headers
 	workspace = headers.get('workspaceId')
 	report = request.args
+	view = report.get('view_name', 'myview')
 
-	sql_query = db.text("select report, workspaceid, field, seq from customize_column where workspaceid = :workspace and report = :report")
-	result = db.session.execute(sql_query, {'workspace': workspace, 'report':report.get('report')})
+	sql_query = db.text("select report, workspaceid, field, seq from customize_column where is_custom_column IS False AND workspaceid = :workspace AND report = :report AND view_name = :view")
+	result = db.session.execute(sql_query, {'workspace': workspace, 'report':report.get('report'), 'view':view})
 	data = result.fetchall()
 	columns = ["report", "workspace", "field", "seq"]
 	results = [dict(zip(columns, row)) for row in data]
+
+	sql_query2 = db.text("select report, workspaceid, field, seq, custom_formula, is_custom_column, name, is_custom_used, custom_id from customize_column where is_custom_column IS TRUE AND workspaceid = :workspace AND report = :report AND view_name = :view")
+	result2 = db.session.execute(sql_query2, {'workspace': workspace, 'report':report.get('report'), 'view':view})
+	data2 = result2.fetchall()
+	columns2 = ["report", "workspace", "field", "seq", "customFormula", "isCustomColumn", "name", "isAdded", "id"]
+	results2 = [dict(zip(columns2, row)) for row in data2]
+	results.extend(results2)
 	return jsonify(results),200
 
 
@@ -258,9 +266,18 @@ def reporting_update_customize_column():
 	param = request.args
 	body = json.loads(request.data)
 	report = param.get('report')
-	CustomizeColumn.query.filter_by(workspaceid=workspace).delete()
+	view = param.get('view_name', 'myview')
+	CustomizeColumn.query.filter_by(workspaceid=workspace, view_name=view).delete()
+
 	for row in body:
-		ff = CustomizeColumn(workspaceid=workspace, report=report, field=row.get('field'), seq=row.get('seq'))
+		field = row.get('field')
+		seq = row.get('seq')
+		name = row.get('name', None)
+		is_custom_column = row.get('isCustomColumn', None)
+		custom_formula = row.get('customFormula', None)
+		is_custom_used = row.get('isAdded', None)
+		custom_id = row.get('id', None)
+		ff = CustomizeColumn(workspaceid=workspace, report=report, field=field, seq=seq, custom_formula=custom_formula, is_custom_column=is_custom_column, name=name, is_custom_used=is_custom_used, custom_id=custom_id, view_name=view)
 		db.session.add(ff)
 	db.session.commit()
 	

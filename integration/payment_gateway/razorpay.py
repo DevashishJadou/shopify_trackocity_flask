@@ -24,9 +24,9 @@ def razorpay_params():
     header = request.headers
     _body = json.loads(request.get_data())
     workspace = header.get('workspaceId')
-    _razorpay_api_secret = _body['razorpay_api_secret']
-    _razorpay_api_key = _body['razorpay_api_key']
-    _razorpay_client_secret = _body['_razorpay_client_secret']
+    _razorpay_api_secret = 'tmp'
+    _razorpay_api_key = 'tmp'
+    _razorpay_client_secret = 'tmp'
 
     user = RazorpayConfiguration.query.filter_by(workspace=workspace).first()
     if user:
@@ -34,7 +34,7 @@ def razorpay_params():
         user.razorpay_api_key = _razorpay_api_key
         user.razorpay_client_secret = _razorpay_client_secret
         db.session.commit()
-        return jsonify({'message': 'Inforamtion Updated Succesfully'}), 200
+        return jsonify({'message': 'Already Connected'}), 200
 
     else:
         razorpay_register = RazorpayConfiguration(workspace=workspace, razorpay_api_secret=_razorpay_api_secret, razorpay_api_key=_razorpay_api_key, razorpay_client_secret=_razorpay_client_secret, active=True)
@@ -48,7 +48,7 @@ def razorpay_params():
                 except:
                     pass
         except Exception as e:
-            print(f'Razorpay client secret: {e.msg}')
+            print(f'Razorpay Connect: {e.msg}')
             return jsonify({'error': 'Something went Wrong'}), 500
     db.session.commit()
 

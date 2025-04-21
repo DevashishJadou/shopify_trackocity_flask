@@ -3,7 +3,7 @@
 from ..connection import db
 from datetime import datetime
 import uuid, os
-from sqlalchemy import MetaData, Table, Column, Integer, String, DateTime, Text, Numeric, Date
+from sqlalchemy import MetaData, Table, Column, Integer, String, DateTime, Text, Numeric, Date, Boolean, ForeignKey
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.dialects.postgresql import BYTEA
 from sqlalchemy.sql import func
@@ -233,9 +233,11 @@ def order_table_dynamic(tablename):
         customer_user_agent = db.Column(db.Text)
         event_type = db.Column(db.String(32))
         thankyou_page = db.Column(db.Text)
+        checkout_token = db.Column(db.String(64))
         first_stage_date = db.Column(db.DateTime)
         second_stage_date = db.Column(db.DateTime)
         converted_date = db.Column(db.DateTime)
+        islead = db.Column(db.Boolean, default=False)
         created_at = db.Column(db.DateTime, default=datetime.now)
         updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
         email_encrypt = db.Column(BYTEA)
@@ -281,9 +283,11 @@ def ordertable(tablename):
 			Column('customer_ip', String(64)),
 			Column('customer_user_agent', Text),
             Column('thankyou_page', Text),
+            Column('checkout_token', String(64)),
             Column('first_stage_date', DateTime),
             Column('second_stage_date', DateTime),
             Column('converted_date', DateTime),
+            Column('islead', Boolean, default=False),
             Column('event_type', String(32)),
 			Column('created_at', DateTime, default=datetime.now),
 			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now),
@@ -306,10 +310,10 @@ def orderlinetable(tablename):
 			Column('order_id', Integer, primary_key=True),
 			Column('shopify_productid', Integer),
 			Column('sku', String(128), unique=True),
-            Column('variant_title', String(128)),
+            Column('product_name', String(255)),
 			Column('quantity', Integer),
 			Column('price', Numeric),
-			Column('title', String(128)),
+			Column('variant_title', String(128)),
             Column('cost', Numeric)
 		)
     return orderline_table
@@ -452,3 +456,9 @@ class CustomizeColumn(db.Model):
     report = db.Column(db.String(32))
     field = db.Column(db.String(64))
     seq = db.Column(db.INTEGER)
+    custom_formula = db.Column(db.Text)
+    is_custom_column = db.Column(db.Boolean, default=False)
+    name = db.Column(db.String(64))
+    is_custom_used = db.Column(db.Boolean, default=False)
+    custom_id = db.Column(db.String(32))
+    view_name = db.Column(db.String(64))

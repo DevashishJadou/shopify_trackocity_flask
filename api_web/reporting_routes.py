@@ -6,32 +6,34 @@ from ..connection import db
 
 from flask import Blueprint, request, jsonify
 from sqlalchemy import text
+from sqlalchemy.sql import func
 from .schema import FB
 from flask_cors import cross_origin
-import json
+import json, os, re
 
 from datetime import datetime, timedelta
 from collections import defaultdict
 
 report_bp = Blueprint('reporting', __name__)
+ENCRYPTION_KEY = os.environ.get('_ENCYPT_KEY')
 
 
 @report_bp.route('/alluser', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_all_user():
-	page = request.args.get('page', default=1, type=int)
-	per_page = request.args.get('per_page', default=3, type=int)
+    page = request.args.get('page', default=1, type=int)
+    per_page = request.args.get('per_page', default=3, type=int)
 
-	users = UserRegister.query.paginate(
-		page = page,
-		per_page = per_page
-	)
+    users = UserRegister.query.paginate(
+        page = page,
+        per_page = per_page
+    )
 
-	result = FB().dump(users, many=True)
+    result = FB().dump(users, many=True)
 
-	return jsonify({
-			"users":result,
-		}), 200 
+    return jsonify({
+            "users":result,
+        }), 200 
 
 
 @report_bp.route('/source', methods=['GET', 'OPTIONS'])
@@ -58,12 +60,15 @@ def update_metrics(metrics, row, indexes, traffic):
     metrics["Impression"] += row[indexes["Impression"]]
     metrics["Spend"] += round(float(row[indexes["Spend"]]),1)
     metrics["Sales"] += int(row[indexes["Sales"]])
+    metrics["Leads"] += int(row[indexes["Leads"]])
     metrics["Revenue"] += round(float(row[indexes["Revenue"]]),1)
     metrics["Profit"] += round((float(row[indexes["Revenue"]]) - float(row[indexes["Spend"]])),1)
     metrics["CancelOrder"] += int(row[indexes["CancelOrder"]])
     metrics["CancelRev"] += float(row[indexes["CancelRev"]])
     metrics["nSales"] += int(row[indexes["nSales"]])
     metrics["nRevenue"] += float(row[indexes["nRevenue"]])
+    metrics["rSales"] += (int(row[indexes["Sales"]]) - int(row[indexes["nSales"]]))
+    metrics["rRevenue"] += round(float(row[indexes["Revenue"]]) - float(row[indexes["nRevenue"]]),2)
     metrics["New Visits"] += min(int(row[indexes["New Visits"]]), row[indexes["Clicks"]])
     metrics["nvisitor"] += int(row[indexes["nvisitor"]])
     metrics["visitor"] += (int(row[indexes["nvisitor"]]) + int(row[indexes["New Visits"]]))
@@ -76,12 +81,13 @@ def update_metrics(metrics, row, indexes, traffic):
     metrics["ROAS"] = round(metrics["Revenue"] / max(metrics["Spend"], 1),2)
     metrics["AOV"] = round(metrics["Revenue"] / max(metrics["Sales"], 1),1)
     metrics["CPA"] = 'n/a' if metrics["Sales"] == 0 else round(metrics["Spend"] / metrics["Sales"],1)
+    metrics["CPL"] = 'n/a' if metrics["Leads"] == 0 else round(metrics["Spend"] / metrics["Leads"],1)
     metrics["CPC"] = 'n/a' if metrics["Clicks"] == 0 else round(metrics["Spend"] / metrics["Clicks"],2)
     metrics["CTR %"] = 'n/a' if metrics["Impression"] == 0 else round(metrics["Clicks"]*100 / metrics["Impression"],2)
     metrics["CR %"] = 'n/a' if metrics["Clicks"] == 0 else round(metrics["Sales"]*100 / metrics["Clicks"],2)
     metrics["Reported ROAS"] = 'n/a' if metrics["Spend"] == 0 else round(metrics["Reported Rev"] / max(metrics["Spend"], 1),2)
     metrics["Reported CPA"] = 'n/a' if metrics["Reported Sale"] == 0 else round(metrics["Spend"] / max(metrics["Reported Sale"], 1),2)
-	
+    
     metrics["nSpend"] = float(metrics["Clicks"]) * min(metrics["Clicks"], metrics["visitor"]) / max(1, metrics["Clicks"], metrics["visitor"])
     metrics["nROAS"] = 'n/a' if metrics["Spend"] == 0 else round(metrics["nRevenue"] / metrics["Spend"],2)
     metrics["nAOV"] = 'n/a' if metrics["nSales"] == 0 else round(metrics["nRevenue"] / metrics["nSales"],1)
@@ -102,34 +108,38 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
         data[campaign_id] = {
             "campaign_id": campaign_id,
             "campaign_name": row[1],
+            "campaign_status": row[2],
             "ad_sets": {},
             "Impression": 0, "Clicks": 0, "Spend": 0.0,
-            "Sales": 0, "Revenue": 0.0, "Profit":0.0, "CPM":0, "ROAS": 0.0, "AOV": 0.0,
-			"CPC": 0.0, "CPA":0.0, "CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
+            "Sales": 0, "Leads":0, "Revenue": 0.0, "Profit":0.0, "CPM":0, "ROAS": 0.0, "AOV": 0.0,
+            "CPC": 0.0, "CPA":0.0, "CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
             "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
             "New Visits": 0, "nvisitor": 0, "visitor": 0, "nSpend": 0.0,
-            "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "New Visits %": 0.0,
+            "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, 
+            "rSales":0, "rRevenue":0.0, "New Visits %": 0.0,
             "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0, "Reported CPA":0.0, 
             "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name": None
         }
     if ad_set_id not in data[campaign_id]["ad_sets"]:
         data[campaign_id]["ad_sets"][ad_set_id] = {
             "ad_set_id": ad_set_id,
-            "ad_set_name": row[3],
+            "ad_set_name": row[4],
+            "ad_set_status": row[5],
             "ads": [],
             "Impression": 0, "Clicks": 0, "Spend": 0.0, "Profit": 0.0,
-            "Sales": 0, "Revenue": 0.0, "CPM":0, "ROAS": 0.0, "AOV": 0.0,
-			"CPC": 0.0, "CPA":0.0, "CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
+            "Sales": 0, "Leads":0, "Revenue": 0.0, "CPM":0, "ROAS": 0.0, "AOV": 0.0,
+            "CPC": 0.0, "CPA":0.0, "CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
             "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
             "New Visits": 0, "nvisitor": 0, "visitor": 0, "nSpend": 0.0,
-            "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "New Visits %": 0.0,
+            "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, 
+            "rRevenue":0.0, "rSales":0.0, "New Visits %": 0.0,
             "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0, "Reported CPA":0.0,
             "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name":None
         }
 
 # Utility function to process ads
 def process_ads(data, fbadsdata, row, indexes, traffic):
-    campaign_id, ad_set_id, ad_id = row[0], row[2], row[4]
+    campaign_id, ad_set_id, ad_id = row[0], row[3], row[6]
     if traffic not in ('Facebook', 'Google', 'Linkedin'):
         row = list(row)
         row[indexes["Clicks"]] = (int(row[indexes["nvisitor"]]) + int(row[indexes["New Visits"]]))
@@ -143,28 +153,33 @@ def process_ads(data, fbadsdata, row, indexes, traffic):
     data[campaign_id]["ad_sets"][ad_set_id]["ads"].append({
         "ad_id": ad_id,
         "ad_name": row[indexes["ad_name"]],
+        "ad_status": row[indexes["ad_status"]],
         "Impression": row[indexes["Impression"]],
         "Clicks": row[indexes["Clicks"]],
         "Spend": round(float(row[indexes["Spend"]]),1),
         "Sales": int(row[indexes["Sales"]]),
+        "Leads": int(row[indexes["Leads"]]),
         "Revenue": round(float(row[indexes["Revenue"]]),0),
-		"Profit" : round(float(row[indexes["Revenue"]]) - float(row[indexes["Spend"]]),0),
-		"CPM": 'n/a' if row[indexes["Impression"]] == 0 else round(float(row[indexes["Spend"]]*1000 / row[indexes["Impression"]]),1),
-		"ROAS": 'n/a' if row[indexes["Spend"]] == 0 else round(float(row[indexes["Revenue"]]) / float(row[indexes["Spend"]]),2),
+        "Profit" : round(float(row[indexes["Revenue"]]) - float(row[indexes["Spend"]]),0),
+        "CPM": 'n/a' if row[indexes["Impression"]] == 0 else round(float(row[indexes["Spend"]]*1000 / row[indexes["Impression"]]),1),
+        "ROAS": 'n/a' if row[indexes["Spend"]] == 0 else round(float(row[indexes["Revenue"]]) / float(row[indexes["Spend"]]),2),
         "AOV": 'n/a' if row[indexes["Sales"]] == 0 else round(float(row[indexes["Revenue"]]) / int(row[indexes["Sales"]]),1),
         "CPA": 'n/a' if row[indexes["Sales"]] == 0 else round(float(row[indexes["Spend"]]) / int(row[indexes["Sales"]]),1),
+        "CPL": 'n/a' if row[indexes["Leads"]] == 0 else round(float(row[indexes["Spend"]]) / int(row[indexes["Leads"]]),1),
         "CPC": 'n/a' if row[indexes["Clicks"]] == 0 else round(float(row[indexes["Spend"]]) / int(row[indexes["Clicks"]]),2),
-		"CTR %": 'n/a' if row[indexes["Impression"]] == 0 else round(float(row[indexes["Clicks"]])*100 / int(row[indexes["Impression"]]),2),
+        "CTR %": 'n/a' if row[indexes["Impression"]] == 0 else round(float(row[indexes["Clicks"]])*100 / int(row[indexes["Impression"]]),2),
         "CR %": 'n/a' if row[indexes["Clicks"]] == 0 else round(int(row[indexes["Sales"]])*100 / int(row[indexes["Clicks"]]),2),
         "CancelOrder": int(row[indexes["CancelOrder"]]),
         "CancelRev": float(row[indexes["CancelRev"]]),
         "Reported Rev": float(row[indexes["Reported Rev"]]),
         "Reported Sale": float(row[indexes["Reported Sale"]]),
         "Reported ROAS": 'n/a' if row[indexes["Spend"]] == 0 else round(float(row[indexes["Reported Rev"]]) / float(row[indexes["Spend"]]),2),
-        "Reported CPA": 'n/a' if row[indexes["Reported Sale"]] == 0 else round(float(row[indexes["Spend"]]) /int(row[indexes["Reported Sale"]]),1),
+        "Reported CPA": 'n/a' if int(row[indexes["Reported Sale"]]) == 0 else round(float(row[indexes["Spend"]]) /int(row[indexes["Reported Sale"]]),1),
         "Cost": float(row[indexes["Cost"]]),
-        "nSales": int(row[indexes["nSales"]]),
-        "nRevenue": float(row[indexes["nRevenue"]]),
+        "nSales": int(row[indexes["Sales"]]) - int(row[indexes["nSales"]]),
+        "nRevenue": round(float(row[indexes["nRevenue"]]),0),
+        "rSales": int(row[indexes["nSales"]]),
+        "rRevenue": round(float(row[indexes["Revenue"]]) - float(row[indexes["nRevenue"]]),0),
         "nvisitor": int(row[indexes["nvisitor"]]),
         "visitor": int(row[indexes["New Visits"]]) + int(row[indexes["nvisitor"]]),
         "nROAS": 'n/a' if row[indexes["Spend"]] == 0 else round(float(row[indexes["nRevenue"]]) / float(row[indexes["Spend"]]),2),
@@ -172,7 +187,7 @@ def process_ads(data, fbadsdata, row, indexes, traffic):
         "nCPA": 'n/a' if row[indexes["nSales"]] == 0 else round(float(row[indexes["Spend"]]) /int(row[indexes["nSales"]]),1),
         "nCPC": 'n/a' if row[indexes["New Visits"]] == 0 else round(float(row[indexes["Spend"]]) / int(row[indexes["New Visits"]]) + int(row[indexes["nvisitor"]]),2),
         "nCR %": 'n/a' if row[indexes["New Visits"]] == 0 else round(int(row[indexes["nSales"]])*100 / int(row[indexes["New Visits"]]) + int(row[indexes["nvisitor"]]),2),
-		"New Visits %": 'n/a' if row[indexes["Clicks"]] == 0 else round(min(row[indexes["New Visits"]], row[indexes["Clicks"]])*100 / row[indexes["Clicks"]] ,2),
+        "New Visits %": 'n/a' if row[indexes["Clicks"]] == 0 else round(min(row[indexes["New Visits"]], row[indexes["Clicks"]])*100 / row[indexes["Clicks"]] ,2),
         "New Visits": min(row[indexes["New Visits"]], row[indexes["Clicks"]]),
         "eCPNV": 'n/a' if row[indexes["New Visits"]] == 0 else round(row[indexes["Spend"]] / row[indexes["New Visits"]] ,1),
         "Gross Margin %": 'n/a' if (row[indexes["Revenue"]]) == 0 else round((row[indexes["Revenue"]] - (row[indexes["Spend"]]+row[indexes["Cost"]]))*100 / row[indexes["Revenue"]] ,1),
@@ -184,7 +199,7 @@ def process_ads(data, fbadsdata, row, indexes, traffic):
     update_metrics(fbadsdata, row, indexes, traffic)
     update_metrics(data[campaign_id], row, indexes, traffic)
     update_metrics(data[campaign_id]["ad_sets"][ad_set_id], row, indexes, traffic)
-	
+    
 
 @report_bp.route('/table', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
@@ -196,72 +211,82 @@ def get_reporttabledatafacebook():
     attribute = body.get('attribute')
     traffic = body.get('traffic')
     product_list = body.get('product', None)
+    click_type = body.get('click_type', 'paid')
+    window = body.get('window', 999)
     product_list = None if product_list == '' else product_list
+    window = 999 if window == '' else window
     userid = headers.get('workspaceId')
     user = UserRegister.query.filter_by(workspace=userid).first()
 
     if user:
+        if attribute == 'first':
+            sort = 'ASC'
+        else:
+            sort = 'DESC'
+
         sort = 'ASC' if attribute == 'first' else 'DESC'
-        if traffic == 'Facebook' and userid == 'd0495b3eb79a453186cc92754685bb73':
-            sql_query = text("SELECT * FROM table_facebookattribute_wo_visitorid(:workspace, :productid, :startdate, :enddate, :sort, :product_list)")
+        if traffic == 'Facebook' and userid in ('d0495b3eb79a453186cc92754685bb73', 'c65209bb2dd545bd82131c0a7d040cab') :
+            sql_query = text("SELECT * FROM table_facebookattribute_wo_visitorid(:workspace, :productid, :startdate, :enddate, :sort, :product_list, :click_type, :windoww) ")
             result = db.session.execute(sql_query, {
                 'workspace': userid, 'productid': user.productid,
                 'startdate': startdate, 'enddate': enddate, 'sort': sort,
-                'product_list': product_list
+                'product_list': product_list, 'click_type': click_type, 'windoww': window
             })
             data = result.fetchall()
         elif traffic == 'Facebook':
-            sql_query = text("SELECT * FROM table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort, :product_list)")
+            sql_query = text("SELECT * FROM table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort, :product_list, :click_type, :windoww)")
             result = db.session.execute(sql_query, {
                 'workspace': userid, 'productid': user.productid,
                 'startdate': startdate, 'enddate': enddate, 'sort': sort,
-                'product_list': product_list
+                'product_list': product_list, 'click_type': click_type, 'windoww': window
             })
             data = result.fetchall()
         elif traffic == 'Google':
-            sql_query = text("SELECT * FROM table_googleattribute(:workspace, :productid, :startdate, :enddate, :sort, :product_list)")
+            sql_query = text("SELECT * FROM table_googleattribute(:workspace, :productid, :startdate, :enddate, :sort, :product_list, :click_type, :windoww)")
             result = db.session.execute(sql_query, {
-	            'workspace': userid, 'productid': user.productid,
-	            'startdate': startdate, 'enddate': enddate, 'sort': sort,
-                'product_list': product_list
-	        })
+                'workspace': userid, 'productid': user.productid,
+                'startdate': startdate, 'enddate': enddate, 'sort': sort,
+                'product_list': product_list, 'click_type': click_type, 'windoww': window
+            })
             data = result.fetchall()
         elif traffic == 'LinkedIn':
-            sql_query = text("SELECT * FROM table_mediaattribute(:workspace, :productid, :startdate, :enddate, :sort, :channel, :product_list)")
+            sql_query = text("SELECT * FROM table_mediaattribute(:workspace, :productid, :startdate, :enddate, :sort, :channel, :product_list, :click_type, :windoww)")
             result = db.session.execute(sql_query, {
-	            'workspace': userid, 'productid': user.productid,
-	            'startdate': startdate, 'enddate': enddate, 'sort': sort, 'channel': 'linkedin',
-                'product_list': product_list
-	        })
+                'workspace': userid, 'productid': user.productid,
+                'startdate': startdate, 'enddate': enddate, 'sort': sort, 'channel': 'linkedin',
+                'product_list': product_list, 'click_type': click_type, 'windoww': window
+            })
             data = result.fetchall()
         else:
-            sql_query = text("SELECT * FROM table_otherattribute(:workspace, :productid, :startdate, :enddate, :sort, :src, :product_list)")
+            sql_query = text("SELECT * FROM table_otherattribute(:workspace, :productid, :startdate, :enddate, :sort, :src, :product_list, :click_type, :windoww)")
             result = db.session.execute(sql_query, {
-	            'workspace': userid, 'productid': user.productid,
-	            'startdate': startdate, 'enddate': enddate, 'sort': sort, 'src':traffic,
-                'product_list': product_list
-	        })
+                'workspace': userid, 'productid': user.productid,
+                'startdate': startdate, 'enddate': enddate, 'sort': sort, 'src':traffic,
+                'product_list': product_list, 'click_type': click_type, 'windoww': window
+            })
             data = result.fetchall()
+        db.session.close()
 
         record = {}
         adsdata = {
             "Impression": 0, "Clicks": 0, "Spend": 0.0, "Profit":0.0,
-            "Sales": 0, "Revenue": 0.0, "ROAS": 0.0, "AOV": 0.0,
-			"CPC": 0.0, "CPA":0.0, "CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
+            "Sales": 0, "Leads":0, "Revenue": 0.0, "ROAS": 0.0, "AOV": 0.0,
+            "CPC": 0.0, "CPA":0.0, "CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
             "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
             "New Visits": 0, "nvisitor":0, "visitor":0,
-            "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, "New Visits %":0.0,
+            "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, 
+            "rRevenue":0, "rSales":0, "New Visits %":0.0,
             "Reported Sale":0, "Reported Rev":0.0, "Reported ROAS":0.0, "Reported CPA": 0.0,
             "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name":None
         }
 
         # Process each row of data
-        for row in data:
+        for row in data:    
             process_ads(record, adsdata, row, {
-                "ad_name": 5, "Product Name":6, "Impression": 7, "Clicks": 8, "Spend": 9,
-                "Sales": 10, "Revenue": 11, "CancelOrder": 12, "CancelRev": 13, "nSales": 14, 
-                "nRevenue": 15, "New Visits": 16, "nvisitor":17, 
-                "Reported Sale":18, "Reported Rev":19, "Cost":20
+                "ad_name": 7, "ad_status":8, "Product Name":9, "Impression": 10, "Clicks": 11, "Spend": 12,
+                "Sales": 13, "Revenue": 14, "CancelOrder": 15, "CancelRev": 16, "nSales": 17, 
+                "nRevenue": 18, "New Visits": 19, "nvisitor":20, 
+                "Reported Sale":21, "Reported Rev":22, "Cost":23, "Cost Cancel":24, "Leads":25
             }, traffic)
 
         # Convert ad_sets to list in campaigns
@@ -281,27 +306,28 @@ def get_reporttabledatafacebook():
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_reportgraphdata():
 
-	headers = request.headers
-	body = request.args
-	startdate = body.get('startdate')
-	enddate = body.get('enddate')
-	userid = headers.get('workspaceId')
-	
-	user = UserRegister.query.filter_by(workspace=userid).first()
+    headers = request.headers
+    body = request.args
+    startdate = body.get('startdate')
+    enddate = body.get('enddate')
+    userid = headers.get('workspaceId')
+    
+    user = UserRegister.query.filter_by(workspace=userid).first()
 
-	sql_query = db.text("select * from report_graphsales(:workspace, :startdate, :enddate)")
+    sql_query = db.text("select * from report_graphsales(:workspace, :startdate, :enddate)")
 
-	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
-	data = result.fetchall()
+    result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
+    data = result.fetchall()
+    db.session.close()
 
-	sale_data = {'revenue':0.0, 'sales':0, 'data':{}}
-	for row in data:
-		key = row[0].strftime("%Y-%m-%d")
-		sale_data['data'][key] = [{"revenue":round(row[1],0), "sales": int(row[2])}]
-		sale_data['revenue'] = round(sale_data['revenue'] + float(row[1]),0)
-		sale_data['sales'] = sale_data['sales'] + int(row[2])
+    sale_data = {'revenue':0.0, 'sales':0, 'data':{}}
+    for row in data:
+        key = row[0].strftime("%Y-%m-%d")
+        sale_data['data'][key] = [{"revenue":round(row[1],0), "sales": int(row[2])}]
+        sale_data['revenue'] = round(sale_data['revenue'] + float(row[1]),0)
+        sale_data['sales'] = sale_data['sales'] + int(row[2])
 
-	return jsonify(sale_data), 200
+    return jsonify(sale_data), 200
 
 
 
@@ -309,38 +335,47 @@ def get_reportgraphdata():
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_reporttablesaledata():
 
-	headers = request.headers
-	body = request.args
-	startdate = body.get('startdate')
-	enddate = body.get('enddate')
-	userid = headers.get('workspaceId')
-	adid = body.get('adid')
-	channel = body.get('channel')
-	attribute = body.get('attribute')
-	product_list = body.get('product', None)
-	product_list = None if product_list == '' else product_list
-	user = UserRegister.query.filter_by(workspace=userid).first()
+    headers = request.headers
+    body = request.args
+    startdate = body.get('startdate')
+    enddate = body.get('enddate')
+    userid = headers.get('workspaceId')
+    adid = body.get('adid')
+    channel = body.get('channel')
+    attribute = body.get('attribute')
+    product_list = body.get('product', None)
+    islead = body.get('islead', False)
+    click_type = body.get('click_type', 'paid')
+    window = body.get('window', 999)
+    product_list = None if product_list == '' else product_list
+    window = 999 if window == '' else window
+    user = UserRegister.query.filter_by(workspace=userid).first()
 
-	output = []
-	if user:
-		if channel in ('Facebook', 'Google', 'LinkedIn'):
-			channel = channel.lower()
-		sort = 'ASC' if attribute == 'First' else 'DESC'
-		sql_query = db.text("select * from table_salesdata(:workspace, :productid, :startdate, :enddate, :channel, :adid, :sort, :product_list)")
+    output = []
+    if user:
+        if channel in ('Facebook', 'Google', 'LinkedIn'):
+            channel = channel.lower()
+        sort = 'ASC' if attribute == 'First' else 'DESC'
+        # sql_query = db.text("select complete_name, pgp_sym_decrypt(email_phone::bytea, :encryption_key), total, order_date, trackid  from table_salesdata(:workspace, :productid, :startdate, :enddate, :channel, :adid, :sort, :product_list)")
+        # result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'channel':channel, 'adid':adid, 'sort':sort, 'product_list':product_list, 'encryption_key':ENCRYPTION_KEY})
 
-		result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'channel':channel, 'adid':adid, 'sort':sort, 'product_list':product_list})
-		data = result.fetchall()
+        sql_query = db.text("select complete_name, email_phone, total, order_date, trackid  from table_salesdata(:workspace, :productid, :startdate, :enddate, :channel, :adid, :sort, :product_list, :islead, :click_type, :windoww)")
+        result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'channel':channel, 'adid':adid, 'sort':sort, 'product_list':product_list, 'islead':islead, 'click_type':click_type, 'windoww':window})
 
-		for row in data:
-			element = {}
-			element['complete_name'] = row[0]
-			element['email_phone'] = row[1]
-			element['total'] = float(row[2])
-			element['order_date'] = row[3].strftime("%Y-%m-%d %H:%M:%S")
-			element['trackid'] = row[4]
-			output.append(element)
-		
-	return jsonify(output), 200
+        data = result.fetchall()
+        db.session.close()
+
+        for row in data:
+            element = {}
+            element['complete_name'] = row[0]
+            element['email_phone'] = row[1]    #re.sub(r'(?<=....)..', '**', row[1], 1)
+            element['total'] = float(row[2])
+            element['order_date'] = row[3].strftime("%Y-%m-%d %H:%M:%S")
+            element['trackid'] = row[4]
+            output.append(element)
+        
+    return jsonify(output), 200
+
 
 
 
@@ -348,27 +383,28 @@ def get_reporttablesaledata():
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_reporttablesalejourney():
 
-	headers = request.headers
-	body = request.args
-	userid = headers.get('workspaceId')
-	trackid = body.get('trackid')
-	user = UserRegister.query.filter_by(workspace=userid).first()
+    headers = request.headers
+    body = request.args
+    userid = headers.get('workspaceId')
+    trackid = body.get('trackid')
+    user = UserRegister.query.filter_by(workspace=userid).first()
 
-	output = []
-	if user:
-		sql_query = db.text("select * from table_salejourney(:workspace, :productid, :trackid)")
+    output = []
+    if user:
+        sql_query = db.text("select * from table_salejourney(:workspace, :productid, :trackid)")
 
-		result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'trackid':trackid})
-		data = result.fetchall()
+        result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'trackid':trackid})
+        data = result.fetchall()
+        db.session.close()
 
-		for row in data:
-			element = {}
-			element['event_time'] = row[0].strftime("%Y-%m-%d %H:%M:%S")
-			element['adsource'] = row[1]
-			element['adname'] = row[2]
-			output.append(element)
-		
-	return jsonify(output), 200
+        for row in data:
+            element = {}
+            element['event_time'] = row[0].strftime("%Y-%m-%d %H:%M:%S")
+            element['adsource'] = row[1]
+            element['adname'] = row[2]
+            output.append(element)
+        
+    return jsonify(output), 200
 
 
 
@@ -376,20 +412,24 @@ def get_reporttablesalejourney():
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def table_saleinteractions():
 
-	headers = request.headers
-	body = request.args
-	userid = headers.get('workspaceId')
-	startdate =  body.get('startdate')
-	enddate = body.get('enddate')
-	user = UserRegister.query.filter_by(workspace=userid).first()
+    headers = request.headers
+    body = request.args
+    userid = headers.get('workspaceId')
+    startdate =  body.get('startdate')
+    enddate = body.get('enddate')
+    user = UserRegister.query.filter_by(workspace=userid).first()
+    # import pdb; pdb.set_trace()
       
-	sql_query = db.text("select * from table_saleinteractions(:workspace, :productid, :startdate, :enddate)")
-	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
-	data = result.fetchall()
-	columns = ["id", "order_date", "total", "transcation_id", "name", "email", "phone", "first_adsource", "last_adsource", "interactions_count"]
+    # sql_query = db.text("select id ,order_date, total, transcation_id, first_name, pgp_sym_decrypt(email::bytea, :encrpyted_key), pgp_sym_decrypt(phone::bytea, :encrpyted_key), first_adsource, last_adsource, interactions_count from table_saleinteractions(:workspace, :productid, :startdate, :enddate)")
+    # result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'encrpyted_key':ENCRYPTION_KEY})
+    sql_query = db.text("select id ,order_date, total, transcation_id, first_name, email, phone, first_adsource, last_adsource, interactions_count from table_saleinteractions(:workspace, :productid, :startdate, :enddate)")
+    result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
+    data = result.fetchall()
+    db.session.close()
+    columns = ["id", "order_date", "total", "transcation_id", "name", "email", "phone", "first_adsource", "last_adsource", "interactions_count"]
 
-	results = [dict(zip(columns, row)) for row in data]
-	return jsonify(results),200
+    results = [dict(zip(columns, row)) for row in data]
+    return jsonify(results),200
       
 
 
@@ -397,296 +437,297 @@ def table_saleinteractions():
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_dashboardgraphdata():
 
-	headers = request.headers
-	body = request.args
-	startdate = body.get('startdate')
-	enddate = body.get('enddate')
-	userid = headers.get('workspaceId')
+    headers = request.headers
+    body = request.args
+    startdate = body.get('startdate')
+    enddate = body.get('enddate')
+    userid = headers.get('workspaceId')
 
-	sql_query = db.text("select * from dashboard_graphsales(:workspace, :startdate, :enddate)")
+    sql_query = db.text("select * from dashboard_graphsales(:workspace, :startdate, :enddate)")
 
-	result = db.session.execute(sql_query, {'workspace': userid, 'startdate':startdate, 'enddate':enddate})
-	data = result.fetchall()
+    result = db.session.execute(sql_query, {'workspace': userid, 'startdate':startdate, 'enddate':enddate})
+    data = result.fetchall()
+    db.session.close()
 
-	sale_data = {'revenue':{"data":[], "total":0.0, "compare":0.0}, 'sales':{"data":[],"total":0.0, "compare":0.0}, 'spend':{"data":[],"total":0.0, "compare":0.0}, 'roi':{"data":[],"total":0.0, "compare":0.0}, 'aov':{"data":[],"total":0.0, "compare":0.0}, 'cpa':{"data":[],"total":0.0, "compare":0.0}}
-	for row in data:
-		date_str = row[0].strftime("%Y-%m-%d")
-		revenue = round(float(row[1]),2)
-		sales = int(row[2])
-		spend = round(float(row[3]), 2)
-		roi = round(float(row[4]), 2)
-		aov = round(float(row[5]), 2)
-		cpa = round(float(row[6]), 2)
+    sale_data = {'revenue':{"data":[], "total":0.0, "compare":0.0}, 'sales':{"data":[],"total":0.0, "compare":0.0}, 'spend':{"data":[],"total":0.0, "compare":0.0}, 'roi':{"data":[],"total":0.0, "compare":0.0}, 'aov':{"data":[],"total":0.0, "compare":0.0}, 'cpa':{"data":[],"total":0.0, "compare":0.0}}
+    for row in data:
+        date_str = row[0].strftime("%Y-%m-%d")
+        revenue = round(float(row[1]),2)
+        sales = int(row[2])
+        spend = round(float(row[3]), 2)
+        roi = round(float(row[4]), 2)
+        aov = round(float(row[5]), 2)
+        cpa = round(float(row[6]), 2)
 
-		sale_data["revenue"]["data"].append({"value": revenue, "date": date_str})
-		sale_data["sales"]["data"].append({"value": sales, "date": date_str})
-		sale_data["spend"]["data"].append({"value": spend, "date": date_str})
-		sale_data["roi"]["data"].append({"value": roi, "date": date_str})
-		sale_data["aov"]["data"].append({"value": aov, "date": date_str})
-		sale_data["cpa"]["data"].append({"value": cpa, "date": date_str})
+        sale_data["revenue"]["data"].append({"value": revenue, "date": date_str})
+        sale_data["sales"]["data"].append({"value": sales, "date": date_str})
+        sale_data["spend"]["data"].append({"value": spend, "date": date_str})
+        sale_data["roi"]["data"].append({"value": roi, "date": date_str})
+        sale_data["aov"]["data"].append({"value": aov, "date": date_str})
+        sale_data["cpa"]["data"].append({"value": cpa, "date": date_str})
 
-		sale_data["revenue"]['total'] += revenue
-		sale_data["sales"]['total'] += sales
-		sale_data["spend"]['total'] += spend
+        sale_data["revenue"]['total'] += revenue
+        sale_data["sales"]['total'] += sales
+        sale_data["spend"]['total'] += spend
 
-	sale_data["roi"]['total'] = round(sale_data["revenue"]['total']/max(sale_data["spend"]['total'],1),2)
-	sale_data["aov"]['total'] = round(sale_data["revenue"]['total']/max(sale_data["sales"]['total'],1), 2)
-	sale_data["cpa"]['total'] = round(sale_data["spend"]['total']/max(sale_data["sales"]['total'],1), 2)
-	sale_data["spend"]['total'] = round(sale_data["spend"]['total'], 2)
+    sale_data["roi"]['total'] = round(sale_data["revenue"]['total']/max(sale_data["spend"]['total'],1),2)
+    sale_data["aov"]['total'] = round(sale_data["revenue"]['total']/max(sale_data["sales"]['total'],1), 2)
+    sale_data["cpa"]['total'] = round(sale_data["spend"]['total']/max(sale_data["sales"]['total'],1), 2)
+    sale_data["spend"]['total'] = round(sale_data["spend"]['total'], 2)
 
 
-	sql_prevquery = db.text("select * from dashboard_graphprev_sales(:workspace, :startdate, :enddate)")
-	try:
-		startdate = datetime.strptime(startdate, '%b %d %Y')
-		enddate = datetime.strptime(enddate, '%b %d %Y')
-	except:
-		startdate = datetime.strptime(startdate, '%b %d, %Y')
-		enddate = datetime.strptime(enddate, '%b %d, %Y')
-	difference = enddate - startdate
-	enddate = (startdate - timedelta(days=1)).strftime('%Y-%m-%d')
-	startdate = (startdate - difference - timedelta(days=1)).strftime('%Y-%m-%d')
-	
-	result = db.session.execute(sql_prevquery, {'workspace': userid, 'startdate':startdate, 'enddate':enddate})
-	data = result.fetchall()
-	for row in data:
-		sale_data["revenue"]["compare"] = (100.0*(sale_data["revenue"]['total'] - round(float(row[0]),2)) / round(float(row[0]),2)) if row[0] != 0 else 0
-		sale_data["sales"]["compare"] = (100.0*(sale_data["sales"]['total'] - round(float(row[1]),2)) / round(float(row[1]),2)) if row[1] != 0 else 0
-		sale_data["spend"]["compare"] = (100.0*(sale_data["spend"]['total'] - round(float(row[2]),2)) / round(float(row[2]),2)) if row[2] != 0 else 0
-		sale_data["roi"]["compare"] = (100.0*(sale_data["roi"]['total'] - round(float(row[3]),2)) / round(float(row[3]),2)) if row[3] != 0 else 0
-		sale_data["aov"]["compare"] = (100.0*(sale_data["aov"]['total'] - round(float(row[4]),2)) / round(float(row[4]),2)) if row[4] != 0 else 0
-		sale_data["cpa"]["compare"] = (100.0*(sale_data["cpa"]['total'] - round(float(row[5]),2)) / round(float(row[5]),2)) if row[5] != 0 else 0
+    sql_prevquery = db.text("select * from dashboard_graphprev_sales(:workspace, :startdate, :enddate)")
+    try:
+        startdate = datetime.strptime(startdate, '%b %d %Y')
+        enddate = datetime.strptime(enddate, '%b %d %Y')
+    except:
+        startdate = datetime.strptime(startdate, '%b %d, %Y')
+        enddate = datetime.strptime(enddate, '%b %d, %Y')
+    difference = enddate - startdate
+    enddate = (startdate - timedelta(days=1)).strftime('%Y-%m-%d')
+    startdate = (startdate - difference - timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    result = db.session.execute(sql_prevquery, {'workspace': userid, 'startdate':startdate, 'enddate':enddate})
+    data = result.fetchall()
+    for row in data:
+        sale_data["revenue"]["compare"] = (100.0*(sale_data["revenue"]['total'] - round(float(row[0]),2)) / round(float(row[0]),2)) if row[0] != 0 else 0
+        sale_data["sales"]["compare"] = (100.0*(sale_data["sales"]['total'] - round(float(row[1]),2)) / round(float(row[1]),2)) if row[1] != 0 else 0
+        sale_data["spend"]["compare"] = (100.0*(sale_data["spend"]['total'] - round(float(row[2]),2)) / round(float(row[2]),2)) if row[2] != 0 else 0
+        sale_data["roi"]["compare"] = (100.0*(sale_data["roi"]['total'] - round(float(row[3]),2)) / round(float(row[3]),2)) if row[3] != 0 else 0
+        sale_data["aov"]["compare"] = (100.0*(sale_data["aov"]['total'] - round(float(row[4]),2)) / round(float(row[4]),2)) if row[4] != 0 else 0
+        sale_data["cpa"]["compare"] = (100.0*(sale_data["cpa"]['total'] - round(float(row[5]),2)) / round(float(row[5]),2)) if row[5] != 0 else 0
 
-	return jsonify(sale_data), 200
+    return jsonify(sale_data), 200
 
 
 def sum_dicts(list1, list2):
-	combined_dict = defaultdict(int)
-	for entry in list1 + list2:
-		combined_dict[entry['date']] += entry['value']
+    combined_dict = defaultdict(int)
+    for entry in list1 + list2:
+        combined_dict[entry['date']] += entry['value']
 
-	result = [{"date": date, "value": value} for date, value in combined_dict.items()]
+    result = [{"date": date, "value": value} for date, value in combined_dict.items()]
 
-	return result
+    return result
 
 
 def channel_matrix(userid, productid, startdate, enddate, fbflag, ggflag):
 
-	try:
-		startdate_ = datetime.strptime(startdate, '%b %d %Y')
-		enddate_ = datetime.strptime(enddate, '%b %d %Y')
-	except:
-		startdate_ = datetime.strptime(startdate, '%b %d, %Y')
-		enddate_ = datetime.strptime(enddate, '%b %d, %Y')
-	difference = enddate_ - startdate_
-	enddate_prev = (startdate_ - timedelta(days=1)).strftime('%Y-%m-%d')
-	startdate_prev = (startdate_ - difference - timedelta(days=1)).strftime('%Y-%m-%d')
+    try:
+        startdate_ = datetime.strptime(startdate, '%b %d %Y')
+        enddate_ = datetime.strptime(enddate, '%b %d %Y')
+    except:
+        startdate_ = datetime.strptime(startdate, '%b %d, %Y')
+        enddate_ = datetime.strptime(enddate, '%b %d, %Y')
+    difference = enddate_ - startdate_
+    enddate_prev = (startdate_ - timedelta(days=1)).strftime('%Y-%m-%d')
+    startdate_prev = (startdate_ - difference - timedelta(days=1)).strftime('%Y-%m-%d')
 
-	sort = 'DESC'
-	metric={}
-	adspend = {'revenue':{"data":[], "total":0.0, "compare":0.0}, 'sales':{"data":[],"total":0.0, "compare":0.0}, 'spend':{"data":[],"total":0.0, "compare":0.0}, 'roi':{"data":[],"total":0.0, "compare":0.0}, 'aov':{"data":[],"total":0.0, "compare":0.0}, 'cpa':{"data":[],"total":0.0, "compare":0.0}, 'profit':{"data":[],"total":0.0, "compare":0.0}, 'cr':{"data":[],"total":0.0, "compare":0.0}, 'click':{"data":[],"total":0.0, "compare":0.0}}
-	fbadsdata = {'accountpresent':fbflag,'revenue':{"data":[], "total":0.0, "compare":0.0}, 'sales':{"data":[],"total":0.0, "compare":0.0}, 'spend':{"data":[],"total":0.0, "compare":0.0}, 'roi':{"data":[],"total":0.0, "compare":0.0}, 'aov':{"data":[],"total":0.0, "compare":0.0}, 'cpa':{"data":[],"total":0.0, "compare":0.0}, 'profit':{"data":[],"total":0.0, "compare":0.0}, 'cr':{"data":[],"total":0.0, "compare":0.0},'click':{"data":[],"total":0.0, "compare":0.0}}
-	fbrevenue =0; fbsales=0; fbspend=0; fbroi=0; fbaov=0; fbcpa=0; fbcr=0; fbprofit=0; fbclick=0;
-	if fbflag:
-		sql_query_fb = db.text("select * from dashboard_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort)")
-		result = db.session.execute(sql_query_fb, {'workspace': userid, 'productid':productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
-		data = result.fetchall()
+    sort = 'DESC'
+    metric={}
+    adspend = {'revenue':{"data":[], "total":0.0, "compare":0.0}, 'sales':{"data":[],"total":0.0, "compare":0.0}, 'spend':{"data":[],"total":0.0, "compare":0.0}, 'roi':{"data":[],"total":0.0, "compare":0.0}, 'aov':{"data":[],"total":0.0, "compare":0.0}, 'cpa':{"data":[],"total":0.0, "compare":0.0}, 'profit':{"data":[],"total":0.0, "compare":0.0}, 'cr':{"data":[],"total":0.0, "compare":0.0}, 'click':{"data":[],"total":0.0, "compare":0.0}}
+    fbadsdata = {'accountpresent':fbflag,'revenue':{"data":[], "total":0.0, "compare":0.0}, 'sales':{"data":[],"total":0.0, "compare":0.0}, 'spend':{"data":[],"total":0.0, "compare":0.0}, 'roi':{"data":[],"total":0.0, "compare":0.0}, 'aov':{"data":[],"total":0.0, "compare":0.0}, 'cpa':{"data":[],"total":0.0, "compare":0.0}, 'profit':{"data":[],"total":0.0, "compare":0.0}, 'cr':{"data":[],"total":0.0, "compare":0.0},'click':{"data":[],"total":0.0, "compare":0.0}}
+    fbrevenue =0; fbsales=0; fbspend=0; fbroi=0; fbaov=0; fbcpa=0; fbcr=0; fbprofit=0; fbclick=0;
+    if fbflag:
+        sql_query_fb = db.text("select * from dashboard_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort)")
+        result = db.session.execute(sql_query_fb, {'workspace': userid, 'productid':productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
+        data = result.fetchall()
 
-		for row in data:
-			date_str = row[0].strftime("%Y-%m-%d")
-			revenue = round(float(row[5]),2)
-			sales = int(row[4])
-			spend = round(float(row[3]), 2)
-			roi = round(float(row[6]), 2)
-			aov = round(float(row[7]), 2)
-			cpa = round(float(row[8]), 2)
-			cr = round(float(row[9]), 2)
-			profit = round(float(row[10]), 2)
-			click = round(float(row[2]), 2)
+        for row in data:
+            date_str = row[0].strftime("%Y-%m-%d")
+            revenue = round(float(row[5]),2)
+            sales = int(row[4])
+            spend = round(float(row[3]), 2)
+            roi = round(float(row[6]), 2)
+            aov = round(float(row[7]), 2)
+            cpa = round(float(row[8]), 2)
+            cr = round(float(row[9]), 2)
+            profit = round(float(row[10]), 2)
+            click = round(float(row[2]), 2)
 
-			fbadsdata["revenue"]["data"].append({"value": round(revenue), "date": date_str})
-		
-			fbadsdata["sales"]["data"].append({"value": sales, "date": date_str})
-			fbadsdata["spend"]["data"].append({"value": round(spend), "date": date_str})
-			fbadsdata["roi"]["data"].append({"value": roi, "date": date_str})
-			fbadsdata["aov"]["data"].append({"value": aov, "date": date_str})
-			fbadsdata["cpa"]["data"].append({"value": cpa, "date": date_str})
-			fbadsdata["cr"]["data"].append({"value": cr, "date": date_str})
-			fbadsdata["profit"]["data"].append({"value": round(profit), "date": date_str})
-			fbadsdata["click"]["data"].append({"value": click, "date": date_str})
+            fbadsdata["revenue"]["data"].append({"value": round(revenue), "date": date_str})
+        
+            fbadsdata["sales"]["data"].append({"value": sales, "date": date_str})
+            fbadsdata["spend"]["data"].append({"value": round(spend), "date": date_str})
+            fbadsdata["roi"]["data"].append({"value": roi, "date": date_str})
+            fbadsdata["aov"]["data"].append({"value": aov, "date": date_str})
+            fbadsdata["cpa"]["data"].append({"value": cpa, "date": date_str})
+            fbadsdata["cr"]["data"].append({"value": cr, "date": date_str})
+            fbadsdata["profit"]["data"].append({"value": round(profit), "date": date_str})
+            fbadsdata["click"]["data"].append({"value": click, "date": date_str})
 
-			fbadsdata["revenue"]['total'] += revenue
-			fbadsdata["sales"]['total'] += sales
-			fbadsdata["spend"]['total'] += spend
-			fbadsdata["profit"]['total'] += profit
-			fbadsdata["click"]['total'] += click
+            fbadsdata["revenue"]['total'] += revenue
+            fbadsdata["sales"]['total'] += sales
+            fbadsdata["spend"]['total'] += spend
+            fbadsdata["profit"]['total'] += profit
+            fbadsdata["click"]['total'] += click
 
-			adspend["revenue"]['total'] += revenue
-			adspend["sales"]['total'] += sales
-			adspend["spend"]['total'] += spend
-			adspend["profit"]['total'] += profit
-			adspend["click"]['total'] += click
+            adspend["revenue"]['total'] += revenue
+            adspend["sales"]['total'] += sales
+            adspend["spend"]['total'] += spend
+            adspend["profit"]['total'] += profit
+            adspend["click"]['total'] += click
 
-		fbadsdata["aov"]['total'] = round(fbadsdata["revenue"]['total']/max(fbadsdata["sales"]['total'],1),2)
-		fbadsdata["cpa"]['total'] = round(fbadsdata["spend"]['total']/max(fbadsdata["sales"]['total'],1),2)
-		fbadsdata["roi"]['total'] = round(fbadsdata["revenue"]['total']/max(fbadsdata["spend"]['total'],1),2)
-		fbadsdata["cr"]['total'] = round(fbadsdata["sales"]['total']/max(fbadsdata["click"]['total'],1),2)
+        fbadsdata["aov"]['total'] = round(fbadsdata["revenue"]['total']/max(fbadsdata["sales"]['total'],1),2)
+        fbadsdata["cpa"]['total'] = round(fbadsdata["spend"]['total']/max(fbadsdata["sales"]['total'],1),2)
+        fbadsdata["roi"]['total'] = round(fbadsdata["revenue"]['total']/max(fbadsdata["spend"]['total'],1),2)
+        fbadsdata["cr"]['total'] = round(fbadsdata["sales"]['total']/max(fbadsdata["click"]['total'],1),2)
 
-		sqlquery_fbprev = db.text("select * from dashboard_facebookprev_attribute(:workspace, :productid, :startdate, :enddate, :sort)")
-		result = db.session.execute(sqlquery_fbprev, {'workspace': userid, 'productid':productid, 'startdate':startdate_prev, 'enddate':enddate_prev, 'sort':sort})
-		body = result.fetchall()
+        sqlquery_fbprev = db.text("select * from dashboard_facebookprev_attribute(:workspace, :productid, :startdate, :enddate, :sort)")
+        result = db.session.execute(sqlquery_fbprev, {'workspace': userid, 'productid':productid, 'startdate':startdate_prev, 'enddate':enddate_prev, 'sort':sort})
+        body = result.fetchall()
 
-		for row in body:
-			fbrevenue = round(float(row[4]))
-			fbsales = int(row[3])
-			fbspend = round(float(row[2]))
-			fbroi = round(float(row[5]), 2)
-			fbaov = round(float(row[6]), 2)
-			fbcpa = round(float(row[7]), 2)
-			fbcr = round(float(row[8]), 2)
-			fbprofit = round(float(row[9]))
-			fbclick = round(float(row[1]), 2)
+        for row in body:
+            fbrevenue = round(float(row[4]))
+            fbsales = int(row[3])
+            fbspend = round(float(row[2]))
+            fbroi = round(float(row[5]), 2)
+            fbaov = round(float(row[6]), 2)
+            fbcpa = round(float(row[7]), 2)
+            fbcr = round(float(row[8]), 2)
+            fbprofit = round(float(row[9]))
+            fbclick = round(float(row[1]), 2)
 
-			fbadsdata["revenue"]["compare"] = (100.0*(fbadsdata["revenue"]['total'] - fbrevenue) / fbrevenue) if fbrevenue != 0 else 0
-			fbadsdata["sales"]["compare"] = (100.0*(fbadsdata["sales"]['total'] - fbsales) / fbsales) if fbsales != 0 else 0
-			fbadsdata["spend"]["compare"] = (100.0*(fbadsdata["spend"]['total'] - fbspend) / fbspend) if fbspend != 0 else 0
-			fbadsdata["roi"]["compare"] = (100.0*(fbadsdata["roi"]['total'] - fbroi) / fbroi) if fbroi != 0 else 0
-			fbadsdata["aov"]["compare"] = (100.0*(fbadsdata["aov"]['total'] - fbaov) / fbaov) if fbaov != 0 else 0
-			fbadsdata["cpa"]["compare"] = (100.0*(fbadsdata["cpa"]['total'] - fbcpa) / fbcpa) if fbcpa != 0 else 0
-			fbadsdata["cr"]["compare"] = (100.0*(fbadsdata["cr"]['total'] - fbcr) / fbcr) if fbcr != 0 else 0
-			fbadsdata["profit"]["compare"] = (100.0*(fbadsdata["profit"]['total'] - fbprofit) / abs(fbprofit)) if fbprofit != 0 else 0
-			fbadsdata["click"]["compare"] = (100.0*(fbadsdata["click"]['total'] - fbclick) / fbclick) if fbclick != 0 else 0
-	
-	metric['meta'] = fbadsdata
+            fbadsdata["revenue"]["compare"] = (100.0*(fbadsdata["revenue"]['total'] - fbrevenue) / fbrevenue) if fbrevenue != 0 else 0
+            fbadsdata["sales"]["compare"] = (100.0*(fbadsdata["sales"]['total'] - fbsales) / fbsales) if fbsales != 0 else 0
+            fbadsdata["spend"]["compare"] = (100.0*(fbadsdata["spend"]['total'] - fbspend) / fbspend) if fbspend != 0 else 0
+            fbadsdata["roi"]["compare"] = (100.0*(fbadsdata["roi"]['total'] - fbroi) / fbroi) if fbroi != 0 else 0
+            fbadsdata["aov"]["compare"] = (100.0*(fbadsdata["aov"]['total'] - fbaov) / fbaov) if fbaov != 0 else 0
+            fbadsdata["cpa"]["compare"] = (100.0*(fbadsdata["cpa"]['total'] - fbcpa) / fbcpa) if fbcpa != 0 else 0
+            fbadsdata["cr"]["compare"] = (100.0*(fbadsdata["cr"]['total'] - fbcr) / fbcr) if fbcr != 0 else 0
+            fbadsdata["profit"]["compare"] = (100.0*(fbadsdata["profit"]['total'] - fbprofit) / abs(fbprofit)) if fbprofit != 0 else 0
+            fbadsdata["click"]["compare"] = (100.0*(fbadsdata["click"]['total'] - fbclick) / fbclick) if fbclick != 0 else 0
+    
+    metric['meta'] = fbadsdata
 
-	ggdsdata = {'accountpresent':ggflag,'revenue':{"data":[], "total":0.0, "compare":0.0}, 'sales':{"data":[],"total":0.0, "compare":0.0}, 'spend':{"data":[],"total":0.0, "compare":0.0}, 'roi':{"data":[],"total":0.0, "compare":0.0}, 'aov':{"data":[],"total":0.0, "compare":0.0}, 'cpa':{"data":[],"total":0.0, "compare":0.0}, 'profit':{"data":[],"total":0.0, "compare":0.0}, 'cr':{"data":[],"total":0.0, "compare":0.0},'click':{"data":[],"total":0.0, "compare":0.0}}
-	ggrevenue =0; ggsales=0; ggspend=0; ggroi=0; ggaov=0; ggcpa=0; ggcr=0; ggprofit=0; ggclick=0;
-	if ggflag:
-		sql_query_fb = db.text("select * from dashboard_googleattribute(:workspace, :productid, :startdate, :enddate, :sort)")
-		result = db.session.execute(sql_query_fb, {'workspace': userid, 'productid':productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
-		data = result.fetchall()
+    ggdsdata = {'accountpresent':ggflag,'revenue':{"data":[], "total":0.0, "compare":0.0}, 'sales':{"data":[],"total":0.0, "compare":0.0}, 'spend':{"data":[],"total":0.0, "compare":0.0}, 'roi':{"data":[],"total":0.0, "compare":0.0}, 'aov':{"data":[],"total":0.0, "compare":0.0}, 'cpa':{"data":[],"total":0.0, "compare":0.0}, 'profit':{"data":[],"total":0.0, "compare":0.0}, 'cr':{"data":[],"total":0.0, "compare":0.0},'click':{"data":[],"total":0.0, "compare":0.0}}
+    ggrevenue =0; ggsales=0; ggspend=0; ggroi=0; ggaov=0; ggcpa=0; ggcr=0; ggprofit=0; ggclick=0;
+    if ggflag:
+        sql_query_fb = db.text("select * from dashboard_googleattribute(:workspace, :productid, :startdate, :enddate, :sort)")
+        result = db.session.execute(sql_query_fb, {'workspace': userid, 'productid':productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
+        data = result.fetchall()
 
-		for row in data:
+        for row in data:
 
-			date_str = row[0].strftime("%Y-%m-%d")
-			revenue = round(float(row[5]),2)
-			sales = int(row[4])
-			spend = round(float(row[3]), 2)
-			roi = round(float(row[6]), 2)
-			aov = round(float(row[7]), 2)
-			cpa = round(float(row[8]), 2)
-			cr = round(float(row[9]), 2)
-			profit = round(float(row[10]), 2)
-			click = round(float(row[2]), 2)
+            date_str = row[0].strftime("%Y-%m-%d")
+            revenue = round(float(row[5]),2)
+            sales = int(row[4])
+            spend = round(float(row[3]), 2)
+            roi = round(float(row[6]), 2)
+            aov = round(float(row[7]), 2)
+            cpa = round(float(row[8]), 2)
+            cr = round(float(row[9]), 2)
+            profit = round(float(row[10]), 2)
+            click = round(float(row[2]), 2)
 
-			ggdsdata["revenue"]["data"].append({"value": round(revenue), "date": date_str})
-			ggdsdata["sales"]["data"].append({"value": sales, "date": date_str})
-			ggdsdata["spend"]["data"].append({"value": round(spend), "date": date_str})
-			ggdsdata["roi"]["data"].append({"value": roi, "date": date_str})
-			ggdsdata["aov"]["data"].append({"value": aov, "date": date_str})
-			ggdsdata["cpa"]["data"].append({"value": cpa, "date": date_str})
-			ggdsdata["cr"]["data"].append({"value": cr, "date": date_str})
-			ggdsdata["profit"]["data"].append({"value": round(profit), "date": date_str})
-			ggdsdata["click"]["data"].append({"value": click, "date": date_str})
+            ggdsdata["revenue"]["data"].append({"value": round(revenue), "date": date_str})
+            ggdsdata["sales"]["data"].append({"value": sales, "date": date_str})
+            ggdsdata["spend"]["data"].append({"value": round(spend), "date": date_str})
+            ggdsdata["roi"]["data"].append({"value": roi, "date": date_str})
+            ggdsdata["aov"]["data"].append({"value": aov, "date": date_str})
+            ggdsdata["cpa"]["data"].append({"value": cpa, "date": date_str})
+            ggdsdata["cr"]["data"].append({"value": cr, "date": date_str})
+            ggdsdata["profit"]["data"].append({"value": round(profit), "date": date_str})
+            ggdsdata["click"]["data"].append({"value": click, "date": date_str})
 
-			ggdsdata["revenue"]['total'] += revenue
-			ggdsdata["sales"]['total'] += sales
-			ggdsdata["spend"]['total'] += spend
-			ggdsdata["profit"]['total'] += profit
-			ggdsdata["click"]['total'] += click
+            ggdsdata["revenue"]['total'] += revenue
+            ggdsdata["sales"]['total'] += sales
+            ggdsdata["spend"]['total'] += spend
+            ggdsdata["profit"]['total'] += profit
+            ggdsdata["click"]['total'] += click
 
 
-			adspend["revenue"]['total'] += revenue
-			adspend["sales"]['total'] += sales
-			adspend["spend"]['total'] += spend
-			adspend["profit"]['total'] += profit
-			adspend["click"]['total'] += click
+            adspend["revenue"]['total'] += revenue
+            adspend["sales"]['total'] += sales
+            adspend["spend"]['total'] += spend
+            adspend["profit"]['total'] += profit
+            adspend["click"]['total'] += click
 
-		ggdsdata["aov"]['total'] = round(ggdsdata["revenue"]['total']/max(ggdsdata["sales"]['total'],1),2)
-		ggdsdata["cpa"]['total'] = round(ggdsdata["spend"]['total']/max(ggdsdata["sales"]['total'],1),2)
-		ggdsdata["roi"]['total'] = round(ggdsdata["revenue"]['total']/max(ggdsdata["spend"]['total'],1),2)
-		ggdsdata["cr"]['total'] = round(ggdsdata["sales"]['total']/max(ggdsdata["click"]['total'],1),2)
+        ggdsdata["aov"]['total'] = round(ggdsdata["revenue"]['total']/max(ggdsdata["sales"]['total'],1),2)
+        ggdsdata["cpa"]['total'] = round(ggdsdata["spend"]['total']/max(ggdsdata["sales"]['total'],1),2)
+        ggdsdata["roi"]['total'] = round(ggdsdata["revenue"]['total']/max(ggdsdata["spend"]['total'],1),2)
+        ggdsdata["cr"]['total'] = round(ggdsdata["sales"]['total']/max(ggdsdata["click"]['total'],1),2)
 
-		sqlquery_ggprev = db.text("select * from dashboard_googleprev_attribute(:workspace, :productid, :startdate, :enddate, :sort)")
-		result = db.session.execute(sqlquery_ggprev, {'workspace': userid, 'productid':productid, 'startdate':startdate_prev, 'enddate':enddate_prev, 'sort':sort})
-		body = result.fetchall()
-		
-		for row in body:
-			ggrevenue = round(float(row[4]),2)
-			ggsales = int(row[3])
-			ggspend = round(float(row[2]), 2)
-			ggroi = round(float(row[5]), 2)
-			ggaov = round(float(row[6]), 2)
-			ggcpa = round(float(row[7]), 2)
-			ggcr = round(float(row[8]), 2)
-			ggprofit = round(float(row[9]), 2)
-			ggclick = round(float(row[1]), 2)
+        sqlquery_ggprev = db.text("select * from dashboard_googleprev_attribute(:workspace, :productid, :startdate, :enddate, :sort)")
+        result = db.session.execute(sqlquery_ggprev, {'workspace': userid, 'productid':productid, 'startdate':startdate_prev, 'enddate':enddate_prev, 'sort':sort})
+        body = result.fetchall()
+        
+        for row in body:
+            ggrevenue = round(float(row[4]),2)
+            ggsales = int(row[3])
+            ggspend = round(float(row[2]), 2)
+            ggroi = round(float(row[5]), 2)
+            ggaov = round(float(row[6]), 2)
+            ggcpa = round(float(row[7]), 2)
+            ggcr = round(float(row[8]), 2)
+            ggprofit = round(float(row[9]), 2)
+            ggclick = round(float(row[1]), 2)
 
-			ggdsdata["revenue"]["compare"] = (100.0*(ggdsdata["revenue"]['total'] - ggrevenue) / max(ggrevenue,1))  if ggrevenue != 0 else 0
-			ggdsdata["sales"]["compare"] = (100.0*(ggdsdata["sales"]['total'] - ggsales) / max(ggsales,1)) if ggsales != 0 else 0
-			ggdsdata["spend"]["compare"] = (100.0*(ggdsdata["spend"]['total'] - ggspend) / max(ggspend,1)) if ggspend != 0 else 0
-			ggdsdata["roi"]["compare"] = (100.0*(ggdsdata["roi"]['total'] - ggroi) / max(ggroi,0.01)) if ggroi != 0 else 0
-			ggdsdata["aov"]["compare"] = (100.0*(ggdsdata["aov"]['total'] - ggaov) / max(ggaov,1)) if ggaov != 0 else 0
-			ggdsdata["cpa"]["compare"] = (100.0*(ggdsdata["cpa"]['total'] - ggcpa) / max(ggcpa,1)) if ggcpa != 0 else 0
-			ggdsdata["cr"]["compare"] = (100.0*(ggdsdata["cr"]['total'] - ggcr) / max(ggcr, 0.01)) if ggcr != 0 else 0
-			ggdsdata["profit"]["compare"] = (100.0*(ggdsdata["profit"]['total'] - ggprofit) / max(abs(ggprofit),1)) if ggprofit != 0 else 0
-			ggdsdata["click"]["compare"] = (100.0*(ggdsdata["click"]['total'] - ggclick) / max(ggclick,1)) if ggclick != 0 else 0
+            ggdsdata["revenue"]["compare"] = (100.0*(ggdsdata["revenue"]['total'] - ggrevenue) / max(ggrevenue,1))  if ggrevenue != 0 else 0
+            ggdsdata["sales"]["compare"] = (100.0*(ggdsdata["sales"]['total'] - ggsales) / max(ggsales,1)) if ggsales != 0 else 0
+            ggdsdata["spend"]["compare"] = (100.0*(ggdsdata["spend"]['total'] - ggspend) / max(ggspend,1)) if ggspend != 0 else 0
+            ggdsdata["roi"]["compare"] = (100.0*(ggdsdata["roi"]['total'] - ggroi) / max(ggroi,0.01)) if ggroi != 0 else 0
+            ggdsdata["aov"]["compare"] = (100.0*(ggdsdata["aov"]['total'] - ggaov) / max(ggaov,1)) if ggaov != 0 else 0
+            ggdsdata["cpa"]["compare"] = (100.0*(ggdsdata["cpa"]['total'] - ggcpa) / max(ggcpa,1)) if ggcpa != 0 else 0
+            ggdsdata["cr"]["compare"] = (100.0*(ggdsdata["cr"]['total'] - ggcr) / max(ggcr, 0.01)) if ggcr != 0 else 0
+            ggdsdata["profit"]["compare"] = (100.0*(ggdsdata["profit"]['total'] - ggprofit) / max(abs(ggprofit),1)) if ggprofit != 0 else 0
+            ggdsdata["click"]["compare"] = (100.0*(ggdsdata["click"]['total'] - ggclick) / max(ggclick,1)) if ggclick != 0 else 0
 
-	metric['google'] = ggdsdata
+    metric['google'] = ggdsdata
 
-	for key in adspend:
-		adspend[key]['data'] = sum_dicts(fbadsdata[key]['data'], ggdsdata[key]['data'])
-	adspend['aov']['total'] = adspend['revenue']['total'] / max(adspend['sales']['total'], 1)
-	adspend['cpa']['total'] = adspend['spend']['total'] / max(adspend['sales']['total'], 1)
-	adspend['roi']['total'] = adspend['revenue']['total'] / max(adspend['spend']['total'], 1)
-	adspend["cr"]['total'] = round(adspend["sales"]['total']/max(adspend["click"]['total'],1),2)
+    for key in adspend:
+        adspend[key]['data'] = sum_dicts(fbadsdata[key]['data'], ggdsdata[key]['data'])
+    adspend['aov']['total'] = adspend['revenue']['total'] / max(adspend['sales']['total'], 1)
+    adspend['cpa']['total'] = adspend['spend']['total'] / max(adspend['sales']['total'], 1)
+    adspend['roi']['total'] = adspend['revenue']['total'] / max(adspend['spend']['total'], 1)
+    adspend["cr"]['total'] = round(adspend["sales"]['total']/max(adspend["click"]['total'],1),2)
 
-	adspendprev_roi = (fbrevenue + ggrevenue) / max((fbspend + ggspend) ,1)
-	adspendprev_aov = (fbrevenue + ggrevenue) / max((fbsales + ggsales),1)
-	adspendprev_cpa = (fbspend + ggspend) / max((fbsales + ggsales),1)
-	adspendprev_cr = (fbsales + ggsales) / max((fbclick + ggclick) ,1)
+    adspendprev_roi = (fbrevenue + ggrevenue) / max((fbspend + ggspend) ,1)
+    adspendprev_aov = (fbrevenue + ggrevenue) / max((fbsales + ggsales),1)
+    adspendprev_cpa = (fbspend + ggspend) / max((fbsales + ggsales),1)
+    adspendprev_cr = (fbsales + ggsales) / max((fbclick + ggclick) ,1)
 
-	adspend["spend"]["compare"] = (100.0*(adspend["spend"]["total"] - (fbspend + ggspend)) / max((fbspend + ggspend),1)) if (fbspend + ggspend) != 0 else 0
-	adspend["sales"]["compare"] = (100.0*(adspend["sales"]["total"] - (fbsales + ggsales)) / max((fbsales + ggsales),1)) if (fbsales + ggsales) != 0 else 0
-	adspend["revenue"]["compare"] = (100.0*(adspend["revenue"]["total"] - (fbrevenue + ggrevenue)) / max((fbrevenue + ggrevenue),1)) if (fbrevenue + ggrevenue) != 0 else 0
-	adspend["roi"]["compare"] = (100.0*(adspend["roi"]['total'] - adspendprev_roi) / max(adspendprev_roi,0.01)) if adspendprev_roi != 0 else 0
-	adspend["aov"]["compare"] = (100.0*(adspend["aov"]['total'] - adspendprev_aov) / max(adspendprev_aov,1)) if adspendprev_aov != 0 else 0
-	adspend["cpa"]["compare"] = (100.0*(adspend["cpa"]['total'] - adspendprev_cpa) / max(adspendprev_cpa,1)) if adspendprev_cpa != 0 else 0
-	adspend["cr"]["compare"] = (100.0*(adspend["cr"]['total'] - adspendprev_cr) / max(adspendprev_cr, 0.01)) if adspendprev_cr != 0 else 0
-	adspend["click"]["compare"] = (100.0*(adspend["click"]['total'] - (fbclick + ggclick)) / max((fbclick + ggclick), 1)) if (fbclick + ggclick) != 0 else 0
-	adspend["profit"]["compare"] = (100.0*(adspend["profit"]['total'] - (fbprofit + ggprofit)) / max(abs(fbprofit + ggprofit), 1)) if (fbprofit + ggprofit) != 0 else 0
-	
-	metric['adspend'] = adspend	
+    adspend["spend"]["compare"] = (100.0*(adspend["spend"]["total"] - (fbspend + ggspend)) / max((fbspend + ggspend),1)) if (fbspend + ggspend) != 0 else 0
+    adspend["sales"]["compare"] = (100.0*(adspend["sales"]["total"] - (fbsales + ggsales)) / max((fbsales + ggsales),1)) if (fbsales + ggsales) != 0 else 0
+    adspend["revenue"]["compare"] = (100.0*(adspend["revenue"]["total"] - (fbrevenue + ggrevenue)) / max((fbrevenue + ggrevenue),1)) if (fbrevenue + ggrevenue) != 0 else 0
+    adspend["roi"]["compare"] = (100.0*(adspend["roi"]['total'] - adspendprev_roi) / max(adspendprev_roi,0.01)) if adspendprev_roi != 0 else 0
+    adspend["aov"]["compare"] = (100.0*(adspend["aov"]['total'] - adspendprev_aov) / max(adspendprev_aov,1)) if adspendprev_aov != 0 else 0
+    adspend["cpa"]["compare"] = (100.0*(adspend["cpa"]['total'] - adspendprev_cpa) / max(adspendprev_cpa,1)) if adspendprev_cpa != 0 else 0
+    adspend["cr"]["compare"] = (100.0*(adspend["cr"]['total'] - adspendprev_cr) / max(adspendprev_cr, 0.01)) if adspendprev_cr != 0 else 0
+    adspend["click"]["compare"] = (100.0*(adspend["click"]['total'] - (fbclick + ggclick)) / max((fbclick + ggclick), 1)) if (fbclick + ggclick) != 0 else 0
+    adspend["profit"]["compare"] = (100.0*(adspend["profit"]['total'] - (fbprofit + ggprofit)) / max(abs(fbprofit + ggprofit), 1)) if (fbprofit + ggprofit) != 0 else 0
+    
+    metric['adspend'] = adspend 
 
-	return metric
+    return metric
 
 
 @report_bp.route('/dashboardmetric', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_dashboardmetric():
-	headers = request.headers
-	_body = request.args
-	startdate = _body.get('startdate')
-	enddate = _body.get('enddate')
-	userid = headers.get('workspaceId')
-	user = UserRegister.query.filter_by(workspace=userid).first()
+    headers = request.headers
+    _body = request.args
+    startdate = _body.get('startdate')
+    enddate = _body.get('enddate')
+    userid = headers.get('workspaceId')
+    user = UserRegister.query.filter_by(workspace=userid).first()
 
-	fbflag = False
-	ggflag = False
-	fb = ClientFacebookredentials.query.filter_by(workspace=userid).first()
-	if fb:
-		fbflag = True
-	gg = ClientGoogleCredentials.query.filter_by(workspace=userid).first()
-	if gg:
-		ggflag = True
+    fbflag = False
+    ggflag = False
+    fb = ClientFacebookredentials.query.filter_by(workspace=userid).first()
+    if fb:
+        fbflag = True
+    gg = ClientGoogleCredentials.query.filter_by(workspace=userid).first()
+    if gg:
+        ggflag = True
 
-	result = channel_matrix(userid, user.productid, startdate, enddate, fbflag, ggflag)
+    result = channel_matrix(userid, user.productid, startdate, enddate, fbflag, ggflag)
 
-	return jsonify(result),200
+    return jsonify(result),200
 
 
 
 def dashbaord_mongo_query(metric, productid, startdate, enddate):
-	
+    
     if metric == 'pageview':
         pipeline = [
         {
@@ -870,16 +911,16 @@ def get_dashboardtraffic():
     # ]
     # usr = list(CustomerInfo.objects.aggregate(*localsess_pipeline))
     # try:
-    # 	data['user'] = usr[0]['distinct_localsession_count']
+    #   data['user'] = usr[0]['distinct_localsession_count']
     # except:
-    # 	data['user'] = 0
+    #   data['user'] = 0
 
 
     # sess_pipeline = [
     # {'$match': {
     #     'productid': int(user.productid),
     #     'creation_at': {'$gte': startdate, '$lte': enddate},
-    # 	'body.customerInfo': {}
+    #   'body.customerInfo': {}
     # }},
     # {'$group': {
     #     '_id': '$session'  # Group by 'localsession' to get distinct values
@@ -888,43 +929,43 @@ def get_dashboardtraffic():
     # ]
     # unique_usr = list(CustomerInfo.objects.aggregate(*sess_pipeline))
     # try:
-    # 	data['unique_user'] = unique_usr[0]['distinct_session_count']
+    #   data['unique_user'] = unique_usr[0]['distinct_session_count']
     # except:
-    # 	data['unique_user'] = 0
+    #   data['unique_user'] = 0
 
 
     # if user.product_type == 'growth':
-    # 	bounce_pipeline = [
-    # 		{
-    # 			'$match': {
-    # 				'productid': float(user.productid),
-    # 				'creation_at': {'$gte': startdate, '$lte': enddate}
-    # 			}
-    # 		},
-    # 		{
-    # 			'$group': {
-    # 				'_id': '$localsession',
-    # 				'count': {'$sum': 1}  # Count occurrences of each localsession
-    # 			}
-    # 		},
-    # 		{
-    # 			'$match': {
-    # 				'count': 1  # Filter to keep only those groups where count is exactly 1
-    # 			}
-    # 		},
-    # 		{
-    # 			'$count': 'unique_localsession_count'
-    # 		}
-    # 	]
+    #   bounce_pipeline = [
+    #       {
+    #           '$match': {
+    #               'productid': float(user.productid),
+    #               'creation_at': {'$gte': startdate, '$lte': enddate}
+    #           }
+    #       },
+    #       {
+    #           '$group': {
+    #               '_id': '$localsession',
+    #               'count': {'$sum': 1}  # Count occurrences of each localsession
+    #           }
+    #       },
+    #       {
+    #           '$match': {
+    #               'count': 1  # Filter to keep only those groups where count is exactly 1
+    #           }
+    #       },
+    #       {
+    #           '$count': 'unique_localsession_count'
+    #       }
+    #   ]
 
-    # 	session = data['user'] if data['user'] !=0 else 1
-    # 	try:
-    # 		bounce = list(CustomerInfo.objects.aggregate(*bounce_pipeline))
-    # 		data['bounce_rate'] = round(bounce[0]['unique_localsession_count']*100/session,2)
-    # 	except:
-    # 		data['bounce_rate'] = 0.0
+    #   session = data['user'] if data['user'] !=0 else 1
+    #   try:
+    #       bounce = list(CustomerInfo.objects.aggregate(*bounce_pipeline))
+    #       data['bounce_rate'] = round(bounce[0]['unique_localsession_count']*100/session,2)
+    #   except:
+    #       data['bounce_rate'] = 0.0
 
-    # 	data['page_view_per_session'] = round(data['page_view']/session, 2)
+    #   data['page_view_per_session'] = round(data['page_view']/session, 2)
 
     
     # tablename = 'order_' + userid
@@ -935,10 +976,9 @@ def get_dashboardtraffic():
     #     orderTable.order_date <= enddate
     # ).count()
     # if data['user'] == 0:
-    # 	data['cr'] = 0.0
+    #   data['cr'] = 0.0
     # else:
-    # 	data['cr'] = round(conversion*100.0/data['user'],2)
-
+    #   data['cr'] = round(conversion*100.0/data['user'],2)
 
     return jsonify(trafficdata), 200
 
@@ -948,21 +988,23 @@ def get_dashboardtraffic():
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_productdetails():
 
-	headers = request.headers
-	userid = headers.get('workspaceId')
-	
-	sql_query = text("SELECT DISTINCT product_name FROM product_table WHERE workspaceid = :workspace")
-	result = db.session.execute(sql_query, { 'workspace': userid })
-	data = result.fetchall()
+    headers = request.headers
+    userid = headers.get('workspaceId')
+    
+    sql_query = text("SELECT DISTINCT product_name FROM product_table WHERE workspaceid = :workspace")
+    result = db.session.execute(sql_query, { 'workspace': userid })
+    data = result.fetchall()
 
-	if len(data) > 0:
-		return [{"product": row[0]} for row in data]
-	else:
-		try:
-			sql_query = text(f"SELECT DISTINCT product_name FROM orderline_{userid}")
-			result = db.session.execute(sql_query)
-			data = result.fetchall()
-			return [{"product": row[0]} for row in data]
-		except:
-			return [{"product": None}]
-		
+    if len(data) > 0:
+        return [{"product": row[0]} for row in data]
+    else:
+        try:
+            sql_query = text(f"SELECT DISTINCT product_name FROM orderline_{userid}")
+            result = db.session.execute(sql_query)
+            data = result.fetchall()
+            db.session.close()
+            return [{"product": row[0]} for row in data]
+        except:
+            db.session.close()
+            return [{"product": None}]
+        
