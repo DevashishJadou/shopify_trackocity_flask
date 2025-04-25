@@ -100,6 +100,7 @@ def update_metrics(metrics, row, indexes, traffic):
     metrics["Gross Margin %"] = 'n/a' if metrics["Revenue"] == 0 else round((metrics["Revenue"]  - (metrics["Spend"]+metrics["Cost"]))*100 / metrics["Revenue"] ,1)
     metrics["Gross Profit"] = round((metrics["Revenue"]  - (metrics["Spend"]+metrics["Cost"])),0)
     metrics["Product Name"] = row[indexes["Product Name"]]
+    metrics["Creative"] = row[indexes["Creative"]]
 
 
 # Utility function to initialize campaign and ad set
@@ -118,7 +119,7 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, 
             "rSales":0, "rRevenue":0.0, "New Visits %": 0.0,
             "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0, "Reported CPA":0.0, 
-            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name": None
+            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name": None, "Creative": None
         }
     if ad_set_id not in data[campaign_id]["ad_sets"]:
         data[campaign_id]["ad_sets"][ad_set_id] = {
@@ -134,7 +135,7 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, 
             "rRevenue":0.0, "rSales":0.0, "New Visits %": 0.0,
             "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0, "Reported CPA":0.0,
-            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name":None
+            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name":None, "Creative": None
         }
 
 # Utility function to process ads
@@ -192,7 +193,8 @@ def process_ads(data, fbadsdata, row, indexes, traffic):
         "eCPNV": 'n/a' if row[indexes["New Visits"]] == 0 else round(row[indexes["Spend"]] / row[indexes["New Visits"]] ,1),
         "Gross Margin %": 'n/a' if (row[indexes["Revenue"]]) == 0 else round((row[indexes["Revenue"]] - (row[indexes["Spend"]]+row[indexes["Cost"]]))*100 / row[indexes["Revenue"]] ,1),
         "Gross Profit": round((row[indexes["Revenue"]] - (row[indexes["Spend"]]+row[indexes["Cost"]])),1),
-        "Product Name": row[indexes["Product Name"]]
+        "Product Name": row[indexes["Product Name"]],
+        "Creative": row[indexes["Creative"]]
     })
     
     # Update metrics for campaign, ad set, and overall
@@ -277,7 +279,8 @@ def get_reporttabledatafacebook():
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, 
             "rRevenue":0, "rSales":0, "New Visits %":0.0,
             "Reported Sale":0, "Reported Rev":0.0, "Reported ROAS":0.0, "Reported CPA": 0.0,
-            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name":None
+            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name":None, 
+            "Creative": None
         }
 
         # Process each row of data
@@ -286,7 +289,7 @@ def get_reporttabledatafacebook():
                 "ad_name": 7, "ad_status":8, "Product Name":9, "Impression": 10, "Clicks": 11, "Spend": 12,
                 "Sales": 13, "Revenue": 14, "CancelOrder": 15, "CancelRev": 16, "nSales": 17, 
                 "nRevenue": 18, "New Visits": 19, "nvisitor":20, 
-                "Reported Sale":21, "Reported Rev":22, "Cost":23, "Cost Cancel":24, "Leads":25
+                "Reported Sale":21, "Reported Rev":22, "Cost":23, "Cost Cancel":24, "Leads":25, "Creative":26
             }, traffic)
 
         # Convert ad_sets to list in campaigns
