@@ -41,7 +41,7 @@ def row_to_dict(row):
 class SmartQueryHandler:
     def __init__(self, openai_api_key):
         self.openai_api_key = openai_api_key
-        self.llm = ChatOpenAI(openai_api_key=openai_api_key, temperature=0.1, top_p=0.7, frequency_penalty=0.2, presence_penalty=0)
+        self.llm = ChatOpenAI(openai_api_key=openai_api_key, model="gpt-4o-mini", temperature=0.1, top_p=0.7, frequency_penalty=0.2, presence_penalty=0)
         
         # Updated system template to classify question type based on context
         self.classifier_template = """
@@ -128,13 +128,13 @@ class SmartQueryHandler:
             - Does it require trend analysis, forecasting, or segmentation?
             
             2. Extract essential details:
-            - Time period (last 7 days, 30 days, MoM, WoW, or all available data).
+            - Time period (last 3 days, last 7 days, WoW, or all available data).
             - Metrics mentioned or inferred (CPA, ROAS, CTR, CR, AOV, CPC, CPM, etc.).
-            - Requested breakdowns (by campaign, ad set, ad type, platform, creative type).
+            - Requested breakdowns (by campaign, ad set, ad type, creative type).
             - Comparison logic (current period vs. previous period, winning vs. losing ads).
 
             3. Determine table relationships:
-            - For user touchpoint or assist in order, join `horizon.customer_journey`.
+            - For ad platform data, join `horizon.ads`.
             - For first-click attribution, join `horizon.ads_firstattribute`.
             - For conversion and ad spend focus, primarily use `horizon.ads_lastattribute`.
 
@@ -143,7 +143,6 @@ class SmartQueryHandler:
             Step 2: Constructing the Query
             1. Select primary tables based on query type:
             - Ad performance: Use `horizon.ads_lastattribute` (final conversions & spend).
-            - Customer journey insights: Join `horizon.customer_journey` for touchpoints.
             - First-touch attribution analysis: Use `horizon.ads_firstattribute`.
 
             2. Extract relevant metrics (based on direct request & inferred insights):
@@ -175,11 +174,34 @@ class SmartQueryHandler:
 
             Example 1: Facebook Campaign Analysis for ROAS Improvement
             Question: Can you analyze the performance of the ad '080125-1M3-VID14-C-LEM-C1' over the last 7 days? Identify any anomalies, provide actionable recommendations, suggest budget strategies if relevant, and forecast potential performance trends based on recent data.
-            SQL Query: SELECT
+            SQL Query: WITH al_agg AS (
+                        SELECT
+                            al.adid,
+                            al.dated,
+                            SUM(COALESCE(al.revenue, 0)) AS revenue,
+                            SUM(COALESCE(al.spend, 0)) AS spend,
+                            SUM(COALESCE(al.orders, 0)) AS orders,
+                            SUM(COALESCE(al.new_revenue, 0)) AS new_revenue,
+                            SUM(COALESCE(al.new_order, 0)) AS new_order,
+                            SUM(COALESCE(al.fresh_visitor, 0)) AS fresh_visitor,
+                            SUM(COALESCE(al.engagement, 0)) AS engagement,
+                            SUM(COALESCE(al.video_view_3s, 0)) AS video_view_3s,
+                            SUM(COALESCE(al.video_p25_watched_actions, 0)) AS video_watched_actions_25percent,
+                            SUM(COALESCE(al.video_p50_watched_actions, 0)) AS video_watched_actions_50percent,
+                            SUM(COALESCE(al.video_p100_watched_actions, 0)) AS video_watched_actions_100percent
+                        FROM horizon.ads_lastattribute al
+                         WHERE al.ad_name = '080125-1M3-VID14-C-LEM-C1'
+                        AND al.dated >= CURRENT_DATE - INTERVAL '7 days'
+                        AND al.workspace = '854e249d718e42cba341aa0559931c12
+                        GROUP BY 1, 2
+                    )
+                    SELECT
                         ads.dated AS date,
                         ads.ad_name AS ad_name,
+                        COALESCE(ads.ad_type, 'NA') AS ad_type,
+                        COALESCE(ads.ad_copy, 'NA') AS ad_copy,
                         SUM(COALESCE(al.revenue,0)) AS total_revenue,
-                        SUM(COALESCE(al.spend,0)) AS total_spend,
+                        SUM(COALESCE(ads.spend,0)) AS total_spend,
                         ROUND(SUM(COALESCE(al.revenue,0)) / NULLIF(SUM(ads.spend), 0), 2) AS roas,
                         ROUND(SUM(COALESCE(al.revenue,0)) / NULLIF(SUM(COALESCE(al.orders,0)), 0), 2) AS cpa,
                         ROUND(SUM(ads.spend) / NULLIF(SUM(ads.clicks), 0), 2) AS cpc,
@@ -187,40 +209,71 @@ class SmartQueryHandler:
                         ROUND(SUM(COALESCE(al.new_revenue,0)) / NULLIF(SUM(ads.spend), 0), 2) AS nroas,
                         ROUND(SUM(COALESCE(al.orders,0))*100 / NULLIF(SUM(ads.clicks), 0), 2) AS cr,
                         SUM(COALESCE(al.orders,0)) AS total_orders,
-                        SUM(COALESCE(al.new_order,0)) AS new_orders
+                        SUM(COALESCE(al.new_order,0)) AS new_order,
+                        SUM(COALESCE(al.fresh_visitor,0)) AS fresh_visitor,
+                        SUM(COALESCE(al.engagement,0)) AS creative_engagement,
+                        SUM(COALESCE(al.video_view_3s,0)) AS video_view_3s,
+                        SUM(COALESCE(al.video_watched_actions_25percent,0)) AS video_watched_actions_25percent,
+                        SUM(COALESCE(al.video_watched_actions_50percent,0)) AS video_watched_actions_50percent,
+                        SUM(COALESCE(al.video_watched_actions_100percent,0)) AS video_watched_actions_100percent
                     from
                         horizon.ads ads 
-                        left join horizon.ads_lastattribute al on COALESCE(ads.adid, ads.campaignid) = al.adid and ads.dated = al.dated  
+                        left join al_agg  al on COALESCE(ads.adid, ads.campaignid) = al.adid and ads.dated = al.dated  
                     WHERE
                         ads.ad_name = '080125-1M3-VID14-C-LEM-C1'
                         AND ads.dated >= CURRENT_DATE - INTERVAL '7 days'
                         AND ads.workspace = '854e249d718e42cba341aa0559931c12'
                     GROUP BY
-                        1,2
+                        1,2,3,4
                     ORDER BY
                         ads.dated;
+
             Example 2: Month-over-Month Facebook Ads Performance Comparison
             Question: How is my account performing?
-            SQL Query:  SELECT
-                            date_trunc('month', al.orderdate) AS month,
-                            al.campaign_name AS campaign_name,
-                            SUM(COALESCE(al.revenue,0)) AS total_revenue,
-                            SUM(COALESCE(al.spend,0)) AS total_spend,
-                            SUM(COALESCE(al.orders,0)) AS total_orders,
-                            ROUND(SUM(ads.spend)* 1000.0 / NULLIF(SUM(ads.impression), 0), 2) AS cpm,
-                            ROUND(SUM(ads.clicks)*100 / NULLIF(SUM(ads.impression), 0), 2) AS ctr,
-                            ROUND(SUM(COALESCE(al.revenue,0)) / NULLIF(SUM(ads.spend), 0), 2) AS roas,
-                            ROUND(SUM(al.new_revenue) / NULLIF(SUM(ads.spend), 0), 2) AS nroas,
-                            SUM(COALESCE(al.new_order,0)) AS new_total_order,
-                            SUM(COALESCE(al.fresh_visitor,0)) AS fresh_visitor
-                        FROM
-                            horizon.ads ads 
-                            left join horizon.ads_lastattribute al on COALESCE(ads.adid, ads.campaignid) = al.adid and ads.dated = al.dated  
-                        WHERE
-                            lower(al.channel) = 'facebook'
-                            AND al.workspace = '854e249d718e42cba341aa0559931c12'
-                            AND al.orderdate >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '60 days')
-                        GROUP BY 1, 2
+            SQL Query:  WITH al_agg AS (
+                            SELECT
+                                date_trunc('month', al.orderdate) AS month,
+                                al.adid,
+                                al.campaign_name,
+                                SUM(COALESCE(al.revenue, 0)) AS revenue,
+                                SUM(COALESCE(al.spend, 0)) AS spend,
+                                SUM(COALESCE(al.orders, 0)) AS orders,
+                                SUM(COALESCE(al.new_revenue, 0)) AS new_revenue,
+                                SUM(COALESCE(al.new_order, 0)) AS new_order,
+                                SUM(COALESCE(al.fresh_visitor, 0)) AS fresh_visitor
+                            FROM horizon.ads_lastattribute al
+                            WHERE
+                                LOWER(al.channel) = 'facebook'
+                                AND al.workspace = '854e249d718e42cba341aa0559931c12'
+                                AND al.orderdate >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '60 days')
+                            GROUP BY 1, 2, 3
+                        ),
+
+                        ads_agg AS (
+                            SELECT
+                                date_trunc('month', ads.dated) AS month,
+                                COALESCE(ads.adid, ads.campaignid) AS adid,
+                                SUM(ads.spend) AS spend,
+                                SUM(ads.impression) AS impressions,
+                                SUM(ads.clicks) AS clicks
+                            FROM horizon.ads ads
+                            GROUP BY 1, 2
+                        )
+                        SELECT
+                            al.month,
+                            al.campaign_name,
+                            SUM(al.revenue) AS total_revenue,
+                            SUM(a.spend) AS total_spend,
+                            SUM(al.orders) AS total_orders,
+                            ROUND(SUM(COALESCE(a.spend, 0)) * 1000.0 / NULLIF(SUM(a.impressions), 0), 2) AS cpm,
+                            ROUND(SUM(COALESCE(a.clicks, 0)) * 100.0 / NULLIF(SUM(a.impressions), 0), 2) AS ctr,
+                            ROUND(SUM(al.revenue) / NULLIF(SUM(a.spend), 0), 2) AS roas,
+                            ROUND(SUM(al.new_revenue) / NULLIF(SUM(a.spend), 0), 2) AS nroas,
+                            SUM(al.new_orders) AS new_total_order,
+                            SUM(al.fresh_visitors) AS fresh_visitor
+                        FROM ads_agg a
+                        LEFT JOIN al_agg al ON al.adid = a.adid AND al.month = a.month
+                        GROUP BY al.month, al.campaign_name
                         ORDER BY roas DESC;
 
             SQL Query:"""

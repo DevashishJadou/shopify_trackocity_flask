@@ -221,13 +221,9 @@ def get_reporttabledatafacebook():
     user = UserRegister.query.filter_by(workspace=userid).first()
 
     if user:
-        if attribute == 'first':
-            sort = 'ASC'
-        else:
-            sort = 'DESC'
 
         sort = 'ASC' if attribute == 'first' else 'DESC'
-        if traffic == 'Facebook' and userid in ('d0495b3eb79a453186cc92754685bb73', 'c65209bb2dd545bd82131c0a7d040cab') :
+        if traffic == 'Facebook' and userid in ('c65209bb2dd545bd82131c0a7d040cab') :
             sql_query = text("SELECT * FROM table_facebookattribute_wo_visitorid(:workspace, :productid, :startdate, :enddate, :sort, :product_list, :click_type, :windoww) ")
             result = db.session.execute(sql_query, {
                 'workspace': userid, 'productid': user.productid,
@@ -1011,3 +1007,55 @@ def get_productdetails():
             db.session.close()
             return [{"product": None}]
         
+
+
+
+@report_bp.route('/customerpath', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def get_customerpath():
+
+    headers = request.headers
+    _body = request.args
+    startdate = _body.get('startdate')
+    enddate = _body.get('enddate')
+    userid = headers.get('workspaceId')
+    user = UserRegister.query.filter_by(workspace=userid).first()
+
+    sql_query = text("SELECT * FROM customer_path(:workspace, :productid, :startdate, :enddate)")
+    result = db.session.execute(sql_query, { 'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate })
+    data = result.fetchall()
+
+    columns = result.keys()
+    op = [dict(zip(columns, row)) for row in data]
+    return op
+
+
+
+@report_bp.route('/ad_breakdown', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def get_ad_breakdown():
+    headers = request.headers
+    _body = request.args
+    startdate = _body.get('startdate')
+    enddate = _body.get('enddate')
+    userid = headers.get('workspaceId')
+
+    attribute = _body.get('attribute')
+    traffic = _body.get('traffic', None)
+    product_list = _body.get('product', None)
+    click_type = _body.get('click_type', 'paid')
+    window = _body.get('window', 999)
+    product_list = None if product_list == '' else product_list
+    window = 999 if window == '' else window
+
+    sort = 'ASC' if attribute == 'first' else 'DESC'
+
+    user = UserRegister.query.filter_by(workspace=userid).first()
+
+    sql_query = text("SELECT * FROM ad_breakdown(:workspace, :productid, :startdate, :enddate, :sort, :click_type, :windoww)")
+    op = db.session.execute(sql_query, { 'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'sort': sort, 'click_type':click_type, 'windoww':window })
+    data = op.fetchall()
+
+    columns = op.keys()
+    result = [dict(zip(columns, row)) for row in data]
+    return result

@@ -6,6 +6,8 @@ from flask_cors import cross_origin
 import json
 from sqlalchemy import text
 
+import requests
+
 
 setting_bp = Blueprint('setting', __name__)
 
@@ -231,7 +233,12 @@ def page_limit_get():
     result = db.session.execute(sql_query, {'workspace': workspace})
     xx =  result.fetchall()
     page_view_usage = xx[0][0] if xx else 0
-    return jsonify({"data":page_view_usage})
+
+    user = UserRegister.query.filter_by(workspace=workspace).first()
+    plan = user.plan
+
+    return jsonify({"data":page_view_usage, "plan":plan}), 200
+    # return jsonify({"data":page_view_usage}), 200
 
 
 
@@ -288,6 +295,48 @@ def reporting_update_customize_column():
 
 
 
+@setting_bp.route('/frontenderror', methods=['POST', 'OPTIONS'])
+@cross_origin(origins='*', methods=['POST', 'OPTIONS'], headers=['Content-Type', 'Authorization'])
+def error_to_slack():
+	headers = request.headers
+	workspace = headers.get('workspaceId')
+	param = request.args
+	param = json.loads(request.data)
 
+	SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/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"
+	payload = {
+				"text": f"🚨 *{workspace}* : *{param.get('type', 'Unknown Error')} Error Report*",
+				"attachments": [
+					{
+						"fields": [
+						{
+							"title": "API Endpoint",
+							"value": param.get('endpoint', 'N/A'),
+							"short": False
+						},
+						{
+							"title": "Error Message",
+							"value": param.get('message', 'N/A'),
+							"short": False
+						},
+						{
+							"title": "Error stack",
+							"value": param.get('stack', 'N/A'),
+							"short": False
+						},
+						{
+							"title": "Time",
+							"value": param.get('time', 'N/A'),
+							"short": False
+						}
+					]
+					}
+					]
+				}
 
+	response = requests.post(SLACK_WEBHOOK_URL, json=payload)
 
+	if response.status_code == 200:
+		return jsonify({'status': 'success', 'message': 'Sent to Slack'}), 200
+	else:
+		return jsonify({'status': 'error', 'message': 'Failed to send to Slack'}), 500

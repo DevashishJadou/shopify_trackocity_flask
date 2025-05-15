@@ -34,6 +34,7 @@ class UserRegister(db.Model):
     tax_rate = db.Column(db.Numeric)
     tax_on = db.Column(db.Boolean, default=False)
     tag = db.Column(db.String(16))
+    plan = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.now)
     last_activity = db.Column(db.DateTime, default=datetime.now)
 
