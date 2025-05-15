@@ -20,6 +20,7 @@ from .integration.channel.pabbly import channel_bp
 from .api_web.reporting_routes import report_bp
 from .api_web.creative_routes import creative_bp
 from .api_web.behaviour_routes import behaviour_bp
+from .api_web.dashboard_routes import dashboard_bp
 from .api_web.integration_routes import intgration_cd
 from .chat_bot.mongo_bot import chatbot_cd
 from .chat_bot.sql_bot import chatbot_cd
@@ -55,6 +56,7 @@ app.register_blueprint(linkedinads_bp, url_prefix='/linkedinads')
 app.register_blueprint(report_bp, url_prefix='/reporting')
 app.register_blueprint(creative_bp, url_prefix='/creative')
 app.register_blueprint(behaviour_bp, url_prefix='/behaviour')
+app.register_blueprint(dashboard_bp, url_prefix='/dashboard')
 app.register_blueprint(payment_bp, url_prefix='/clientpayment')
 app.register_blueprint(channel_bp, url_prefix='/clientchannel')
 app.register_blueprint(chatbot_cd, url_prefix='/chatbot')
