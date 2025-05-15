@@ -170,7 +170,9 @@ class SmartQueryHandler:
             - The query should strictly return only SQL, without explanations.
             - Ensure joins, groupings, and aggregations align with analysis objectives.
             - Use consistent schema prefix (`horizon.`) for all tables.
-            - Always include `workspace = '{workspace}'` in the `WHERE` clause     
+            - Always include `workspace = '{workspace}'` in the `WHERE` clause  
+            - Group BY alway by position like 1,2 
+            - Always use filter for ad_name, adset_name or campaign_name when user query is specific to ad, adset or campaign
 
             Example 1: Facebook Campaign Analysis for ROAS Improvement
             Question: Can you analyze the performance of the ad '080125-1M3-VID14-C-LEM-C1' over the last 7 days? Identify any anomalies, provide actionable recommendations, suggest budget strategies if relevant, and forecast potential performance trends based on recent data.
@@ -213,6 +215,7 @@ class SmartQueryHandler:
                         SUM(COALESCE(al.fresh_visitor,0)) AS fresh_visitor,
                         SUM(COALESCE(al.engagement,0)) AS creative_engagement,
                         SUM(COALESCE(al.video_view_3s,0)) AS video_view_3s,
+                        SUM(COALESCE(al.video_view_3s,0))/GREATEST(SUM(ads.impression),1) AS hook_rate,
                         SUM(COALESCE(al.video_watched_actions_25percent,0)) AS video_watched_actions_25percent,
                         SUM(COALESCE(al.video_watched_actions_50percent,0)) AS video_watched_actions_50percent,
                         SUM(COALESCE(al.video_watched_actions_100percent,0)) AS video_watched_actions_100percent
@@ -257,6 +260,8 @@ class SmartQueryHandler:
                                 SUM(ads.impression) AS impressions,
                                 SUM(ads.clicks) AS clicks
                             FROM horizon.ads ads
+                            WHERE workspace = '854e249d718e42cba341aa0559931c12'
+                                AND dated >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '60 days')
                             GROUP BY 1, 2
                         )
                         SELECT
@@ -273,7 +278,7 @@ class SmartQueryHandler:
                             SUM(al.fresh_visitors) AS fresh_visitor
                         FROM ads_agg a
                         LEFT JOIN al_agg al ON al.adid = a.adid AND al.month = a.month
-                        GROUP BY al.month, al.campaign_name
+                        GROUP BY 1,2
                         ORDER BY roas DESC;
 
             SQL Query:"""
