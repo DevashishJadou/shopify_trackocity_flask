@@ -200,16 +200,14 @@ class SmartQueryHandler:
                     SELECT
                         ads.dated AS date,
                         ads.ad_name AS ad_name,
-                        COALESCE(ads.ad_type, 'NA') AS ad_type,
-                        COALESCE(ads.ad_copy, 'NA') AS ad_copy,
                         SUM(COALESCE(al.revenue,0)) AS total_revenue,
                         SUM(COALESCE(ads.spend,0)) AS total_spend,
                         ROUND(SUM(COALESCE(al.revenue,0)) / NULLIF(SUM(ads.spend), 0), 2) AS roas,
                         ROUND(SUM(COALESCE(al.revenue,0)) / NULLIF(SUM(COALESCE(al.orders,0)), 0), 2) AS cpa,
                         ROUND(SUM(ads.spend) / NULLIF(SUM(ads.clicks), 0), 2) AS cpc,
-                        ROUND(SUM(ads.clicks)*100 / NULLIF(SUM(ads.impression), 0), 2) AS ctr,
+                        ROUND(SUM(ads.clicks)*100.0 / NULLIF(SUM(ads.impression), 0), 2) AS ctr,
                         ROUND(SUM(COALESCE(al.new_revenue,0)) / NULLIF(SUM(ads.spend), 0), 2) AS nroas,
-                        ROUND(SUM(COALESCE(al.orders,0))*100 / NULLIF(SUM(ads.clicks), 0), 2) AS cr,
+                        ROUND(SUM(COALESCE(al.orders,0))*100.0 / NULLIF(SUM(ads.clicks), 0), 2) AS cr,
                         SUM(COALESCE(al.orders,0)) AS total_orders,
                         SUM(COALESCE(al.new_order,0)) AS new_order,
                         SUM(COALESCE(al.fresh_visitor,0)) AS fresh_visitor,
@@ -227,7 +225,7 @@ class SmartQueryHandler:
                         AND ads.dated >= CURRENT_DATE - INTERVAL '7 days'
                         AND ads.workspace = '854e249d718e42cba341aa0559931c12'
                     GROUP BY
-                        1,2,3,4
+                        1,2
                     ORDER BY
                         ads.dated;
 
@@ -257,8 +255,9 @@ class SmartQueryHandler:
                                 date_trunc('month', ads.dated) AS month,
                                 COALESCE(ads.adid, ads.campaignid) AS adid,
                                 SUM(ads.spend) AS spend,
-                                SUM(ads.impression) AS impressions,
-                                SUM(ads.clicks) AS clicks
+                                SUM(ads.impression) AS impression,
+                                SUM(ads.clicks) AS click,
+                                SUM(ads.clicks) AS total_visitor
                             FROM horizon.ads ads
                             WHERE workspace = '854e249d718e42cba341aa0559931c12'
                                 AND dated >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '60 days')
@@ -270,8 +269,8 @@ class SmartQueryHandler:
                             SUM(al.revenue) AS total_revenue,
                             SUM(a.spend) AS total_spend,
                             SUM(al.orders) AS total_orders,
-                            ROUND(SUM(COALESCE(a.spend, 0)) * 1000.0 / NULLIF(SUM(a.impressions), 0), 2) AS cpm,
-                            ROUND(SUM(COALESCE(a.clicks, 0)) * 100.0 / NULLIF(SUM(a.impressions), 0), 2) AS ctr,
+                            ROUND(SUM(COALESCE(a.spend, 0)) * 1000.0 / NULLIF(SUM(a.impression), 0), 2) AS cpm,
+                            ROUND(SUM(COALESCE(a.clicks, 0)) * 100.0 / NULLIF(SUM(a.impression), 0), 2) AS ctr,
                             ROUND(SUM(al.revenue) / NULLIF(SUM(a.spend), 0), 2) AS roas,
                             ROUND(SUM(al.new_revenue) / NULLIF(SUM(a.spend), 0), 2) AS nroas,
                             SUM(al.new_orders) AS new_total_order,
