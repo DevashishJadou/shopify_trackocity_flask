@@ -223,7 +223,7 @@ def get_reporttabledatafacebook():
     if user:
 
         sort = 'ASC' if attribute == 'first' else 'DESC'
-        if traffic == 'Facebook' and userid in ('c65209bb2dd545bd82131c0a7d040cab') :
+        if traffic == 'Facebook' and userid in ('c65209bb2dd545bd82131c0a7d040cab', '9e3bd13dee4b43dea5a98530db61780b') :
             sql_query = text("SELECT * FROM table_facebookattribute_wo_visitorid(:workspace, :productid, :startdate, :enddate, :sort, :product_list, :click_type, :windoww) ")
             result = db.session.execute(sql_query, {
                 'workspace': userid, 'productid': user.productid,
@@ -1045,6 +1045,7 @@ def get_ad_breakdown():
     product_list = _body.get('product', None)
     click_type = _body.get('click_type', 'paid')
     window = _body.get('window', 999)
+    campaign = _body.get('campaign', None)
     product_list = None if product_list == '' else product_list
     window = 999 if window == '' else window
 
@@ -1052,10 +1053,11 @@ def get_ad_breakdown():
 
     user = UserRegister.query.filter_by(workspace=userid).first()
 
-    sql_query = text("SELECT * FROM ad_breakdown(:workspace, :productid, :startdate, :enddate, :sort, :click_type, :windoww)")
-    op = db.session.execute(sql_query, { 'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'sort': sort, 'click_type':click_type, 'windoww':window })
+    sql_query = text("SELECT * FROM ad_breakdown(:workspace, :productid, :startdate, :enddate, :sort, :click_type, :windoww, :campaign)")
+    op = db.session.execute(sql_query, { 'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'sort': sort, 'click_type':click_type, 'windoww':window, 'campaign':campaign })
     data = op.fetchall()
 
-    columns = op.keys()
+    # columns = op.keys()
+    columns = ['level_type', 'campaign_name', 'campaignid', 'adset_name', 'adsetid', 'ad_name', 'adid', 'dated', 'Impression', 'Clicks', 'Spend', 'Sales', 'Revenue', 'nSales', 'nRevenue', 'New Visit', 'ROAS', 'CPC', 'CPM', 'CTR', 'CR']
     result = [dict(zip(columns, row)) for row in data]
     return result
