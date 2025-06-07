@@ -34,6 +34,7 @@
     ],
     "family": "trackocity-flask-dev-task",
     "executionRoleArn": "arn:aws:iam::705653111952:role/ecsTaskExecutionRole",
+    "taskRoleArn": "arn:aws:iam::705653111952:role/ecsTaskExecutionRole",
     "networkMode": "awsvpc",
     "revision": 1,
     "volumes": [],
@@ -73,7 +74,7 @@
         "FARGATE"
     ],
     "cpu": "256",
-    "memory": "512",
+    "memory": "1024",
     "runtimePlatform": {
         "cpuArchitecture": "X86_64",
         "operatingSystemFamily": "LINUX"
