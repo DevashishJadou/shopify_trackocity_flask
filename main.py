@@ -36,6 +36,8 @@ from flask_jwt_extended import verify_jwt_in_request, jwt_required, create_acces
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 import time, json , requests
 
+import tracemalloc
+
 # os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 # Set-ExecutionPolicy Unrestricted -Scope Process
 
@@ -175,5 +177,17 @@ def payment_order_creation(name, workspace, plan_till, email, phone='1212121212'
         return payment.link
 
 
+tracemalloc.start()
+@app.route("/memory-stats")
+def memory_stats():
+    snapshot = tracemalloc.take_snapshot()
+    top_stats = snapshot.statistics('lineno')
+
+    result = ["Top memory usage by line:"]
+    for stat in top_stats[:10]:
+        result.append(str(stat))
+
+    return "<br>".join(result)
+
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=False)

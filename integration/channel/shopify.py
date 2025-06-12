@@ -10,10 +10,10 @@ from ...db_model.sql_models import Shopify, order_table_dynamic, ordertable, ord
 from ...connection import db
 from ...dbrule import dup_order_rule
 
-
+from sqlalchemy import text
 from sqlalchemy import MetaData
 
-metadata = MetaData(schema="public")
+metadata = MetaData()
 
 # channel_bp = Blueprint('clientchannel', __name__)
 
@@ -52,6 +52,16 @@ def shopifyintegration():
 		except Exception as e:
 			print(f'Shopify client secret: {e.msg}')
 			return jsonify({'error': 'Something went Wrong'}), 500
+		
+		sql_query = db.text("select * from partition_product_create (:workspace)")
+		db.session.execute(sql_query, {'workspace':workspace})
+
+		now = datetime.now()
+		current_year = now.year
+		current_month = now.month
+		sql_query = db.text("select * from partition_monthly_create(:workspace, :year, :month)")
+		db.session.execute(sql_query, {'workspace':workspace, 'year': current_year, 'month': current_month})
+		db.session.commit()
 
 	return jsonify({'message': 'success'}), 200
 

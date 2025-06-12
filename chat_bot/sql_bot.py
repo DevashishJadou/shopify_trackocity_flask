@@ -16,6 +16,7 @@ from flask import Blueprint, jsonify, request
 from flask_cors import cross_origin
 
 
+
 def custom_json_serializer(obj):
     if isinstance(obj, (datetime, date)):
         # Convert datetime to ISO format string
@@ -167,6 +168,8 @@ class SmartQueryHandler:
 
 
             Step 3: Generating the Final SQL Query
+            - Refer horizon.ads for spend, impression, clicks, engagement, video views, etc.
+            - Refer horizon.ads_lastattribute for revenue, orders, new_revenue, fresh_visitor.
             - The query should strictly return only SQL, without explanations.
             - Ensure joins, groupings, and aggregations align with analysis objectives.
             - Use consistent schema prefix (`horizon.`) for all tables.
@@ -176,109 +179,83 @@ class SmartQueryHandler:
 
             Example 1: Facebook Campaign Analysis for ROAS Improvement
             Question: Can you analyze the performance of the ad '080125-1M3-VID14-C-LEM-C1' over the last 7 days? Identify any anomalies, provide actionable recommendations, suggest budget strategies if relevant, and forecast potential performance trends based on recent data.
-            SQL Query: WITH al_agg AS (
+            SQL Query: WITH ads_agg AS (
                         SELECT
-                            al.adid,
-                            al.dated,
-                            SUM(COALESCE(al.revenue, 0)) AS revenue,
-                            SUM(COALESCE(al.spend, 0)) AS spend,
-                            SUM(COALESCE(al.orders, 0)) AS orders,
-                            SUM(COALESCE(al.new_revenue, 0)) AS new_revenue,
-                            SUM(COALESCE(al.new_order, 0)) AS new_order,
-                            SUM(COALESCE(al.fresh_visitor, 0)) AS fresh_visitor,
-                            SUM(COALESCE(al.engagement, 0)) AS engagement,
-                            SUM(COALESCE(al.video_view_3s, 0)) AS video_view_3s,
-                            SUM(COALESCE(al.video_p25_watched_actions, 0)) AS video_watched_actions_25percent,
-                            SUM(COALESCE(al.video_p50_watched_actions, 0)) AS video_watched_actions_50percent,
-                            SUM(COALESCE(al.video_p100_watched_actions, 0)) AS video_watched_actions_100percent
-                        FROM horizon.ads_lastattribute al
-                         WHERE al.ad_name = '080125-1M3-VID14-C-LEM-C1'
-                        AND al.dated >= CURRENT_DATE - INTERVAL '7 days'
-                        AND al.workspace = '854e249d718e42cba341aa0559931c12
-                        GROUP BY 1, 2
-                    )
-                    SELECT
-                        ads.dated AS date,
-                        ads.ad_name AS ad_name,
-                        SUM(COALESCE(al.revenue,0)) AS total_revenue,
-                        SUM(COALESCE(ads.spend,0)) AS total_spend,
-                        ROUND(SUM(COALESCE(al.revenue,0)) / NULLIF(SUM(ads.spend), 0), 2) AS roas,
-                        ROUND(SUM(COALESCE(al.revenue,0)) / NULLIF(SUM(COALESCE(al.orders,0)), 0), 2) AS cpa,
-                        ROUND(SUM(ads.spend) / NULLIF(SUM(ads.clicks), 0), 2) AS cpc,
-                        ROUND(SUM(ads.clicks)*100.0 / NULLIF(SUM(ads.impression), 0), 2) AS ctr,
-                        ROUND(SUM(COALESCE(al.new_revenue,0)) / NULLIF(SUM(ads.spend), 0), 2) AS nroas,
-                        ROUND(SUM(COALESCE(al.orders,0))*100.0 / NULLIF(SUM(ads.clicks), 0), 2) AS cr,
-                        SUM(COALESCE(al.orders,0)) AS total_orders,
-                        SUM(COALESCE(al.new_order,0)) AS new_order,
-                        SUM(COALESCE(al.fresh_visitor,0)) AS fresh_visitor,
-                        SUM(COALESCE(al.engagement,0)) AS creative_engagement,
-                        SUM(COALESCE(al.video_view_3s,0)) AS video_view_3s,
-                        SUM(COALESCE(al.video_view_3s,0))/GREATEST(SUM(ads.impression),1) AS hook_rate,
-                        SUM(COALESCE(al.video_watched_actions_25percent,0)) AS video_watched_actions_25percent,
-                        SUM(COALESCE(al.video_watched_actions_50percent,0)) AS video_watched_actions_50percent,
-                        SUM(COALESCE(al.video_watched_actions_100percent,0)) AS video_watched_actions_100percent
-                    from
-                        horizon.ads ads 
-                        left join al_agg  al on COALESCE(ads.adid, ads.campaignid) = al.adid and ads.dated = al.dated  
-                    WHERE
-                        ads.ad_name = '080125-1M3-VID14-C-LEM-C1'
+                            ads.workspace,
+                            ads.dated,
+                            ads.campaign_name,
+                            ads.adset_name,
+                            ads.ad_name AS ad_name,
+                            ads.adid,
+                            SUM(COALESCE(ads.spend,0)) AS spend,
+                            SUM(COALESCE(ads.impression, 0)) AS impression,
+                            SUM(COALESCE(ads.clicks, 0)) AS clicks,
+                            SUM(COALESCE(ads.engagement,0)) AS engagement,
+                            SUM(COALESCE(ads.video_view_3s,0)) AS video_view_3s,
+                            SUM(COALESCE(ads.thruplay,0)) AS thruplay,
+                            SUM(COALESCE(ads.video_p25_watched_actions,0)) AS video_watched_actions_25percent,
+                            SUM(COALESCE(ads.video_p50_watched_actions,0)) AS video_watched_actions_50percent,
+                            SUM(COALESCE(ads.video_p100_watched_actions,0)) AS video_watched_actions_100percent
+                        FROM horizon.ads ads
+                        WHERE ads.campaign_name = '250425-100-AL-BOW-COV-(MSC)-ABO-DB-TST-NA-LC-IND'
                         AND ads.dated >= CURRENT_DATE - INTERVAL '7 days'
                         AND ads.workspace = '854e249d718e42cba341aa0559931c12'
-                    GROUP BY
-                        1,2
-                    ORDER BY
-                        ads.dated;
-
-            Example 2: Month-over-Month Facebook Ads Performance Comparison
-            Question: How is my account performing?
-            SQL Query:  WITH al_agg AS (
+                        GROUP BY 1, 2, 3, 4, 5, 6
+                    ),
+                    al_agg AS (
                             SELECT
-                                date_trunc('month', al.orderdate) AS month,
-                                al.adid,
                                 al.campaign_name,
+                                al.adset_name,
+                                al.ad_name,
+                                al.adid,
+                                al.dated,
                                 SUM(COALESCE(al.revenue, 0)) AS revenue,
-                                SUM(COALESCE(al.spend, 0)) AS spend,
                                 SUM(COALESCE(al.orders, 0)) AS orders,
                                 SUM(COALESCE(al.new_revenue, 0)) AS new_revenue,
                                 SUM(COALESCE(al.new_order, 0)) AS new_order,
                                 SUM(COALESCE(al.fresh_visitor, 0)) AS fresh_visitor
                             FROM horizon.ads_lastattribute al
-                            WHERE
-                                LOWER(al.channel) = 'facebook'
-                                AND al.workspace = '854e249d718e42cba341aa0559931c12'
-                                AND al.orderdate >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '60 days')
-                            GROUP BY 1, 2, 3
-                        ),
-
-                        ads_agg AS (
-                            SELECT
-                                date_trunc('month', ads.dated) AS month,
-                                COALESCE(ads.adid, ads.campaignid) AS adid,
-                                SUM(ads.spend) AS spend,
-                                SUM(ads.impression) AS impression,
-                                SUM(ads.clicks) AS click,
-                                SUM(ads.clicks) AS total_visitor
-                            FROM horizon.ads ads
-                            WHERE workspace = '854e249d718e42cba341aa0559931c12'
-                                AND dated >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '60 days')
-                            GROUP BY 1, 2
+                            WHERE al.campaign_name = '250425-100-AL-BOW-COV-(MSC)-ABO-DB-TST-NA-LC-IND'
+                            AND al.dated >= CURRENT_DATE - INTERVAL '7 days'
+                            AND al.workspace = '854e249d718e42cba341aa0559931c12'
+                            GROUP BY 1, 2, 3, 4, 5
                         )
-                        SELECT
-                            al.month,
-                            al.campaign_name,
-                            SUM(al.revenue) AS total_revenue,
-                            SUM(a.spend) AS total_spend,
-                            SUM(al.orders) AS total_orders,
-                            ROUND(SUM(COALESCE(a.spend, 0)) * 1000.0 / NULLIF(SUM(a.impression), 0), 2) AS cpm,
-                            ROUND(SUM(COALESCE(a.clicks, 0)) * 100.0 / NULLIF(SUM(a.impression), 0), 2) AS ctr,
-                            ROUND(SUM(al.revenue) / NULLIF(SUM(a.spend), 0), 2) AS roas,
-                            ROUND(SUM(al.new_revenue) / NULLIF(SUM(a.spend), 0), 2) AS nroas,
-                            SUM(al.new_orders) AS new_total_order,
-                            SUM(al.fresh_visitors) AS fresh_visitor
-                        FROM ads_agg a
-                        LEFT JOIN al_agg al ON al.adid = a.adid AND al.month = a.month
-                        GROUP BY 1,2
-                        ORDER BY roas DESC;
+                    SELECT
+                        a.dated AS date,
+                        a.campaign_name,
+                        a.adset_name,
+                        a.ad_name AS ad_name,
+                        a.adid,
+                        SUM(COALESCE(b.revenue,0)) AS total_revenue,
+                        SUM(COALESCE(a.spend,0)) AS total_spend,
+                        ROUND(SUM(COALESCE(b.revenue,0)) / NULLIF(SUM(a.spend), 0), 2) AS roas,
+                        ROUND(SUM(a.spend)*1000.0 / NULLIF(SUM(a.impression), 0), 2) AS cpm,
+                        ROUND(SUM(COALESCE(b.revenue,0)) / NULLIF(SUM(COALESCE(b.orders,0)), 0), 2) AS cpa,
+                        ROUND(SUM(a.spend) / NULLIF(SUM(a.clicks), 0), 2) AS cpc,
+                        ROUND(SUM(a.clicks)*100.0 / NULLIF(SUM(a.impression), 0), 2) AS ctr,
+                        ROUND(SUM(COALESCE(b.new_revenue,0)) / NULLIF(SUM(a.spend), 0), 2) AS nroas,
+                        ROUND(SUM(COALESCE(b.orders,0))*100.0 / NULLIF(SUM(a.clicks), 0), 2) AS cr,
+                        SUM(COALESCE(b.orders,0)) AS total_orders,
+                        SUM(COALESCE(b.new_order,0)) AS new_order,
+                        SUM(COALESCE(b.fresh_visitor,0)) AS fresh_visitor,
+                        SUM(COALESCE(a.engagement,0)) AS creative_engagement,
+                        SUM(COALESCE(a.video_view_3s,0)) AS video_view_3s,
+                        SUM(COALESCE(a.video_view_3s,0))/GREATEST(SUM(a.impression),1) AS hook_rate,
+                        SUM(COALESCE(a.thruplay, 0)) * 100.0 / GREATEST(SUM(a.video_view_3s), 1) AS hold_rate,
+                        SUM(COALESCE(a.video_watched_actions_25percent,0))/SUM(COALESCE(a.engagement,1)) AS video_watched_actions_25percent,
+                        SUM(COALESCE(a.video_watched_actions_50percent,0))/SUM(COALESCE(a.engagement,1)) AS video_watched_actions_50percent,
+                        SUM(COALESCE(a.video_watched_actions_100percent,0))/SUM(COALESCE(a.engagement,1)) AS video_watched_actions_100percent
+                    FROM ads_agg a
+                    JOIN al_agg b ON a.adid = b.adid AND a.dated = b.dated  
+                    WHERE
+                        a.campaign_name = '250425-100-AL-BOW-COV-(MSC)-ABO-DB-TST-NA-LC-IND'
+                        AND a.dated >= CURRENT_DATE - INTERVAL '7 days'
+                        AND a.workspace = '854e249d718e42cba341aa0559931c12'
+                    GROUP BY
+                        1,2,3,4,5
+                    ORDER BY
+                        a.dated;
+
 
             SQL Query:"""
 
@@ -358,18 +335,28 @@ class SmartQueryHandler:
     def handle_question(self, question, workspace, prev_question):
         """Handle both database and non-database questions"""
         classification = self.classify_question(question, prev_question)
+        excceeded_msg = None
         
         if classification["needs_database"]:
             chain = self.create_query_chain(workspace)
             query = chain.invoke({"question": question})
             results = self.execute_query(query)
+            if len(results) > 99999:
+                question = re.sub(r'last \d+ days', 'last 3 days', question)
+                chain = self.create_query_chain(workspace)
+                query = chain.invoke({"question": question})
+                results = self.execute_query(query)
+                excceeded_msg = "Too much data for last 7days, returning last 3 days data instead."
+
+                if len(results) > 99999:
+                    excceeded_msg = "The Ad are very high. Please request for specific ad"
 
             log = ChatBotLog(workspace=workspace, question = question, query=query, result=str(results))
             db.session.add(log)
             db.session.commit()
 
             data = [row_to_dict(row) for row in results]
-            return jsonify_with_decimal({"data": data, "is_sequential": classification['is_sequential']})
+            return jsonify_with_decimal({"data": data, "is_sequential": classification['is_sequential'], "msg":excceeded_msg})
         else:
             return jsonify({
                 "type": "direct_response",
@@ -408,3 +395,5 @@ def chatwithsql():
         #     except Exception as e:
         #         # return jsonify({"error": str(e)}), 500
         #         return jsonify({"error": "Error in processing Request"}), 500
+
+

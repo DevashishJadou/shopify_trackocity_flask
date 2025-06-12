@@ -11,6 +11,7 @@ from .woocommerce import channel_bp
 from ...connection import db
 from ...dbrule import dup_order_rule
 from sqlalchemy.sql import func
+from sqlalchemy import text
 
 
 ENCRYPTION_KEY = os.environ.get('_ENCYPT_KEY')
@@ -44,6 +45,15 @@ def pabbly_integration():
     except Exception as e:
         print(f'Pabbly integration: {e.msg}')
         return jsonify({'error': 'Something went Wrong'}), 500
+    
+    sql_query = db.text("select * from partition_product_create (:workspace)")
+    db.session.execute(sql_query, {'workspace':workspace})
+    
+    now = datetime.now()
+    current_year = now.year
+    current_month = now.month
+    sql_query = db.text("select * from partition_monthly_create(:workspace, :year, :month)")
+    db.session.execute(sql_query, {'workspace':workspace, 'year': current_year, 'month': current_month})
     db.session.commit()
 
     return jsonify({'message': 'success'}), 200

@@ -5,6 +5,7 @@ from flask_cors import cross_origin
 
 import razorpay
 from sqlalchemy import MetaData
+from sqlalchemy import text
 
 # from db_model.sql_models import RazorpayConfiguration, order_table_dynamic, ordertable
 # from connection import db
@@ -50,6 +51,15 @@ def razorpay_params():
         except Exception as e:
             print(f'Razorpay Connect: {e.msg}')
             return jsonify({'error': 'Something went Wrong'}), 500
+    sql_query = db.text("select * from partition_product_create(:workspace)")
+    db.session.execute(sql_query, {'workspace':workspace})
+
+    now = datetime.now()
+    current_year = now.year
+    current_month = now.month
+    sql_query = db.text("select * from partition_monthly_create(:workspace, :year, :month)")
+    db.session.execute(sql_query, {'workspace':workspace, 'year': current_year, 'month': current_month})
+    
     db.session.commit()
 
     return jsonify({'message': 'success'}), 200

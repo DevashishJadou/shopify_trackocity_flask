@@ -37,3 +37,28 @@ def dashboard_heatmap():
 
 	results = [dict(zip(columns, row)) for row in data]
 	return jsonify(results),200
+
+
+
+
+
+
+@dashboard_bp.route('/insight/daily', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def insight_ai_daily():
+
+	headers = request.headers
+	body = request.args
+	userid = headers.get('workspaceId')
+
+	user = UserRegister.query.filter_by(workspace=userid).first()
+
+	sql_query = db.text("select dated, result from chatbot_daily_analysis where workspace = :workspace order by dated desc limit 1")
+
+	result = db.session.execute(sql_query, {'workspace': userid})
+	data = result.fetchall()
+
+	columns = ["dated", "result"]
+
+	results = [dict(zip(columns, row)) for row in data]
+	return jsonify(results),200
