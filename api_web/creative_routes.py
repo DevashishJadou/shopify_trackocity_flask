@@ -16,12 +16,23 @@ def get_creativetabledatafacebook():
 	startdate = body.get('startdate')
 	enddate = body.get('enddate')
 	userid = headers.get('workspaceId')
-	campaign = body.get('campaign', None)
-	campaign = campaign.lower() if campaign else None
-	adset = body.get('adset', None)
-	adset = adset.lower() if adset else None
-	ad = body.get('ad', None)
-	ad = ad.lower() if ad else None
+	campaign = body.get('campaign')
+
+	if campaign == 'Null' or campaign is None:
+		campaign = None
+	else:
+		campaign = campaign.lower()
+	adset = body.get('adset')
+	if adset == 'Null' or adset is None:
+		adset = None
+	else:
+		adset = adset.lower()
+	ad = body.get('ad')
+	if ad == 'Null' or ad is None:
+		ad = None
+	else:
+		ad = ad.lower()
+	
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
 	sql_query = db.text("select * from creative_table(:workspace, :productid, :startdate, :enddate, :sort, :campaign, :adset, :ad)")
