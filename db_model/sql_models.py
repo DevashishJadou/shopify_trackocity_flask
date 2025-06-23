@@ -37,6 +37,7 @@ class UserRegister(db.Model):
     plan = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.now)
     last_activity = db.Column(db.DateTime, default=datetime.now)
+    is_logout = db.Column(db.Boolean, default=True)
 
 class UserSubdomain(db.Model):
     __tablename__ = "user_subdomain_list"
