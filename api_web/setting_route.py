@@ -12,6 +12,27 @@ import requests
 setting_bp = Blueprint('setting', __name__)
 
 
+
+@setting_bp.route('/update_logout_status', methods=['PUT', 'OPTIONS'])
+@cross_origin(origins='*', methods=['PUT', 'OPTIONS'], headers=['Content-Type', 'Authorization'])
+def update_logout_status():
+    headers = request.headers
+    workspace = headers.get('workspaceId')  # Get user workspace ID
+    data = json.loads(request.data)         # Get request body
+    new_status = data.get('is_logout')      # Get new value for is_logout
+
+    user = UserRegister.query.filter_by(workspace=workspace).first()
+
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    user.is_logout = new_status  # Update value in database
+    db.session.commit()          # Save changes
+
+    return jsonify({"message": "Logout status updated successfully"}), 200
+
+
+
 @setting_bp.route('/taxrate/getrate', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_taxrate():
@@ -236,8 +257,10 @@ def page_limit_get():
 
     user = UserRegister.query.filter_by(workspace=workspace).first()
     plan = user.plan
+    is_logout = user.is_logout
 
-    return jsonify({"data":page_view_usage, "plan":plan}), 200
+    return jsonify({"data": page_view_usage, "plan": plan, "is_logout": is_logout}), 200
+    #return jsonify({"data":page_view_usage, "plan":plan}), 200
     # return jsonify({"data":page_view_usage}), 200
 
 
