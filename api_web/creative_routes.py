@@ -16,11 +16,28 @@ def get_creativetabledatafacebook():
 	startdate = body.get('startdate')
 	enddate = body.get('enddate')
 	userid = headers.get('workspaceId')
+	campaign = body.get('campaign')
+
+	if campaign == 'Null' or campaign is None:
+		campaign = None
+	else:
+		campaign = campaign.lower()
+	adset = body.get('adset')
+	if adset == 'Null' or adset is None:
+		adset = None
+	else:
+		adset = adset.lower()
+	ad = body.get('ad')
+	if ad == 'Null' or ad is None:
+		ad = None
+	else:
+		ad = ad.lower()
+	
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
-	sql_query = db.text("select * from creative_table(:workspace, :productid, :startdate, :enddate, :sort)")
+	sql_query = db.text("select * from creative_table(:workspace, :productid, :startdate, :enddate, :sort, :campaign, :adset, :ad)")
 
-	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'sort':'desc'})
+	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'sort':'desc', 'campaign':campaign, 'adset':adset, 'ad':ad})
 	data = result.fetchall()
 
 	crdata = {"creative": [], "click": 0, "impression": 0, "revenue":0, "spend":0, "sales":0, "engagement":0, "roas":0, "cpa":0, "aov":0, "cpc":0, "cpm":0}
@@ -94,6 +111,9 @@ def get_reporttabledatafacebook():
 	enddate = body.get('enddate')
 	userid = headers.get('workspaceId')
 	creativeid = body.get('creativeId')
+	# campaign = body.get('campaign', None)
+	# adset = body.get('adset', None)
+	# ad = body.get('ad', None)
 	user = UserRegister.query.filter_by(workspace=userid).first()
 
 	if user:

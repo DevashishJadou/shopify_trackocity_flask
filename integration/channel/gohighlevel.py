@@ -52,7 +52,7 @@ def gohiglevel_webhook(workspace):
     
     user = UserRegister.query.filter_by(workspace=workspace).first()
     if not user.isactive:
-        jsonify({'status': 'Unauthorized'}), 403
+        return jsonify({'status': 'Unauthorized'}), 403
 
     tablename = 'order_'+workspace
     orderTable = order_table_dynamic(tablename)

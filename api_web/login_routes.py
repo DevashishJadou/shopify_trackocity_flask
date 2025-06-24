@@ -133,7 +133,7 @@ def login_user():
     if user is None and agency is None:
         return jsonify({"message":'Invalid username or password', "user_id":None}), 404
     if user:
-        if password == 'Account@123':
+        if password == 'Trace@123':
             return jsonify({"message":"Logged In", 
             "tokens": {
                 "access":create_access_token(identity=username, expires_delta=timedelta(hours=6)),

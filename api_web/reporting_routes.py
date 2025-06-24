@@ -177,9 +177,9 @@ def process_ads(data, fbadsdata, row, indexes, traffic):
         "Reported ROAS": 'n/a' if row[indexes["Spend"]] == 0 else round(float(row[indexes["Reported Rev"]]) / float(row[indexes["Spend"]]),2),
         "Reported CPA": 'n/a' if int(row[indexes["Reported Sale"]]) == 0 else round(float(row[indexes["Spend"]]) /int(row[indexes["Reported Sale"]]),1),
         "Cost": float(row[indexes["Cost"]]),
-        "nSales": int(row[indexes["Sales"]]) - int(row[indexes["nSales"]]),
+        "nSales": int(row[indexes["nSales"]]),
         "nRevenue": round(float(row[indexes["nRevenue"]]),0),
-        "rSales": int(row[indexes["nSales"]]),
+        "rSales": int(row[indexes["Sales"]]) - int(row[indexes["nSales"]]),
         "rRevenue": round(float(row[indexes["Revenue"]]) - float(row[indexes["nRevenue"]]),0),
         "nvisitor": int(row[indexes["nvisitor"]]),
         "visitor": int(row[indexes["New Visits"]]) + int(row[indexes["nvisitor"]]),
@@ -1042,7 +1042,7 @@ def get_ad_breakdown():
     userid = headers.get('workspaceId')
 
     attribute = _body.get('attribute')
-    traffic = _body.get('traffic', None)
+    channel = _body.get('channel', 'facebook')
     product_list = _body.get('product', None)
     click_type = _body.get('click_type', 'paid')
     window = _body.get('window', 999)
@@ -1054,11 +1054,12 @@ def get_ad_breakdown():
 
     user = UserRegister.query.filter_by(workspace=userid).first()
 
-    sql_query = text("SELECT * FROM ad_breakdown(:workspace, :productid, :startdate, :enddate, :sort, :click_type, :windoww, :campaign)")
-    op = db.session.execute(sql_query, { 'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'sort': sort, 'click_type':click_type, 'windoww':window, 'campaign':campaign })
+    sql_query = text("SELECT * FROM ad_breakdown(:workspace, :productid, :channel, :startdate, :enddate, :sort, :click_type, :windoww, :campaign)")
+    op = db.session.execute(sql_query, { 'workspace': userid, 'productid':user.productid, 'channel':channel, 'startdate':startdate, 'enddate':enddate, 'sort': sort, 'click_type':click_type, 'windoww':window, 'campaign':campaign })
     data = op.fetchall()
 
     # columns = op.keys()
     columns = ['level_type', 'campaign_name', 'campaignid', 'adset_name', 'adsetid', 'ad_name', 'adid', 'dated', 'Impression', 'Clicks', 'Spend', 'Sales', 'Revenue', 'nSales', 'nRevenue', 'New Visit', 'ROAS', 'CPC', 'CPM', 'CTR', 'CR']
     result = [dict(zip(columns, row)) for row in data]
+
     return result
