@@ -13,26 +13,6 @@ setting_bp = Blueprint('setting', __name__)
 
 
 
-@setting_bp.route('/update_logout_status', methods=['PUT', 'OPTIONS'])
-@cross_origin(origins='*', methods=['PUT', 'OPTIONS'], headers=['Content-Type', 'Authorization'])
-def update_logout_status():
-    headers = request.headers
-    workspace = headers.get('workspaceId')  # Get user workspace ID
-    data = json.loads(request.data)         # Get request body
-    new_status = data.get('is_logout')      # Get new value for is_logout
-
-    user = UserRegister.query.filter_by(workspace=workspace).first()
-
-    if not user:
-        return jsonify({"message": "User not found"}), 404
-
-    user.is_logout = new_status  # Update value in database
-    db.session.commit()          # Save changes
-
-    return jsonify({"message": "Logout status updated successfully"}), 200
-
-
-
 @setting_bp.route('/taxrate/getrate', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_taxrate():
@@ -265,6 +245,26 @@ def page_limit_get():
 
 
 
+@setting_bp.route('/update_logout_status', methods=['PUT', 'OPTIONS'])
+@cross_origin(origins='*', methods=['PUT', 'OPTIONS'], headers=['Content-Type', 'Authorization'])
+def update_logout_status():
+    headers = request.headers
+    workspace = headers.get('workspaceId')  # Get user workspace ID
+    data = json.loads(request.data)         # Get request body
+    new_status = data.get('is_logout')      # Get new value for is_logout
+
+    user = UserRegister.query.filter_by(workspace=workspace).first()
+
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    user.is_logout = new_status  # Update value in database
+    db.session.commit()          # Save changes
+
+    return jsonify({"message": "Logout status updated successfully"}), 200
+
+
+
 @setting_bp.route('/reporting/get_customize_column', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET', 'OPTIONS'], headers=['Content-Type', 'Authorization'])
 def reporting_get_customize_column():
@@ -285,6 +285,13 @@ def reporting_get_customize_column():
 	columns2 = ["report", "workspace", "field", "seq", "customFormula", "isCustomColumn", "name", "isAdded", "id"]
 	results2 = [dict(zip(columns2, row)) for row in data2]
 	results.extend(results2)
+
+	sql_query3 = db.text("select distinct(view_name) from customize_column where workspaceid = :workspace AND report = :report")
+	result3 = db.session.execute(sql_query3, {'workspace': workspace, 'report':report.get('report')})
+	data3 = result3.fetchall()
+	results3 = [row[0] for row in data3]
+
+	results = {'data': results, 'views': results3}
 	return jsonify(results),200
 
 
@@ -297,7 +304,12 @@ def reporting_update_customize_column():
 	body = json.loads(request.data)
 	report = param.get('report')
 	view = param.get('view_name', 'myview')
+	deleteview = param.get('deleteview', False)
 	CustomizeColumn.query.filter_by(workspaceid=workspace, view_name=view).delete()
+
+	if deleteview:
+		db.session.commit()
+		return jsonify({"message":"Deleted"}), 200
 
 	for row in body:
 		field = row.get('field')
