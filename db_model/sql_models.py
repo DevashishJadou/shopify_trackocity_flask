@@ -217,7 +217,7 @@ def order_table_dynamic(tablename):
     class OrderTable(db.Model):
         __tablename__ = tablename
         __table_args__ = {'extend_existing':True}
-        id = db.Column(db.Integer, primary_key=True)
+        id = db.Column(db.Integer, primary_key=True, autoincrement=True)
         order_date = db.Column(db.DateTime)
         transcation_id = db.Column(db.String(128), unique=True)
         first_name = db.Column(db.String(128))
@@ -268,7 +268,7 @@ def ordertable(tablename):
     order_table = Table(
 			tablename,
 			metadata,
-			Column('id', Integer, primary_key=True),
+			Column('id', Integer, primary_key=True, autoincrement=True),
             Column('channel', String(32)),
 			Column('order_date', DateTime),
 			Column('transcation_id', String(128), unique=True),
@@ -464,3 +464,4 @@ class CustomizeColumn(db.Model):
     is_custom_used = db.Column(db.Boolean, default=False)
     custom_id = db.Column(db.String(32))
     view_name = db.Column(db.String(64))
+    # latest_view = db.Column(db.Boolean, default=False)

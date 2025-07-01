@@ -250,19 +250,35 @@ def page_limit_get():
 def update_logout_status():
     headers = request.headers
     workspace = headers.get('workspaceId')  # Get user workspace ID
+    agencyid = headers.get('agencyid')
     data = json.loads(request.data)         # Get request body
     new_status = data.get('is_logout')      # Get new value for is_logout
+    
+    # if agencyid is null
+    if not agencyid:
+        user = UserRegister.query.filter_by(workspace=workspace).first()
+        
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+        
+    
+        user.is_logout = new_status  # Update value in database
+        db.session.commit()          # Save changes
 
-    user = UserRegister.query.filter_by(workspace=workspace).first()
-
-    if not user:
-        return jsonify({"message": "User not found"}), 404
-
-    user.is_logout = new_status  # Update value in database
-    db.session.commit()          # Save changes
-
+    # if agency id is not null
+    else:
+        users = UserRegister.query.filter_by(agencyid=agencyid).all()
+        
+        for user in users:
+            user.is_logout = new_status
+        db.session.commit()    
+            
+    if new_status:
+        print(f'User {workspace} has been logged out.')
+    else:
+        print(f'User {workspace} has been logged in.')    
     return jsonify({"message": "Logout status updated successfully"}), 200
-
+    
 
 
 @setting_bp.route('/reporting/get_customize_column', methods=['GET', 'OPTIONS'])
