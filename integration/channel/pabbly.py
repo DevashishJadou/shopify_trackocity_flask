@@ -162,9 +162,9 @@ def pabbly_webhook(workspace):
             order_make = orderTable(order_date=event_time, transcation_id=payment_id, first_name=first_name, last_name=last_name, email=email, phone=phone, email_encrypt=email_encrypt, phone_encrypt=phone_encrypt, email_secure=email_secure, phone_secure=phone_secure, payment_method=payment_method, total=amount, order_status=order_status, islead=islead)
             db.session.add(order_make)
             db.session.commit()
-        except:
+        except Exception as e:
             db.session.rollback()
-            print(f'Error pabblydata order: pabblydata:{data}')
+            print(f'Error pabblydata order: error:{str(e)} pabblydata:{data}')
             return jsonify({'error': 'Failed to save order'}), 500
 
     
