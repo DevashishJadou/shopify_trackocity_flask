@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from flask_cors import cross_origin
 
 from sqlalchemy import MetaData
-import hashlib, random
+import hashlib, random, time
 
 from ...db_model.sql_models import UserRegister, order_table_dynamic, ordertable
 from .woocommerce import channel_bp
@@ -164,8 +164,19 @@ def pabbly_webhook(workspace):
             db.session.commit()
         except Exception as e:
             db.session.rollback()
-            print(f'Error pabblydata order: error:{str(e)} pabblydata:{data}')
-            return jsonify({'error': 'Failed to save order'}), 500
+            try:
+                time.sleep(1)
+                email_encrypt = func.pgp_sym_encrypt(email, ENCRYPTION_KEY)
+                phone_encrypt = func.pgp_sym_encrypt(phone, ENCRYPTION_KEY)
+                email_secure = func.pgp_digest(email)
+                phone_secure = func.pgp_digest(phone)
+                order_make = orderTable(order_date=event_time, transcation_id=payment_id, first_name=first_name, last_name=last_name, email=email, phone=phone, email_encrypt=email_encrypt, phone_encrypt=phone_encrypt, email_secure=email_secure, phone_secure=phone_secure, payment_method=payment_method, total=amount, order_status=order_status, islead=islead)
+                db.session.add(order_make)
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                print(f'Error pabblydata order: error:{str(e)} pabblydata:{data}')
+                return jsonify({'error': 'Failed to save order'}), 500
 
     
 
