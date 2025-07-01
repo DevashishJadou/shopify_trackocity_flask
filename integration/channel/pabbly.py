@@ -112,7 +112,7 @@ def pabbly_webhook(workspace):
 
     user = UserRegister.query.filter_by(workspace=workspace).first()
     if not user.isactive:
-        jsonify({'status': 'Unauthorized'}), 403
+        return jsonify({'status': 'Unauthorized'}), 403
 
     signature = request.headers.get('Authorization')
     key = workspace + "trackocity"
@@ -148,9 +148,9 @@ def pabbly_webhook(workspace):
     event_time = event_time.strftime("%Y-%m-%d %H:%M:%S")
 
     if data.get('order_number') == '001':
-        payment_id = str(random.randint(1, 9999999))
+        payment_id = str(random.randint(1, 999999999))
     else:
-        payment_id = data.get('order_number', str(random.randint(1, 9999999)))
+        payment_id = data.get('order_number', str(random.randint(1, 999999999)))
     
     order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
     if order_obj is None:
@@ -161,9 +161,13 @@ def pabbly_webhook(workspace):
             phone_secure = func.pgp_digest(phone)
             order_make = orderTable(order_date=event_time, transcation_id=payment_id, first_name=first_name, last_name=last_name, email=email, phone=phone, email_encrypt=email_encrypt, phone_encrypt=phone_encrypt, email_secure=email_secure, phone_secure=phone_secure, payment_method=payment_method, total=amount, order_status=order_status, islead=islead)
             db.session.add(order_make)
+            db.session.commit()
         except:
-            print(f'pabblydata:{data}')
-    db.session.commit()
+            db.session.rollback()
+            print(f'Error pabblydata order: pabblydata:{data}')
+            return jsonify({'error': 'Failed to save order'}), 500
+
+    
 
 
     return jsonify({'status': 'success'}), 200

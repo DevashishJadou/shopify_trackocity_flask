@@ -160,7 +160,7 @@ class Shopify(db.Model):
 
 class Payment(db.Model):
     __tablename__ = "payment_request"
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     completename = db.Column(db.String(32))
     email = db.Column(db.String(128))
     order_id = db.Column(db.String(32))
@@ -216,7 +216,7 @@ def order_table_dynamic(tablename):
     class OrderTable(db.Model):
         __tablename__ = tablename
         __table_args__ = {'extend_existing':True}
-        id = db.Column(db.Integer, primary_key=True)
+        id = db.Column(db.Integer, primary_key=True, autoincrement=True)
         order_date = db.Column(db.DateTime)
         transcation_id = db.Column(db.String(128), unique=True)
         first_name = db.Column(db.String(128))
