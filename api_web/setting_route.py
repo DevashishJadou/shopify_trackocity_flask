@@ -286,29 +286,37 @@ def update_logout_status():
 def reporting_get_customize_column():
 	headers = request.headers
 	workspace = headers.get('workspaceId')
-	report = request.args
-	view = report.get('view_name', 'myview')
+	params = request.args
+	view = params.get('view_name', None)
+	report = params.get('report', 'reporting')
 
-	sql_query = db.text("select report, workspaceid, field, seq from customize_column where is_custom_column IS False AND workspaceid = :workspace AND report = :report AND view_name = :view")
-	result = db.session.execute(sql_query, {'workspace': workspace, 'report':report.get('report'), 'view':view})
+	if not view:
+		sql_query0 = db.text("SELECT distinct(view_name) FROM customize_column WHERE workspaceid = :workspace AND report = :report and latest_view is True")
+		result = db.session.execute(sql_query0, {'workspace': workspace, 'report':report})
+		data = result.fetchall()
+		view = data[0][0]
+
+	sql_query = db.text("SELECT report, workspaceid, field, seq FROM customize_column WHERE is_custom_column IS False AND workspaceid = :workspace AND report = :report AND view_name = :view")
+	result = db.session.execute(sql_query, {'workspace': workspace, 'report':report, 'view':view})
 	data = result.fetchall()
 	columns = ["report", "workspace", "field", "seq"]
 	results = [dict(zip(columns, row)) for row in data]
 
-	sql_query2 = db.text("select report, workspaceid, field, seq, custom_formula, is_custom_column, name, is_custom_used, custom_id from customize_column where is_custom_column IS TRUE AND workspaceid = :workspace AND report = :report AND view_name = :view")
-	result2 = db.session.execute(sql_query2, {'workspace': workspace, 'report':report.get('report'), 'view':view})
+	sql_query2 = db.text("SELECT report, workspaceid, field, seq, custom_formula, is_custom_column, name, is_custom_used, custom_id FROM customize_column WHERE is_custom_column IS TRUE AND workspaceid = :workspace AND report = :report AND view_name = :view")
+	result2 = db.session.execute(sql_query2, {'workspace': workspace, 'report':report, 'view':view})
 	data2 = result2.fetchall()
 	columns2 = ["report", "workspace", "field", "seq", "customFormula", "isCustomColumn", "name", "isAdded", "id"]
 	results2 = [dict(zip(columns2, row)) for row in data2]
 	results.extend(results2)
 
-	sql_query3 = db.text("select distinct(view_name) from customize_column where workspaceid = :workspace AND report = :report")
-	result3 = db.session.execute(sql_query3, {'workspace': workspace, 'report':report.get('report')})
+	sql_query3 = db.text("SELECT distinct(view_name) FROM customize_column WHERE workspaceid = :workspace AND report = :report")
+	result3 = db.session.execute(sql_query3, {'workspace': workspace, 'report':report})
 	data3 = result3.fetchall()
-	results3 = [row[0] for row in data3]
+	result3 = [row[0] for row in data3]
 
-	results = {'data': results, 'views': results3}
+	results = {'data': results, 'views': result3, 'current_view':view}
 	return jsonify(results),200
+
 
 
 @setting_bp.route('/reporting/update_customize_column', methods=['POST', 'OPTIONS'])
@@ -321,6 +329,7 @@ def reporting_update_customize_column():
 	report = param.get('report')
 	view = param.get('view_name', 'myview')
 	deleteview = param.get('deleteview', False)
+	
 	CustomizeColumn.query.filter_by(workspaceid=workspace, view_name=view).delete()
 
 	if deleteview:
@@ -335,13 +344,14 @@ def reporting_update_customize_column():
 		custom_formula = row.get('customFormula', None)
 		is_custom_used = row.get('isAdded', None)
 		custom_id = row.get('id', None)
-		ff = CustomizeColumn(workspaceid=workspace, report=report, field=field, seq=seq, custom_formula=custom_formula, is_custom_column=is_custom_column, name=name, is_custom_used=is_custom_used, custom_id=custom_id, view_name=view)
+
+		sql_query = db.text("UPDATE customize_column SET latest_view = false WHERE workspaceid = :workspace AND report = :report")
+		db.session.execute(sql_query, {'workspace': workspace, 'report':report})
+		ff = CustomizeColumn(workspaceid=workspace, report=report, field=field, seq=seq, custom_formula=custom_formula, is_custom_column=is_custom_column, name=name, is_custom_used=is_custom_used, custom_id=custom_id, view_name=view, latest_view=True)
 		db.session.add(ff)
 	db.session.commit()
 	
 	return jsonify({"message":"Updated"}), 201
-
-
 
 
 
