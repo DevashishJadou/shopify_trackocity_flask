@@ -218,7 +218,7 @@ def create_order_with_retry(orderTable, order_data, max_retries=3):
                 raise e
             
             # Exponential backoff with jitter
-            sleep_time = 0.1 * (2 ** attempt) + random.uniform(0, 0.1)
+            sleep_time = 0.2 * (2 ** attempt) + random.uniform(0, 0.1)
             print(f'Retrying order creation in {sleep_time:.2f}s (attempt {attempt + 1}/{max_retries})')
             time.sleep(sleep_time)
     
@@ -289,15 +289,15 @@ def pabbly_webhook(workspace):
             }
             
             # Add encryption fields if supported
-            try:
-                order_data.update({
-                    'email_encrypt': func.pgp_sym_encrypt(email, ENCRYPTION_KEY),
-                    'phone_encrypt': func.pgp_sym_encrypt(phone, ENCRYPTION_KEY),
-                    'email_secure': func.pgp_digest(email),
-                    'phone_secure': func.pgp_digest(phone)
-                })
-            except Exception as enc_error:
-                print(f"Encryption error (proceeding without): {enc_error}")
+            # try:
+            #     order_data.update({
+            #         'email_encrypt': func.pgp_sym_encrypt(email, ENCRYPTION_KEY),
+            #         'phone_encrypt': func.pgp_sym_encrypt(phone, ENCRYPTION_KEY),
+            #         'email_secure': func.pgp_digest(email),
+            #         'phone_secure': func.pgp_digest(phone)
+            #     })
+            # except Exception as enc_error:
+            #     print(f"Encryption error (proceeding without): {enc_error}")
             
             # Create order with retry logic
             order_make = create_order_with_retry(orderTable, order_data, max_retries=3)
