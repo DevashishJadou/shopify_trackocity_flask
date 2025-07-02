@@ -190,10 +190,6 @@ def create_order_with_retry(orderTable, order_data, max_retries=3):
             db.session.add(order_make)
             db.session.flush()  # Force ID generation and check for issues
             
-            # Verify the object has a proper ID
-            if hasattr(order_make, 'id') and order_make.id is None:
-                raise ValueError("Auto-increment ID generation failed")
-            
             db.session.commit()
             return order_make
             
@@ -215,11 +211,10 @@ def create_order_with_retry(orderTable, order_data, max_retries=3):
             if not is_retryable or attempt == max_retries - 1:
                 # Don't retry for non-retryable errors or if we've exhausted retries
                 print(f'Error creating order (attempt {attempt + 1}): {str(e)}')
-                raise e
             
             # Exponential backoff with jitter
-            sleep_time = 0.2 * (2 ** attempt) + random.uniform(0, 0.1)
-            print(f'Retrying order creation in {sleep_time:.2f}s (attempt {attempt + 1}/{max_retries})')
+            sleep_time = 0.3 * (2 ** attempt) + random.uniform(0, 0.1)
+            print(f'[{datetime.now().isoformat()}] Retrying order creation in {sleep_time:.2f}s (attempt {attempt + 1}/{max_retries})')
             time.sleep(sleep_time)
     
     raise Exception("Failed to create order after maximum retries")
