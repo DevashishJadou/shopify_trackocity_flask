@@ -8,6 +8,7 @@ from .razorpay import payment_bp
 from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable
 from ...connection import db
 from sqlalchemy import MetaData
+from sqlalchemy import text
 
 
 metadata = MetaData()
@@ -49,7 +50,7 @@ def strip_webhook(workspace):
     
     account = PlatformConfiguration.query.filter_by(workspace=workspace).filter_by(platform='stripe').first()
     user = UserRegister.query.filter_by(workspace=workspace).first()
-    if not account or not account.active:
+    if not user.isactive or not account.active:
         jsonify({'status': 'Unauthorized'}), 403
 
     tablename = 'order_'+workspace
