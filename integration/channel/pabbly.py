@@ -240,14 +240,14 @@ def pabbly_webhook(workspace):
     data = request.get_json()
   
     # Handle payment captured event
-    first_name = data.get('first_name')
-    last_name = data.get('last_name')
+    first_name = data.get('first_name', None)
+    last_name = data.get('last_name', None)
     order_status = data.get('order_status')
     amount = data.get('total')
     currency = data.get('currency')
     email = data.get('email')
     phone = str(data.get('phone'))
-    payment_method = data.get('payment_method')
+    payment_method = data.get('payment_method', "Prepaid")
     order_date = data.get('order_date', datetime.now())
     event_time = parse_date(order_date)
     islead = False
@@ -266,7 +266,8 @@ def pabbly_webhook(workspace):
         payment_id = data.get('order_number', str(random.randint(1, 999999999)))
     
     # Check if order already exists
-    order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
+    # order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
+    order_obj = None
     if order_obj is None:
         try:
             # Prepare order data
@@ -295,11 +296,18 @@ def pabbly_webhook(workspace):
             #     print(f"Encryption error (proceeding without): {enc_error}")
             
             # Create order with retry logic
-            order_make = create_order_with_retry(orderTable, order_data, max_retries=3)
+            # order_make = create_order_with_retry(orderTable, order_data, max_retries=3)
+
+            order_make = orderTable(**order_data)
+            db.session.add(order_make)
+            db.session.flush()  # Force ID generation and check for issues
+            
+            db.session.commit()
             
             return jsonify({'status': 'success', 'order_id': getattr(order_make, 'id', payment_id)}), 200
             
         except Exception as e:
+            db.session.rollback()
             print(f'Error pabblydata order: error:{str(e)} pabblydata:{data}')
             return jsonify({'error': 'Failed to save order'}), 500
     else:
