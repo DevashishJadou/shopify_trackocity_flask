@@ -308,6 +308,31 @@ def pabbly_webhook(workspace):
             
         except Exception as e:
             db.session.rollback()
+
+            try:
+                # Fallback to raw SQL INSERT
+                raw_sql = text("""
+                    INSERT INTO {} (
+                        order_date, transcation_id, first_name, last_name, email, phone, 
+                        payment_method, total, order_status, islead, created_at, updated_at
+                    ) VALUES (
+                        :order_date, :transcation_id, :first_name, :last_name, :email, :phone, 
+                        :payment_method, :total, :order_status, :islead, now(), now()
+                    )
+                """.format(tablename))  # tablename already defined as 'order_'+workspace
+                
+                # Execute raw insert with params safely
+                db.session.execute(raw_sql, {
+                    'order_date': event_time,  'transcation_id': payment_id, 'first_name': first_name,
+                    'last_name': last_name,  'email': email,  'phone': phone,  'payment_method': payment_method,
+                    'total': amount,  'order_status': order_status,  'islead': islead
+                })
+                db.session.commit()
+                return jsonify({'status': 'success', 'order_id': payment_id}), 200
+
+            except Exception as raw_e:
+                db.session.rollback()
+                print(f'Pabblydata Raw SQL insert also failed: {raw_e}')
             print(f'Error pabblydata order: error:{str(e)} pabblydata:{data}')
             return jsonify({'error': 'Failed to save order'}), 500
     else:
