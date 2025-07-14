@@ -274,9 +274,9 @@ def update_logout_status():
             return jsonify({"message": "Agency not found"}), 404
         
 
-        correct_agencyid = agency.id   
+        agencyid = agency.id   
     
-        users = UserRegister.query.filter_by(agencyid=correct_agencyid).all()
+        users = UserRegister.query.filter_by(agencyid=agencyid).all()
         
         # users = UserRegister.query.filter_by(agencyid=agencyid).all()
         
