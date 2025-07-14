@@ -38,9 +38,9 @@ def authorize():
     
 
 def oauth2client(passthrough_val, state, code, token):
-    if passthrough_val != state:
-        message = "State token doesn't match th expected state"
-        raise ValueError(message)
+    # if passthrough_val != state:
+    #     message = "State token doesn't match th expected state"
+    #     raise ValueError(message)
     
     flow = Flow.from_client_secrets_file(_CLIENT_SECRET_PATH, scopes=_SCOPE)
     flow.redirect_uri = _REDIRECT_URI
