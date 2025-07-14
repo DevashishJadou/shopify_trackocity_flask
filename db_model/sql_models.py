@@ -213,6 +213,46 @@ class ProductTable(db.Model):
     sale_price = db.Column(db.NUMERIC)
 
 
+def ordertable_detail_dynamic(tablename):
+    class OrderDetail(db.Model):
+        __tablename__ = tablename
+        __table_args__ = {'extend_existing': True}
+
+        id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+        workspace = db.Column(db.String(64), nullable=False)
+        productid = db.Column(db.String(16), nullable=False)
+        order_id = db.Column(db.Integer)
+        order_date = db.Column(db.Date, nullable=False)
+        order_timestamp = db.Column(db.DateTime, nullable=False)
+        transcation_id = db.Column(db.String(64))
+        created_at = db.Column(db.DateTime)
+        order_status = db.Column(db.String(16))
+        total = db.Column(db.Numeric)
+        form_event_time = db.Column(db.DateTime)
+        sessionid_child = db.Column(db.String(32))
+        localsession = db.Column(db.String(32))
+        adsource = db.Column(db.String(32))
+        adid = db.Column(db.String(64))
+        event_time = db.Column(db.DateTime)
+        erank = db.Column(db.SmallInteger)
+        prank = db.Column(db.SmallInteger)
+        neworder = db.Column(db.Integer)
+        ntotal = db.Column(db.Numeric)
+        email = db.Column(db.String(128))
+        phone = db.Column(db.String(128))
+        first_name = db.Column(db.String(128))
+        email_secure = db.Column(db.String(128))
+        phone_secure = db.Column(db.String(128))
+        islead = db.Column(db.Boolean, default=False)
+        region = db.Column(db.String(128))
+        city = db.Column(db.String(128))
+        keyword = db.Column(db.String(128))
+        adsetid = db.Column(db.String(128))
+        placement = db.Column(db.String(128))
+
+    return OrderDetail
+
+
 def order_table_dynamic(tablename):
     class OrderTable(db.Model):
         __tablename__ = tablename

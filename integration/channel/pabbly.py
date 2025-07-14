@@ -6,7 +6,7 @@ from flask_cors import cross_origin
 from sqlalchemy import MetaData
 import hashlib, random
 
-from ...db_model.sql_models import UserRegister, order_table_dynamic, ordertable
+from ...db_model.sql_models import UserRegister, order_table_dynamic, ordertable, ordertable_detail_dynamic
 from .woocommerce import channel_bp
 from ...connection import db
 from ...dbrule import dup_order_rule
@@ -125,6 +125,10 @@ def pabbly_webhook(workspace):
     tablename = 'order_'+workspace
     orderTable = order_table_dynamic(tablename)
     orderTable.metadata = db.Model.metadata
+
+    tablename_detail = 'order_detail_'+workspace
+    orderTableDetail = ordertable_detail_dynamic(tablename_detail)
+    orderTableDetail.metadata = db.Model.metadata
 
     data = request.get_json()
   

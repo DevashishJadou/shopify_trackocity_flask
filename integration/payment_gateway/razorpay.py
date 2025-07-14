@@ -9,7 +9,7 @@ from sqlalchemy import text
 
 # from db_model.sql_models import RazorpayConfiguration, order_table_dynamic, ordertable
 # from connection import db
-from ...db_model.sql_models import UserRegister, RazorpayConfiguration, order_table_dynamic, ordertable
+from ...db_model.sql_models import UserRegister, RazorpayConfiguration, order_table_dynamic, ordertable, ordertable_detail_dynamic
 from ...connection import db
 from ...dbrule import dup_order_rule
 
@@ -106,6 +106,10 @@ def razorpay_webhook(workspace):
     tablename = 'order_'+workspace
     orderTable = order_table_dynamic(tablename)
     orderTable.metadata = db.Model.metadata
+
+    tablename_detail = 'order_detail_'+workspace
+    orderTableDetail = ordertable_detail_dynamic(tablename_detail)
+    orderTableDetail.metadata = db.Model.metadata
 
     # Parse the JSON data from the request
     data = json.loads(request_data)

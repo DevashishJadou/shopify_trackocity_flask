@@ -5,7 +5,7 @@ from flask_cors import cross_origin
 
 from sqlalchemy import MetaData
 
-from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable
+from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable, ordertable_detail_dynamic
 from ...connection import db
 from .razorpay import payment_bp
 from sqlalchemy.sql import func
@@ -163,6 +163,10 @@ def checkout_webhook(workspace):
     tablename = 'order_' + workspace
     orderTable = order_table_dynamic(tablename)
     orderTable.metadata = db.Model.metadata
+
+    tablename_detail = 'order_detail_'+workspace
+    orderTableDetail = ordertable_detail_dynamic(tablename_detail)
+    orderTableDetail.metadata = db.Model.metadata
 
     
     if user.isleadgen:
