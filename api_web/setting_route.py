@@ -1,4 +1,4 @@
-from ..db_model.sql_models import ProductTable, UTMSource, UserRegister, CustomizeColumn
+from ..db_model.sql_models import ProductTable, UTMSource, UserRegister, CustomizeColumn,AgencyRegister
 from ..connection import db
 
 from flask import Blueprint, request, jsonify
@@ -266,7 +266,18 @@ def update_logout_status():
 
     # if agency id is not null
     else:
-        users = UserRegister.query.filter_by(agencyid=agencyid).all()
+        
+        agency = AgencyRegister.query.filter_by(workspace=workspace).first()
+    
+        if not agency:
+            return jsonify({"message": "Agency not found"}), 404
+        
+
+        correct_agencyid = agency.id   
+    
+        users = UserRegister.query.filter_by(agencyid=correct_agencyid).all()
+        
+        # users = UserRegister.query.filter_by(agencyid=agencyid).all()
         
         for user in users:
             user.is_logout = new_status
