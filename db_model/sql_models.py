@@ -315,6 +315,7 @@ def orderlinetable(tablename):
             Column('product_name', String(255)),
 			Column('quantity', Integer),
 			Column('price', Numeric),
+            Column('title', String(255)),
 			Column('variant_title', String(128)),
             Column('cost', Numeric)
 		)
@@ -464,4 +465,4 @@ class CustomizeColumn(db.Model):
     is_custom_used = db.Column(db.Boolean, default=False)
     custom_id = db.Column(db.String(32))
     view_name = db.Column(db.String(64))
-    # latest_view = db.Column(db.Boolean, default=False)
+    latest_view = db.Column(db.Boolean, default=False)

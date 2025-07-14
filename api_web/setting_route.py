@@ -294,7 +294,7 @@ def reporting_get_customize_column():
 		sql_query0 = db.text("SELECT distinct(view_name) FROM customize_column WHERE workspaceid = :workspace AND report = :report and latest_view is True")
 		result = db.session.execute(sql_query0, {'workspace': workspace, 'report':report})
 		data = result.fetchall()
-		view = data[0][0]
+		view = 'default' if len(data) == 0 else data[0][0]
 
 	sql_query = db.text("SELECT report, workspaceid, field, seq FROM customize_column WHERE is_custom_column IS False AND workspaceid = :workspace AND report = :report AND view_name = :view")
 	result = db.session.execute(sql_query, {'workspace': workspace, 'report':report, 'view':view})
@@ -309,12 +309,18 @@ def reporting_get_customize_column():
 	results2 = [dict(zip(columns2, row)) for row in data2]
 	results.extend(results2)
 
-	sql_query3 = db.text("SELECT distinct(view_name) FROM customize_column WHERE workspaceid = :workspace AND report = :report")
+	sql_query3 = db.text("SELECT distinct(view_name) FROM customize_column WHERE workspaceid = :workspace AND report = :report AND view_name IS NOT NULL")
 	result3 = db.session.execute(sql_query3, {'workspace': workspace, 'report':report})
 	data3 = result3.fetchall()
 	result3 = [row[0] for row in data3]
 
-	results = {'data': results, 'views': result3, 'current_view':view}
+	sql_query4 = db.text("SELECT distinct field, custom_formula, name, custom_id, is_custom_column FROM customize_column WHERE is_custom_column IS TRUE AND workspaceid = :workspace AND report = :report")
+	result4 = db.session.execute(sql_query4, {'workspace': workspace, 'report':report, 'view':view})
+	data4 = result4.fetchall()
+	columns4 = ["field", "customFormula","name","id", "isCustomColumn"]
+	results4 = [dict(zip(columns4, row)) for row in data4]
+
+	results = {'data': results, 'views': result3, 'current_view':view, 'custom_columns': results4}
 	return jsonify(results),200
 
 
@@ -329,12 +335,12 @@ def reporting_update_customize_column():
 	report = param.get('report')
 	view = param.get('view_name', 'myview')
 	deleteview = param.get('deleteview', False)
-	
+
 	CustomizeColumn.query.filter_by(workspaceid=workspace, view_name=view).delete()
 
 	if deleteview:
 		db.session.commit()
-		return jsonify({"message":"Deleted"}), 200
+		return jsonify({"message":"View Deleted"}), 200
 
 	for row in body:
 		field = row.get('field')
@@ -354,6 +360,44 @@ def reporting_update_customize_column():
 	return jsonify({"message":"Updated"}), 201
 
 
+@setting_bp.route('/reporting/update_custom_column', methods=['POST', 'OPTIONS'])
+@cross_origin(origins='*', methods=['POST', 'OPTIONS'], headers=['Content-Type', 'Authorization'])
+def update_custom_column():
+	headers = request.headers
+	workspace = headers.get('workspaceId')
+	param = request.args
+	body = json.loads(request.data)
+	report = param.get('report')
+	field_id = param.get('id', None)
+
+	if field_id:
+		# If deleteview is true, delete the custom column
+		CustomizeColumn.query.filter_by(workspaceid=workspace, custom_id=field_id, report=report).delete()
+		db.session.commit()
+		return jsonify({"message":"Custom Column Deleted"}), 200
+
+	
+	for row in body:
+		field = row.get('field')
+		name = row.get('name', None)
+		is_custom_column = row.get('isCustomColumn', None)
+		custom_formula = row.get('customFormula', None)
+		custom_id = row.get('id', None)
+
+		cusfields = CustomizeColumn.query.filter_by(workspaceid=workspace, custom_id=custom_id, report=report).all()
+		if cusfields:
+			for cusfield in cusfields:
+				cusfield.custom_formula = custom_formula
+				cusfield.field = field
+				cusfield.name = name
+			db.session.commit()
+			return jsonify({"message":"Custom Column Updated"}), 200
+
+		if is_custom_column:
+			ff = CustomizeColumn(workspaceid=workspace, report=report, field=field, custom_formula=custom_formula, is_custom_column=is_custom_column, name=name, custom_id=custom_id)
+			db.session.add(ff)
+	db.session.commit()
+	return jsonify({"message":"Custom Column Added"}), 200
 
 
 @setting_bp.route('/frontenderror', methods=['POST', 'OPTIONS'])

@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify
-import json, os
-from zoneinfo import ZoneInfo
+import json, os, requests
+import time
 from datetime import datetime, timedelta
 from flask_cors import cross_origin
+from sqlalchemy import desc
 
 from .db_model.sql_models import Payment, UserRegister
 from .connection import db
@@ -10,67 +11,158 @@ from .connection import db
 
 trackocitypayment_bp = Blueprint('trackocitypayment', __name__)
 
+
+baseUrl = "https://sandbox.cashfree.com/"
+
 @trackocitypayment_bp.route('/payment_link', methods=['POST'])
-def razorpay_params():
+@cross_origin(origins='*', methods=['POST', 'OPTIONS'], headers=['Content-Type', 'Authorization'])
+def create_subscription():
     try:
-        data = json.loads(request.get_data())
-        name = data.get('name')
-        order_id = data.get('order_id')
-        total = data.get('total')
-        link = data.get('link')
-        email = data.get('email')
-        workspace = data.get('workspace')
-        # expireon = datetime.fromtimestamp(data.get('expireon'), tz=ZoneInfo("Asia/Kolkata"))
+        headers = request.headers
+        userid = headers.get('workspaceId')
+        req_data = request.get_json()
+        print("Request body:", json.dumps(req_data, indent=2))
 
-        isexist = Payment.query.filter(workspace=workspace, total=total).first()
-        if isexist:
-            return jsonify({'status': 'success'}), 200
-        else:
-            payment = Payment(completename=name, order_id=order_id, total=total, link=link, email=email, status='pending', workspace=workspace)
-            db.session.add(payment)
-            db.session.commit()
-    except Exception as e:
-        print(f'error payment link:{e.args}')
-    return jsonify({'status': 'success'}), 200
+        # Build the request body
+        request_body = {
+            **req_data,
+            # Uncomment and adjust if needed:
+            # "subscription_meta": {
+            #     **(req_data.get("subscription_meta") or {}),
+            #     "return_url": req_data.get("subscription_meta", {}).get("return_url", "https://yourdomain.com/return"),
+            #     "notify_url": "https://yourdomain.com/api/webhook",
+            # },
+        }
 
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-version": "2023-08-01",
+            "x-client-id": os.environ.get('_CASHFREE_CLIENT_ID'),
+            "x-client-secret": os.environ.get('_CASHFREE_CLIENT_SECRET'),
+        }
 
-@trackocitypayment_bp.route('/payment_confirmation', methods=['POST'])
-@cross_origin()
-def razorpay_webhook():
+        response = requests.post(
+            f"{baseUrl}pg/subscriptions",
+            headers=headers,
+            json=request_body
+        )
 
-    request_data = request.get_data()
-  
-    # Parse the JSON data from the request
-    data = json.loads(request_data)
+        try:
+            result = response.json()
+        except ValueError:
+            result = {"error": "Invalid JSON response from Cashfree"}
 
-    # Process the webhook event based on the event type
-    event_type = data.get('event')
-    if event_type in ('order.paid', 'payment.captured', 'subscription.completed'):
-        # Handle payment captured event
-        payload = data.get('payload').get('payment').get('entity')
-        payment_id = payload.get('id')
-        order_id = payload.get('order_id')
-        amount = payload.get('amount')/100.0
-        currency = payload.get('currency')
-        email = payload.get('email')
-        
-        user = UserRegister.query.filter_by(email=email).first()
-        
-        if user:
-            user.isactive = True
-            plan_till = user.plan_till
-            user.plan_till = max(datetime.now(), plan_till) + timedelta(days=30)
+        print("Full Cashfree response:", json.dumps(result, indent=2))
 
-            order_obj = Payment.query.filter_by(order_id=order_id).first()
-            if order_obj:
-                order_obj.transaction_id = payment_id
-                order_obj.currency = currency
-                order_obj.status = 'complete'
-            else:
-                order_make = Payment(transaction_id=payment_id, email=email, total=amount, currency=currency, status='complete')
-                db.session.add(order_make)
-        
+        if result.get("subs_payment_modes") == []:
+            print("Warning: No payment modes available in response")
+
+        if not response.ok:
+            print("Cashfree API Error:", result)
+            return jsonify(result), response.status_code
+
+        # Additional validation
+        if not result.get("subscription_session_id"):
+            raise Exception("No session ID received")
+
+        customer_detail = result.get('customer_details', {})
+        name = customer_detail.get('customer_name', 'Unknown')
+        email = customer_detail.get('customer_email')
+        subscription_id = result.get('subscription_id')
+        transaction_id = result.get('cf_subscription_id')
+
+        time.sleep(5)  # Wait for the subscription to be created
+        payurl = f"{baseUrl}api/v2/subscriptions/{transaction_id}"
+        payresponse = requests.get(payurl, headers=headers)
+        payresult = payresponse.json()
+        print(f"payresult:{payresult}")
+
+        link = payresult.get('subscription').get('authLink')
+
+        row = Payment(workspace = userid, completename = name, email = email, order_id = subscription_id, transaction_id = transaction_id, link=link, status = 'pending')
+        db.session.add(row)
         db.session.commit()
+        print("Subscription created successfully:", result)
+        return jsonify(link), 200
+
+    except Exception as err:
+        print("Server Error:", err)
+        return jsonify({"error": "Subscription creation failed", "details": str(err)}), 500
 
 
-    return jsonify({'status': 'success'}), 200
+
+
+@trackocitypayment_bp.route('/cancel_subscription', methods=['POST'])
+@cross_origin(origins='*', methods=['POST', 'OPTIONS'], headers=['Content-Type', 'Authorization'])
+def cancel_subscription():
+    try:
+        headers = request.headers
+        userid = headers.get('workspaceId')
+        data = Payment.query.filter_by(workspace=userid).order_by(desc(Payment.id)).first()
+        subscription_id = data.order_id if data else None
+
+        if not subscription_id:
+            return jsonify({"error": "Subscription ID is required"}), 400
+
+        url = f"{baseUrl}pg/subscriptions/{subscription_id}/manage"
+        
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-version": "2023-08-01",
+            "x-client-id": os.environ.get('_CASHFREE_CLIENT_ID'),
+            "x-client-secret": os.environ.get('_CASHFREE_CLIENT_SECRET')
+        }
+        
+        payload = {
+            "subscription_id": subscription_id,
+            "action": "CANCEL"
+        }
+        
+        response = requests.post(url, headers=headers, json=payload)
+        
+        try:
+            result = response.json()
+        except ValueError:
+            # Cashfree sometimes returns plain text errors; handle gracefully
+            result = {"error": "Invalid response from Cashfree", "response_text": response.text}
+
+        if not response.ok:
+            return jsonify(result), response.status_code
+        
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({"error": "Subscription cancellation failed", "details": str(e)}), 500
+    
+
+
+
+@trackocitypayment_bp.route('/get_subscription', methods=['GET'])
+@cross_origin(origins='*', methods=['GET', 'OPTIONS'], headers=['Content-Type', 'Authorization'])
+def get_subscription():
+
+    # headers = request.headers
+    # userid = headers.get('subref')
+    # data = Payment.query.filter_by(workspace=userid).order_by(desc(Payment.id)).first()
+    # subscription_id = data.order_id if data else None
+
+    # if not subscription_id:
+    #     return jsonify({"error": "Subscription ID is required"}), 400
+
+    url = f"https://sandbox.cashfree.com/api/v2/subscriptions/1142709"
+    
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-version": "2023-08-01",
+        "x-client-id": os.environ.get('_CASHFREE_CLIENT_ID'),
+        "x-client-secret": os.environ.get('_CASHFREE_CLIENT_SECRET')
+    }
+    
+    # payload = {
+    #     "subscription_id": subscription_id,
+    #     "action": "CANCEL"
+    # }
+    
+    response = requests.get(url, headers=headers)
+
+    import pdb; pdb.set_trace()
