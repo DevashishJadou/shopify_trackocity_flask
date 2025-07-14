@@ -350,7 +350,7 @@ class SmartQueryHandler:
 
                 if len(results) > 99999:
                     excceeded_msg = "The Ad are very high. Please request for specific ad"
-
+            
             log = ChatBotLog(workspace=workspace, question = question, query=query, result=str(results))
             db.session.add(log)
             db.session.commit()

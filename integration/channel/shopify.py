@@ -6,7 +6,7 @@ from flask_cors import cross_origin
 
 
 from .woocommerce import channel_bp
-from ...db_model.sql_models import Shopify, order_table_dynamic, ordertable, orderlinetable
+from ...db_model.sql_models import Shopify, order_table_dynamic, ordertable, orderlinetable, ordertable_detail_dynamic
 from ...connection import db
 from ...dbrule import dup_order_rule
 
@@ -92,10 +92,13 @@ def shopify():
 			orders_data = response.json()
 			orders_data = orders_data['orders']
 			
-			tablename = 'order_'+userid
-			
+			tablename = 'order_'+userid	
 			orderTable = order_table_dynamic(tablename)
 			orderTable.metadata = db.Model.metadata
+
+			tablename_detail = 'order_detail_'+userid
+			orderTableDetail = ordertable_detail_dynamic(tablename_detail)
+			orderTableDetail.metadata = db.Model.metadata
 			
 			for data in orders_data:
 				customer_ip = data['browser_ip']

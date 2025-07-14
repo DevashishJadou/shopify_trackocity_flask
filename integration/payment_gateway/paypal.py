@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from flask_cors import cross_origin
 from .razorpay import payment_bp
 
-from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable
+from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable, ordertable_detail_dynamic
 from ...connection import db
 from sqlalchemy import MetaData
 
@@ -52,6 +52,10 @@ def paypal_webhook_endpoint(workspace):
     tablename = 'order_'+workspace
     orderTable = order_table_dynamic(tablename)
     orderTable.metadata = db.Model.metadata
+
+    tablename_detail = 'order_detail_'+workspace
+    orderTableDetail = ordertable_detail_dynamic(tablename_detail)
+    orderTableDetail.metadata = db.Model.metadata
 
     # The library needs to be configured with your account's secret key.
     event = None

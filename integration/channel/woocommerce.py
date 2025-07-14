@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 import json, os
 from flask_cors import cross_origin
 
-from ...db_model.sql_models import WooCommerce, order_table_dynamic, ordertable
+from ...db_model.sql_models import WooCommerce, order_table_dynamic, ordertable, ordertable_detail_dynamic
 from ...connection import db
 from ...dbrule import dup_order_rule
 # from db_model.sql_models import WooCommerce, order_table_dynamic, ordertable
@@ -91,6 +91,10 @@ def woocommercewebook(workspace):
 	tablename ='order_'+workspace
 	orderTable = order_table_dynamic(tablename)
 	orderTable.metadata = db.Model.metadata
+     
+	tablename_detail = 'order_detail_'+workspace
+	orderTableDetail = ordertable_detail_dynamic(tablename_detail)
+	orderTableDetail.metadata = db.Model.metadata
 
 	order_date = request_data['date_created']
 	total = request_data['total']

@@ -435,7 +435,7 @@ def table_saleinteractions():
 @report_bp.route('/dashboardgraphsales', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_dashboardgraphdata():
-
+    
     headers = request.headers
     body = request.args
     startdate = body.get('startdate')
@@ -703,6 +703,7 @@ def channel_matrix(userid, productid, startdate, enddate, fbflag, ggflag):
 @report_bp.route('/dashboardmetric', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def get_dashboardmetric():
+    
     headers = request.headers
     _body = request.args
     startdate = _body.get('startdate')

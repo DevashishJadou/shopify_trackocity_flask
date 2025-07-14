@@ -177,6 +177,11 @@ def payment_order_creation(name, workspace, plan_till, email, phone='1212121212'
         return payment.link
 
 
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    db.session.remove()
+
+
 tracemalloc.start()
 @app.route("/memory-stats")
 def memory_stats():

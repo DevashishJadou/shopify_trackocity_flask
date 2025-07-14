@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from flask_cors import cross_origin
 from .razorpay import payment_bp
 
-from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable
+from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable, ordertable_detail_dynamic
 from ...connection import db
 from sqlalchemy import MetaData
 from sqlalchemy import text
@@ -52,10 +52,17 @@ def strip_webhook(workspace):
     user = UserRegister.query.filter_by(workspace=workspace).first()
     if not user.isactive or not account.active:
         jsonify({'status': 'Unauthorized'}), 403
+    
+    if not user.isactive:
+        jsonify({'status': 'Unauthorized'}), 403
 
     tablename = 'order_'+workspace
     orderTable = order_table_dynamic(tablename)
     orderTable.metadata = db.Model.metadata
+
+    tablename_detail = 'order_detail_'+workspace
+    orderTableDetail = ordertable_detail_dynamic(tablename_detail)
+    orderTableDetail.metadata = db.Model.metadata
 
     # The library needs to be configured with your account's secret key.
     event = None
