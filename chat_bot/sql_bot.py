@@ -129,21 +129,22 @@ class SmartQueryHandler:
             - Does it require trend analysis, forecasting, or segmentation?
             
             2. Extract essential details:
-            - Time period (last 3 days, last 7 days, WoW, or all available data).
+            - Time period (last 3 days, last 7 days,or all available data).
             - Metrics mentioned or inferred (CPA, ROAS, CTR, CR, AOV, CPC, CPM, etc.).
             - Requested breakdowns (by campaign, ad set, ad type, creative type).
             - Comparison logic (current period vs. previous period, winning vs. losing ads).
 
             3. Determine table relationships:
             - For ad platform data, join `horizon.ads`.
-            - For first-click attribution, join `horizon.ads_firstattribute`.
             - For conversion and ad spend focus, primarily use `horizon.ads_lastattribute`.
+            - For first-click attribution, join `horizon.ads_firstattribute`.
+            
 
 
 
             Step 2: Constructing the Query
             1. Select primary tables based on query type:
-            - Ad performance: Use `horizon.ads_lastattribute` (final conversions & spend).
+            - Ad performance: Use `horizon.ads_lastattribute` (final conversions) and `horizon.ads` (spend).
             - First-touch attribution analysis: Use `horizon.ads_firstattribute`.
 
             2. Extract relevant metrics (based on direct request & inferred insights):

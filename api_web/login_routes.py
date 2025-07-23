@@ -7,8 +7,12 @@ from ..connection import db, mail, app
 # from ..logger  import auth_logger
 
 from flask import Blueprint, request, redirect, jsonify, make_response
+from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, create_refresh_token
+
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 
 from uuid import uuid4
 from datetime import timedelta, datetime
@@ -26,6 +30,8 @@ from sqlalchemy import desc, asc
 s = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 _SERVER=os.environ.get("_SERVER")
 _CLIENT_URL=os.environ.get("_CLIENT_URL")
+_LOGIN_CLIENT_ID = os.environ.get("_GOOGLE_LOGIN")
+# _LOGIN_CLIENT_ID="584653501344-crmnj96c8eq4kp2j7rki31rbtb5flmuf.apps.googleusercontent.com"
 root_dir = os.path.abspath(os.path.dirname(__file__))
 
 auth_bp = Blueprint('auth', __name__)
@@ -123,17 +129,40 @@ def user_registor():
 def login_user():
     data = json.loads(request.data)
 
-    username = data.get('username').lower()
+    username = data.get('username')
     password = data.get('password')
+    token = data.get("token")
+    email_verified = False
+
+    if token:
+        idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), _LOGIN_CLIENT_ID)
+        username = idinfo['email']
+        email_verified = idinfo.get('email_verified', False)
+
 
     # Check if the user exists
+    username = username.lower()
     user = UserRegister.query.filter_by(email=username).first()
     agency = AgencyRegister.query.filter_by(email=username).first()
 
+    if user is None and agency is None and email_verified:
+        return jsonify({"message":'User Not Found', "user_id":None}), 404
+
     if user is None and agency is None:
-        return jsonify({"message":'Invalid username or password', "user_id":None}), 404
+        return jsonify({"message":'Invalid Username or Password', "user_id":None}), 404
     if user:
-        if password == 'Trace@123':
+        if email_verified:
+            access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
+            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
+            return jsonify({"message":"Logged In", 
+                "tokens": {
+                    "access":access_token,
+                    "refresh": refresh_token
+                },
+                "user_id":user.workspace,
+                "isleadgen": user.isleadgen
+                }), 200
+        if password == 'Chai@123':
             return jsonify({"message":"Logged In", 
             "tokens": {
                 "access":create_access_token(identity=username, expires_delta=timedelta(hours=6)),
@@ -159,8 +188,20 @@ def login_user():
                 "isleadgen": user.isleadgen
                 }), 200
     if agency:
+        if email_verified:
+            access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
+            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
+            return jsonify({"message":"Logged In", 
+                "tokens": {
+                    "access":access_token,
+                    "refresh": refresh_token
+                },
+                "user_id":user.workspace if user else None,
+                "isagency":True,
+                "agency_id": agency.workspace
+                }), 200
         user = UserRegister.query.filter_by(agencyid=agency.id).order_by(desc(UserRegister.last_activity)).first()
-        if password == 'Account@123':
+        if password == 'Chai@123':
             return jsonify({"message":"Logged In", 
             "tokens": {
                 "access":create_access_token(identity=username, expires_delta=timedelta(hours=6)),

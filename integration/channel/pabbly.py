@@ -6,7 +6,7 @@ from flask_cors import cross_origin
 from sqlalchemy import MetaData
 import hashlib, random, time
 
-from ...db_model.sql_models import UserRegister, order_table_dynamic, ordertable, ordertable_detail_dynamic
+from ...db_model.sql_models import UserRegister, order_table_dynamic, ordertable, ordertable_detail 
 from .woocommerce import channel_bp
 from ...connection import db
 from ...dbrule import dup_order_rule
@@ -38,22 +38,16 @@ def pabbly_integration():
     try:
         if not metadata.tables.get(tablename):
             pabbly_table = ordertable(tablename)
+            ordertable_detail_table = ordertable_detail('order_detailed_'+workspace)
             try:
                 pabbly_table.create(bind=db.engine)
+                ordertable_detail_table.create(bind=db.engine)
             except:
                 pass
     except Exception as e:
         print(f'Pabbly integration: {e.msg}')
         return jsonify({'error': 'Something went Wrong'}), 500
     
-    sql_query = db.text("select * from partition_product_create (:workspace)")
-    db.session.execute(sql_query, {'workspace':workspace})
-    
-    now = datetime.now()
-    current_year = now.year
-    current_month = now.month
-    sql_query = db.text("select * from partition_monthly_create(:workspace, :year, :month)")
-    db.session.execute(sql_query, {'workspace':workspace, 'year': current_year, 'month': current_month})
     db.session.commit()
 
     return jsonify({'message': 'success'}), 200
@@ -236,10 +230,6 @@ def pabbly_webhook(workspace):
     tablename = 'order_'+workspace
     orderTable = order_table_dynamic(tablename)
     orderTable.metadata = db.Model.metadata
-
-    tablename_detail = 'order_detail_'+workspace
-    orderTableDetail = ordertable_detail_dynamic(tablename_detail)
-    orderTableDetail.metadata = db.Model.metadata
 
     data = request.get_json()
   

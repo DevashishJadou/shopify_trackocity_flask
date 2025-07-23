@@ -223,15 +223,7 @@ def get_reporttabledatafacebook():
     if user:
 
         sort = 'ASC' if attribute == 'first' else 'DESC'
-        if traffic == 'Facebook' and userid in ('c65209bb2dd545bd82131c0a7d040cab', '9e3bd13dee4b43dea5a98530db61780b') :
-            sql_query = text("SELECT * FROM table_facebookattribute_wo_visitorid(:workspace, :productid, :startdate, :enddate, :sort, :product_list, :click_type, :windoww) ")
-            result = db.session.execute(sql_query, {
-                'workspace': userid, 'productid': user.productid,
-                'startdate': startdate, 'enddate': enddate, 'sort': sort,
-                'product_list': product_list, 'click_type': click_type, 'windoww': window
-            })
-            data = result.fetchall()
-        elif traffic == 'Facebook':
+        if traffic == 'Facebook':
             sql_query = text("SELECT * FROM table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort, :product_list, :click_type, :windoww)")
             result = db.session.execute(sql_query, {
                 'workspace': userid, 'productid': user.productid,
@@ -1030,6 +1022,30 @@ def get_customerpath():
     op = [dict(zip(columns, row)) for row in data]
     return op
 
+
+@report_bp.route('/customerpathad', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def get_customerpathad():
+
+    headers = request.headers
+    _body = request.args
+    startdate = _body.get('startdate')
+    enddate = _body.get('enddate')
+    filter_type = _body.get('filter_type', 'all')
+    filter_value = _body.get('filter_value', None)
+    sort = _body.get('sort', 'desc')
+    click_type = _body.get('click_type', 'paid')
+    taffic_source = _body.get('traffic_source', 'facebook')
+    userid = headers.get('workspaceId')
+    user = UserRegister.query.filter_by(workspace=userid).first()
+
+    sql_query = text("SELECT * FROM customer_path_reporting(:workspace, :startdate, :enddate, :filter_type, :filter_value, :sort, :click_type, :traffic_source)")
+    result = db.session.execute(sql_query, { 'workspace': userid, 'startdate':startdate, 'enddate':enddate, 'filter_type':filter_type, 'filter_value':filter_value, 'sort':sort, 'click_type':click_type, 'traffic_source':taffic_source })
+    data = result.fetchall()
+
+    columns = result.keys()
+    op = [dict(zip(columns, row)) for row in data]
+    return op
 
 
 @report_bp.route('/ad_breakdown', methods=['GET', 'OPTIONS'])
