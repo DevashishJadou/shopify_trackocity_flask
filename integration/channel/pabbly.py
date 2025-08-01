@@ -254,10 +254,11 @@ def pabbly_webhook(workspace):
         event_time += timedelta(hours=timezone_offset)
     event_time = event_time.strftime("%Y-%m-%d %H:%M:%S")
 
+    payment_default = str(random.randint(1, 99999999)) + '-' + str(random.randint(1, 99999999)) + '-' + str(random.randint(1, 99999999))
     if data.get('order_number') == '001':
-        payment_id = str(random.randint(1, 999999999))
+        payment_id = payment_default
     else:
-        payment_id = data.get('order_number', str(random.randint(1, 999999999)))
+        payment_id = data.get('order_number', payment_default)
     
     # Check if order already exists
     # order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
@@ -310,6 +311,12 @@ def pabbly_webhook(workspace):
             db.session.rollback()
 
             try:
+                payment_default = str(random.randint(1, 99999999)) + '-' + str(random.randint(1, 99999999)) + '-' + str(random.randint(1, 99999999))
+                if data.get('order_number') == '001':
+                    payment_id = payment_default
+                else:
+                    payment_id = data.get('order_number', payment_default)
+
                 # Fallback to raw SQL INSERT
                 raw_sql = text("""
                     INSERT INTO {} (
@@ -335,7 +342,7 @@ def pabbly_webhook(workspace):
                 print(f'Pabblydata Raw SQL insert also failed: {raw_e}')
             finally:
                 db.session.close()
-            print(f'Error pabblydata order: error:{str(e)} pabblydata:{data}')
+            print(f'Error pabblydata order: error:{str(e)} pabblydata:{data} payment_id:{payment_id}')
             return jsonify({'error': 'Failed to save order'}), 500
     else:
         return jsonify({'status': 'duplicate', 'message': 'Order already exists'}), 200
