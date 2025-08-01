@@ -326,6 +326,7 @@ def pabbly_webhook(workspace):
                         :order_date, :transcation_id, :first_name, :last_name, :email, :phone, 
                         :payment_method, :total, :order_status, :islead, now(), now()
                     )
+                    ON CONFLICT (transcation_id) DO NOTHING
                 """.format(tablename))  # tablename already defined as 'order_'+workspace
                 
                 # Execute raw insert with params safely
