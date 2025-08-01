@@ -164,8 +164,11 @@ def razorpay_webhook(workspace):
             db.session.commit()
             return jsonify({'status': 'success'}), 200
         except Exception as e:
+            db.session.rollback()
             print(f'Error razorpay webhook:{e.args}')
             return jsonify({'status': 'success'}), 200
+        finally:
+            db.session.close()
     
     if razorpay_client.active and event_type in ('refund.processed'):
         try:

@@ -291,10 +291,10 @@ def ordertable(tablename):
             Column('first_stage_date', DateTime),
             Column('second_stage_date', DateTime),
             Column('converted_date', DateTime),
-            Column('islead', Boolean, default=False),
+            Column('islead', Boolean, default=False, server_default='false'),
             Column('event_type', String(32)),
-			Column('created_at', DateTime, default=datetime.now),
-			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now),
+			Column('created_at', DateTime, default=datetime.now, server_default='false'),
+			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now, server_default='false'),
             Column('email_encrypt', BYTEA),
             Column('phone_encrypt', BYTEA),
             Column('email_secure', Text),
@@ -334,12 +334,13 @@ def ordertable_detail(tablename):
         Column('first_name', String(128)),
         Column('email_secure', String(128)),
         Column('phone_secure', String(128)),
-        Column('islead', Boolean, default=False),
+        Column('islead', Boolean),
         Column('region', String(128)),
         Column('city', String(128)),
         Column('keyword', String(128)),
         Column('adsetid', String(128)),
-        Column('placement', String(128))
+        Column('placement', String(128)),
+        Column('origin', String(64))
     )
 
     return order_table
@@ -354,7 +355,7 @@ def orderlinetable(tablename):
 			metadata,
 			Column('order_id', Integer, primary_key=True),
 			Column('shopify_productid', String(64)),
-			Column('sku', String(128), unique=True),
+			Column('sku', String(128)),
             Column('product_name', String(255)),
 			Column('quantity', Integer),
 			Column('price', Numeric),

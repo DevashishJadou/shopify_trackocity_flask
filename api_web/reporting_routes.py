@@ -222,40 +222,45 @@ def get_reporttabledatafacebook():
 
     if user:
 
-        sort = 'ASC' if attribute == 'first' else 'DESC'
-        if traffic == 'Facebook':
-            sql_query = text("SELECT * FROM table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort, :product_list, :click_type, :windoww)")
-            result = db.session.execute(sql_query, {
-                'workspace': userid, 'productid': user.productid,
-                'startdate': startdate, 'enddate': enddate, 'sort': sort,
-                'product_list': product_list, 'click_type': click_type, 'windoww': window
-            })
-            data = result.fetchall()
-        elif traffic == 'Google':
-            sql_query = text("SELECT * FROM table_googleattribute(:workspace, :productid, :startdate, :enddate, :sort, :product_list, :click_type, :windoww)")
-            result = db.session.execute(sql_query, {
-                'workspace': userid, 'productid': user.productid,
-                'startdate': startdate, 'enddate': enddate, 'sort': sort,
-                'product_list': product_list, 'click_type': click_type, 'windoww': window
-            })
-            data = result.fetchall()
-        elif traffic == 'LinkedIn':
-            sql_query = text("SELECT * FROM table_mediaattribute(:workspace, :productid, :startdate, :enddate, :sort, :channel, :product_list, :click_type, :windoww)")
-            result = db.session.execute(sql_query, {
-                'workspace': userid, 'productid': user.productid,
-                'startdate': startdate, 'enddate': enddate, 'sort': sort, 'channel': 'linkedin',
-                'product_list': product_list, 'click_type': click_type, 'windoww': window
-            })
-            data = result.fetchall()
-        else:
-            sql_query = text("SELECT * FROM table_otherattribute(:workspace, :productid, :startdate, :enddate, :sort, :src, :product_list, :click_type, :windoww)")
-            result = db.session.execute(sql_query, {
-                'workspace': userid, 'productid': user.productid,
-                'startdate': startdate, 'enddate': enddate, 'sort': sort, 'src':traffic,
-                'product_list': product_list, 'click_type': click_type, 'windoww': window
-            })
-            data = result.fetchall()
-        db.session.close()
+        try:
+            sort = 'ASC' if attribute == 'first' else 'DESC'
+            if traffic == 'Facebook':
+                sql_query = text("SELECT * FROM table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort, :product_list, :click_type, :windoww)")
+                result = db.session.execute(sql_query, {
+                    'workspace': userid, 'productid': user.productid,
+                    'startdate': startdate, 'enddate': enddate, 'sort': sort,
+                    'product_list': product_list, 'click_type': click_type, 'windoww': window
+                })
+                data = result.fetchall()
+            elif traffic == 'Google':
+                sql_query = text("SELECT * FROM table_googleattribute(:workspace, :productid, :startdate, :enddate, :sort, :product_list, :click_type, :windoww)")
+                result = db.session.execute(sql_query, {
+                    'workspace': userid, 'productid': user.productid,
+                    'startdate': startdate, 'enddate': enddate, 'sort': sort,
+                    'product_list': product_list, 'click_type': click_type, 'windoww': window
+                })
+                data = result.fetchall()
+            elif traffic == 'LinkedIn':
+                sql_query = text("SELECT * FROM table_mediaattribute(:workspace, :productid, :startdate, :enddate, :sort, :channel, :product_list, :click_type, :windoww)")
+                result = db.session.execute(sql_query, {
+                    'workspace': userid, 'productid': user.productid,
+                    'startdate': startdate, 'enddate': enddate, 'sort': sort, 'channel': 'linkedin',
+                    'product_list': product_list, 'click_type': click_type, 'windoww': window
+                })
+                data = result.fetchall()
+            else:
+                sql_query = text("SELECT * FROM table_otherattribute(:workspace, :productid, :startdate, :enddate, :sort, :src, :product_list, :click_type, :windoww)")
+                result = db.session.execute(sql_query, {
+                    'workspace': userid, 'productid': user.productid,
+                    'startdate': startdate, 'enddate': enddate, 'sort': sort, 'src':traffic,
+                    'product_list': product_list, 'click_type': click_type, 'windoww': window
+                })
+                data = result.fetchall()
+        except Exception as e:
+            db.session.rollback()  # This was missing!
+            raise e
+        finally:
+            db.session.close()
 
         record = {}
         adsdata = {
@@ -303,13 +308,18 @@ def get_reportgraphdata():
     enddate = body.get('enddate')
     userid = headers.get('workspaceId')
     
-    user = UserRegister.query.filter_by(workspace=userid).first()
+    try:
+        user = UserRegister.query.filter_by(workspace=userid).first()
 
-    sql_query = db.text("select * from report_graphsales(:workspace, :startdate, :enddate)")
+        sql_query = db.text("select * from report_graphsales(:workspace, :startdate, :enddate)")
 
-    result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
-    data = result.fetchall()
-    db.session.close()
+        result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
+        data = result.fetchall()
+    except Exception as e:
+        db.session.rollback()
+        raise e
+    finally:
+        db.session.close()
 
     sale_data = {'revenue':0.0, 'sales':0, 'data':{}}
     for row in data:
@@ -350,11 +360,16 @@ def get_reporttablesaledata():
         # sql_query = db.text("select complete_name, pgp_sym_decrypt(email_phone::bytea, :encryption_key), total, order_date, trackid  from table_salesdata(:workspace, :productid, :startdate, :enddate, :channel, :adid, :sort, :product_list)")
         # result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'channel':channel, 'adid':adid, 'sort':sort, 'product_list':product_list, 'encryption_key':ENCRYPTION_KEY})
 
-        sql_query = db.text("select complete_name, email_phone, total, order_date, trackid  from table_salesdata(:workspace, :productid, :startdate, :enddate, :channel, :adid, :sort, :product_list, :islead, :click_type, :windoww)")
-        result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'channel':channel, 'adid':adid, 'sort':sort, 'product_list':product_list, 'islead':islead, 'click_type':click_type, 'windoww':window})
+        try:
+            sql_query = db.text("select complete_name, email_phone, total, order_date, trackid  from table_salesdata(:workspace, :productid, :startdate, :enddate, :channel, :adid, :sort, :product_list, :islead, :click_type, :windoww)")
+            result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'channel':channel, 'adid':adid, 'sort':sort, 'product_list':product_list, 'islead':islead, 'click_type':click_type, 'windoww':window})
 
-        data = result.fetchall()
-        db.session.close()
+            data = result.fetchall()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+        finally:
+            db.session.close()
 
         for row in data:
             element = {}
@@ -384,9 +399,14 @@ def get_reporttablesalejourney():
     if user:
         sql_query = db.text("select * from table_salejourney(:workspace, :productid, :trackid)")
 
-        result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'trackid':trackid})
-        data = result.fetchall()
-        db.session.close()
+        try:
+            result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'trackid':trackid})
+            data = result.fetchall()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+        finally:
+            db.session.close()
 
         for row in data:
             element = {}
@@ -409,14 +429,19 @@ def table_saleinteractions():
     startdate =  body.get('startdate')
     enddate = body.get('enddate')
     user = UserRegister.query.filter_by(workspace=userid).first()
-    # import pdb; pdb.set_trace()
+
       
-    # sql_query = db.text("select id ,order_date, total, transcation_id, first_name, pgp_sym_decrypt(email::bytea, :encrpyted_key), pgp_sym_decrypt(phone::bytea, :encrpyted_key), first_adsource, last_adsource, interactions_count from table_saleinteractions(:workspace, :productid, :startdate, :enddate)")
-    # result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'encrpyted_key':ENCRYPTION_KEY})
-    sql_query = db.text("select id ,order_date, total, transcation_id, first_name, email, phone, first_adsource, last_adsource, interactions_count from table_saleinteractions(:workspace, :productid, :startdate, :enddate)")
-    result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
-    data = result.fetchall()
-    db.session.close()
+    try:
+        # sql_query = db.text("select id ,order_date, total, transcation_id, first_name, pgp_sym_decrypt(email::bytea, :encrpyted_key), pgp_sym_decrypt(phone::bytea, :encrpyted_key), first_adsource, last_adsource, interactions_count from table_saleinteractions(:workspace, :productid, :startdate, :enddate)")
+        # result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'encrpyted_key':ENCRYPTION_KEY})
+        sql_query = db.text("select id ,order_date, total, transcation_id, first_name, email, phone, first_adsource, last_adsource, interactions_count from table_saleinteractions(:workspace, :productid, :startdate, :enddate)")
+        result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate})
+        data = result.fetchall()
+    except Exception as e:
+        db.session.rollback()
+        raise e
+    finally:
+        db.session.close()
     columns = ["id", "order_date", "total", "transcation_id", "name", "email", "phone", "first_adsource", "last_adsource", "interactions_count"]
 
     results = [dict(zip(columns, row)) for row in data]
@@ -434,11 +459,16 @@ def get_dashboardgraphdata():
     enddate = body.get('enddate')
     userid = headers.get('workspaceId')
 
-    sql_query = db.text("select * from dashboard_graphsales(:workspace, :startdate, :enddate)")
+    try:
+        sql_query = db.text("select * from dashboard_graphsales(:workspace, :startdate, :enddate)")
 
-    result = db.session.execute(sql_query, {'workspace': userid, 'startdate':startdate, 'enddate':enddate})
-    data = result.fetchall()
-    db.session.close()
+        result = db.session.execute(sql_query, {'workspace': userid, 'startdate':startdate, 'enddate':enddate})
+        data = result.fetchall()
+    except Exception as e:
+        db.session.rollback()
+        raise e
+    finally:
+        db.session.close()
 
     sale_data = {'revenue':{"data":[], "total":0.0, "compare":0.0}, 'sales':{"data":[],"total":0.0, "compare":0.0}, 'spend':{"data":[],"total":0.0, "compare":0.0}, 'roi':{"data":[],"total":0.0, "compare":0.0}, 'aov':{"data":[],"total":0.0, "compare":0.0}, 'cpa':{"data":[],"total":0.0, "compare":0.0}}
     for row in data:
@@ -478,8 +508,15 @@ def get_dashboardgraphdata():
     enddate = (startdate - timedelta(days=1)).strftime('%Y-%m-%d')
     startdate = (startdate - difference - timedelta(days=1)).strftime('%Y-%m-%d')
     
-    result = db.session.execute(sql_prevquery, {'workspace': userid, 'startdate':startdate, 'enddate':enddate})
-    data = result.fetchall()
+    try:
+        result = db.session.execute(sql_prevquery, {'workspace': userid, 'startdate':startdate, 'enddate':enddate})
+        data = result.fetchall()
+    except Exception as e:
+        db.session.rollback()
+        raise e
+    finally:
+        db.session.close()
+
     for row in data:
         sale_data["revenue"]["compare"] = (100.0*(sale_data["revenue"]['total'] - round(float(row[0]),2)) / round(float(row[0]),2)) if row[0] != 0 else 0
         sale_data["sales"]["compare"] = (100.0*(sale_data["sales"]['total'] - round(float(row[1]),2)) / round(float(row[1]),2)) if row[1] != 0 else 0
@@ -519,9 +556,15 @@ def channel_matrix(userid, productid, startdate, enddate, fbflag, ggflag):
     fbadsdata = {'accountpresent':fbflag,'revenue':{"data":[], "total":0.0, "compare":0.0}, 'sales':{"data":[],"total":0.0, "compare":0.0}, 'spend':{"data":[],"total":0.0, "compare":0.0}, 'roi':{"data":[],"total":0.0, "compare":0.0}, 'aov':{"data":[],"total":0.0, "compare":0.0}, 'cpa':{"data":[],"total":0.0, "compare":0.0}, 'profit':{"data":[],"total":0.0, "compare":0.0}, 'cr':{"data":[],"total":0.0, "compare":0.0},'click':{"data":[],"total":0.0, "compare":0.0}}
     fbrevenue =0; fbsales=0; fbspend=0; fbroi=0; fbaov=0; fbcpa=0; fbcr=0; fbprofit=0; fbclick=0;
     if fbflag:
-        sql_query_fb = db.text("select * from dashboard_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort)")
-        result = db.session.execute(sql_query_fb, {'workspace': userid, 'productid':productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
-        data = result.fetchall()
+        try:
+            sql_query_fb = db.text("select * from dashboard_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort)")
+            result = db.session.execute(sql_query_fb, {'workspace': userid, 'productid':productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
+            data = result.fetchall()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+        finally:
+            db.session.close()
 
         for row in data:
             date_str = row[0].strftime("%Y-%m-%d")
@@ -563,9 +606,15 @@ def channel_matrix(userid, productid, startdate, enddate, fbflag, ggflag):
         fbadsdata["roi"]['total'] = round(fbadsdata["revenue"]['total']/max(fbadsdata["spend"]['total'],1),2)
         fbadsdata["cr"]['total'] = round(fbadsdata["sales"]['total']/max(fbadsdata["click"]['total'],1),2)
 
-        sqlquery_fbprev = db.text("select * from dashboard_facebookprev_attribute(:workspace, :productid, :startdate, :enddate, :sort)")
-        result = db.session.execute(sqlquery_fbprev, {'workspace': userid, 'productid':productid, 'startdate':startdate_prev, 'enddate':enddate_prev, 'sort':sort})
-        body = result.fetchall()
+        try:
+            sqlquery_fbprev = db.text("select * from dashboard_facebookprev_attribute(:workspace, :productid, :startdate, :enddate, :sort)")
+            result = db.session.execute(sqlquery_fbprev, {'workspace': userid, 'productid':productid, 'startdate':startdate_prev, 'enddate':enddate_prev, 'sort':sort})
+            body = result.fetchall()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+        finally:
+            db.session.close()
 
         for row in body:
             fbrevenue = round(float(row[4]))
@@ -593,9 +642,15 @@ def channel_matrix(userid, productid, startdate, enddate, fbflag, ggflag):
     ggdsdata = {'accountpresent':ggflag,'revenue':{"data":[], "total":0.0, "compare":0.0}, 'sales':{"data":[],"total":0.0, "compare":0.0}, 'spend':{"data":[],"total":0.0, "compare":0.0}, 'roi':{"data":[],"total":0.0, "compare":0.0}, 'aov':{"data":[],"total":0.0, "compare":0.0}, 'cpa':{"data":[],"total":0.0, "compare":0.0}, 'profit':{"data":[],"total":0.0, "compare":0.0}, 'cr':{"data":[],"total":0.0, "compare":0.0},'click':{"data":[],"total":0.0, "compare":0.0}}
     ggrevenue =0; ggsales=0; ggspend=0; ggroi=0; ggaov=0; ggcpa=0; ggcr=0; ggprofit=0; ggclick=0;
     if ggflag:
-        sql_query_fb = db.text("select * from dashboard_googleattribute(:workspace, :productid, :startdate, :enddate, :sort)")
-        result = db.session.execute(sql_query_fb, {'workspace': userid, 'productid':productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
-        data = result.fetchall()
+        try:
+            sql_query_fb = db.text("select * from dashboard_googleattribute(:workspace, :productid, :startdate, :enddate, :sort)")
+            result = db.session.execute(sql_query_fb, {'workspace': userid, 'productid':productid, 'startdate':startdate, 'enddate':enddate, 'sort':sort})
+            data = result.fetchall()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+        finally:
+            db.session.close()
 
         for row in data:
 
@@ -638,9 +693,15 @@ def channel_matrix(userid, productid, startdate, enddate, fbflag, ggflag):
         ggdsdata["roi"]['total'] = round(ggdsdata["revenue"]['total']/max(ggdsdata["spend"]['total'],1),2)
         ggdsdata["cr"]['total'] = round(ggdsdata["sales"]['total']/max(ggdsdata["click"]['total'],1),2)
 
-        sqlquery_ggprev = db.text("select * from dashboard_googleprev_attribute(:workspace, :productid, :startdate, :enddate, :sort)")
-        result = db.session.execute(sqlquery_ggprev, {'workspace': userid, 'productid':productid, 'startdate':startdate_prev, 'enddate':enddate_prev, 'sort':sort})
-        body = result.fetchall()
+        try:
+            sqlquery_ggprev = db.text("select * from dashboard_googleprev_attribute(:workspace, :productid, :startdate, :enddate, :sort)")
+            result = db.session.execute(sqlquery_ggprev, {'workspace': userid, 'productid':productid, 'startdate':startdate_prev, 'enddate':enddate_prev, 'sort':sort})
+            body = result.fetchall()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+        finally:
+            db.session.close()
         
         for row in body:
             ggrevenue = round(float(row[4]),2)
@@ -822,55 +883,61 @@ def get_dashboardtraffic():
 
     trafficdata = {'pageview':{"data":[], "total":0.0, "compare":0.0}, 'session':{"data":[], "total":0.0, "compare":0.0}, 'localsession':{"data":[], "total":0.0, "compare":0.0}, 'nuser':{"data":[], "total":0.0, "compare":0.0}}
     
-    for metric in ['pageview','session','localsession','nuser']:
-        result = dashbaord_mongo_query(metric, user.productid, startdate, enddate)
-        if metric == 'pageview':
-            metric_result = MongoMetric.query.filter(MongoMetric.dated>=_body.get('startdate'), MongoMetric.dated<=_body.get('enddate'), MongoMetric.workspace==userid, MongoMetric.metric=='page_view').all()
-        else:
-            metric_result = MongoMetric.query.filter(MongoMetric.dated>=_body.get('startdate'), MongoMetric.dated<=_body.get('enddate'), MongoMetric.workspace==userid, MongoMetric.metric==metric).all()
+    try:
+        for metric in ['pageview','session','localsession','nuser']:
+            result = dashbaord_mongo_query(metric, user.productid, startdate, enddate)
+            if metric == 'pageview':
+                metric_result = MongoMetric.query.filter(MongoMetric.dated>=_body.get('startdate'), MongoMetric.dated<=_body.get('enddate'), MongoMetric.workspace==userid, MongoMetric.metric=='page_view').all()
+            else:
+                metric_result = MongoMetric.query.filter(MongoMetric.dated>=_body.get('startdate'), MongoMetric.dated<=_body.get('enddate'), MongoMetric.workspace==userid, MongoMetric.metric==metric).all()
 
-        total = 0
-        total_cmp = 0
-        combined_dict = defaultdict(int)
+            total = 0
+            total_cmp = 0
+            combined_dict = defaultdict(int)
 
-        for entry in metric_result:
-            dated = entry.dated
-            # Add to combined_dict using the date as key, and accumulate the values
-            combined_dict[dated.strftime('%Y-%m-%d')] += entry.value
-            total += entry.value
-        
-        for ele in result:
-            dd = ele['_id']['date'] if metric == 'nuser' else ele['_id']
-            combined_dict[dd] += ele[metric]
-            total += ele[metric]
+            for entry in metric_result:
+                dated = entry.dated
+                # Add to combined_dict using the date as key, and accumulate the values
+                combined_dict[dated.strftime('%Y-%m-%d')] += entry.value
+                total += entry.value
+            
+            for ele in result:
+                dd = ele['_id']['date'] if metric == 'nuser' else ele['_id']
+                combined_dict[dd] += ele[metric]
+                total += ele[metric]
 
-        # Update total in trafficdata
-        trafficdata[metric]['total'] = total
+            # Update total in trafficdata
+            trafficdata[metric]['total'] = total
 
-        # Now update trafficdata[metric]['data'] with the combined_dict logic
-        for date, value in combined_dict.items():
-            date_found = False
+            # Now update trafficdata[metric]['data'] with the combined_dict logic
+            for date, value in combined_dict.items():
+                date_found = False
 
-            # Check if the date already exists in the metric data
-            for entry in trafficdata[metric]['data']:
-                if entry['date'] == date:
-                    # If the date is found, add the value to the existing value
-                    entry['value'] += value
-                    date_found = True
-                    break
+                # Check if the date already exists in the metric data
+                for entry in trafficdata[metric]['data']:
+                    if entry['date'] == date:
+                        # If the date is found, add the value to the existing value
+                        entry['value'] += value
+                        date_found = True
+                        break
 
-            # If the date is not found, append a new dictionary with the date and value
-            if not date_found:
-                trafficdata[metric]['data'].append({'date': date, 'value': value})
-            trafficdata[metric]['data'].sort(key=lambda x: x['date'])
+                # If the date is not found, append a new dictionary with the date and value
+                if not date_found:
+                    trafficdata[metric]['data'].append({'date': date, 'value': value})
+                trafficdata[metric]['data'].sort(key=lambda x: x['date'])
 
-        if metric == 'pageview':
-            metric_cmp = MongoMetric.query.filter(MongoMetric.dated>=startdate_prev, MongoMetric.dated<=enddate_prev, MongoMetric.workspace==userid, MongoMetric.metric=='page_view').all()
-        else:
-            metric_cmp = MongoMetric.query.filter(MongoMetric.dated>=startdate_prev, MongoMetric.dated<=enddate_prev, MongoMetric.workspace==userid, MongoMetric.metric==metric).all()       
-        for entry in metric_cmp:
-            total_cmp += entry.value
-        trafficdata[metric]['compare'] = (100.0*(total - total_cmp) / max(total_cmp,1)) if (total_cmp) != 0 else 0
+            if metric == 'pageview':
+                metric_cmp = MongoMetric.query.filter(MongoMetric.dated>=startdate_prev, MongoMetric.dated<=enddate_prev, MongoMetric.workspace==userid, MongoMetric.metric=='page_view').all()
+            else:
+                metric_cmp = MongoMetric.query.filter(MongoMetric.dated>=startdate_prev, MongoMetric.dated<=enddate_prev, MongoMetric.workspace==userid, MongoMetric.metric==metric).all()       
+            for entry in metric_cmp:
+                total_cmp += entry.value
+            trafficdata[metric]['compare'] = (100.0*(total - total_cmp) / max(total_cmp,1)) if (total_cmp) != 0 else 0
+    except Exception as e:
+        db.session.rollback()
+        raise e
+    finally:
+        db.session.close()
 
      
     # localsess_pipeline = [
@@ -994,11 +1061,13 @@ def get_productdetails():
             sql_query = text(f"SELECT DISTINCT product_name FROM orderline_{userid}")
             result = db.session.execute(sql_query)
             data = result.fetchall()
-            db.session.close()
             return [{"product": row[0]} for row in data]
-        except:
-            db.session.close()
+        except Exception as e:
+            db.session.rollback()
             return [{"product": None}]
+        finally:
+            db.session.close()
+            
         
 
 
@@ -1014,9 +1083,15 @@ def get_customerpath():
     userid = headers.get('workspaceId')
     user = UserRegister.query.filter_by(workspace=userid).first()
 
-    sql_query = text("SELECT * FROM customer_path(:workspace, :productid, :startdate, :enddate)")
-    result = db.session.execute(sql_query, { 'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate })
-    data = result.fetchall()
+    try:
+        sql_query = text("SELECT * FROM customer_path(:workspace, :productid, :startdate, :enddate)")
+        result = db.session.execute(sql_query, { 'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate })
+        data = result.fetchall()
+    except Exception as e:
+        db.session.rollback()
+        raise e
+    finally:
+        db.session.close()
 
     columns = result.keys()
     op = [dict(zip(columns, row)) for row in data]
@@ -1037,11 +1112,16 @@ def get_customerpathad():
     click_type = _body.get('click_type', 'paid')
     taffic_source = _body.get('traffic_source', 'facebook')
     userid = headers.get('workspaceId')
-    user = UserRegister.query.filter_by(workspace=userid).first()
 
-    sql_query = text("SELECT * FROM customer_path_reporting(:workspace, :startdate, :enddate, :filter_type, :filter_value, :sort, :click_type, :traffic_source)")
-    result = db.session.execute(sql_query, { 'workspace': userid, 'startdate':startdate, 'enddate':enddate, 'filter_type':filter_type, 'filter_value':filter_value, 'sort':sort, 'click_type':click_type, 'traffic_source':taffic_source })
-    data = result.fetchall()
+    try:
+        sql_query = text("SELECT * FROM customer_path_reporting(:workspace, :startdate, :enddate, :filter_type, :filter_value, :sort, :click_type, :traffic_source)")
+        result = db.session.execute(sql_query, { 'workspace': userid, 'startdate':startdate, 'enddate':enddate, 'filter_type':filter_type, 'filter_value':filter_value, 'sort':sort, 'click_type':click_type, 'traffic_source':taffic_source })
+        data = result.fetchall()
+    except Exception as e:
+        db.session.rollback()
+        raise e
+    finally:
+        db.session.close()
 
     columns = result.keys()
     op = [dict(zip(columns, row)) for row in data]
@@ -1070,9 +1150,15 @@ def get_ad_breakdown():
 
     user = UserRegister.query.filter_by(workspace=userid).first()
 
-    sql_query = text("SELECT * FROM ad_breakdown(:workspace, :productid, :channel, :startdate, :enddate, :sort, :click_type, :windoww, :campaign)")
-    op = db.session.execute(sql_query, { 'workspace': userid, 'productid':user.productid, 'channel':channel, 'startdate':startdate, 'enddate':enddate, 'sort': sort, 'click_type':click_type, 'windoww':window, 'campaign':campaign })
-    data = op.fetchall()
+    try:
+        sql_query = text("SELECT * FROM ad_breakdown(:workspace, :productid, :channel, :startdate, :enddate, :sort, :click_type, :windoww, :campaign)")
+        op = db.session.execute(sql_query, { 'workspace': userid, 'productid':user.productid, 'channel':channel, 'startdate':startdate, 'enddate':enddate, 'sort': sort, 'click_type':click_type, 'windoww':window, 'campaign':campaign })
+        data = op.fetchall()
+    except Exception as e:
+        db.session.rollback()
+        raise e
+    finally:
+        db.session.close()
 
     # columns = op.keys()
     columns = ['level_type', 'campaign_name', 'campaignid', 'adset_name', 'adsetid', 'ad_name', 'adid', 'dated', 'Impression', 'Clicks', 'Spend', 'Sales', 'Revenue', 'nSales', 'nRevenue', 'New Visit', 'ROAS', 'CPC', 'CPM', 'CTR', 'CR']

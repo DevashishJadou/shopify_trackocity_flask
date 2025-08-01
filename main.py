@@ -35,7 +35,7 @@ from flask_cors import CORS, cross_origin
 from flask_jwt_extended import verify_jwt_in_request, jwt_required, create_access_token
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 import time, json , requests
-
+import psutil
 import tracemalloc
 
 # os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
@@ -184,15 +184,36 @@ def shutdown_session(exception=None):
 
 tracemalloc.start()
 @app.route("/memory-stats")
-def memory_stats():
+def detailed_memory_stats():
     snapshot = tracemalloc.take_snapshot()
-    top_stats = snapshot.statistics('lineno')
-
-    result = ["Top memory usage by line:"]
-    for stat in top_stats[:10]:
-        result.append(str(stat))
-
+    
+    # Group by filename to identify problem modules
+    top_stats = snapshot.statistics('filename')
+    sqlalchemy_stats = [stat for stat in top_stats if 'sqlalchemy' in stat.traceback.filename]
+    
+    result = [f"SQLAlchemy memory usage: {sum(s.size for s in sqlalchemy_stats) / 1024 / 1024:.1f} MB"]
+    
+    # Show line-level details for SQLAlchemy
+    line_stats = snapshot.statistics('lineno')
+    for stat in line_stats[:5]:
+        if 'sqlalchemy' in stat.traceback.filename:
+            result.append(f"{stat.traceback.filename}:{stat.traceback.lineno}: {stat.size / 1024 / 1024:.1f} MB ({stat.count} objects)")
+    
     return "<br>".join(result)
+
+
+@app.route("/cpu-stats")
+def spike_detector():
+    process = psutil.Process()
+    cpu = process.cpu_percent(interval=1)
+    memory_mb = process.memory_info().rss / 1024 / 1024
+    
+    if cpu > 50 or memory_mb > 1500:  # Spike thresholds
+        timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+        return f"SPIKE DETECTED {timestamp}: CPU={cpu:.1f}% RAM={memory_mb:.1f}MB"
+    
+    return f"Normal: CPU={cpu:.1f}% RAM={memory_mb:.1f}MB"
+
 
 if __name__ == '__main__':
     app.run(debug=False)

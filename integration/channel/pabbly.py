@@ -292,11 +292,17 @@ def pabbly_webhook(workspace):
             # Create order with retry logic
             # order_make = create_order_with_retry(orderTable, order_data, max_retries=3)
 
-            order_make = orderTable(**order_data)
-            db.session.add(order_make)
-            db.session.flush()  # Force ID generation and check for issues
-            
-            db.session.commit()
+            try:
+                order_make = orderTable(**order_data)
+                db.session.add(order_make)
+                db.session.flush()  # Force ID generation and check for issues
+                
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                raise e
+            finally:
+                db.session.close()
             
             return jsonify({'status': 'success', 'order_id': getattr(order_make, 'id', payment_id)}), 200
             
@@ -327,6 +333,8 @@ def pabbly_webhook(workspace):
             except Exception as raw_e:
                 db.session.rollback()
                 print(f'Pabblydata Raw SQL insert also failed: {raw_e}')
+            finally:
+                db.session.close()
             print(f'Error pabblydata order: error:{str(e)} pabblydata:{data}')
             return jsonify({'error': 'Failed to save order'}), 500
     else:

@@ -198,7 +198,7 @@ class SmartQueryHandler:
                             SUM(COALESCE(ads.video_p50_watched_actions,0)) AS video_watched_actions_50percent,
                             SUM(COALESCE(ads.video_p100_watched_actions,0)) AS video_watched_actions_100percent
                         FROM horizon.ads ads
-                        WHERE ads.campaign_name = '250425-100-AL-BOW-COV-(MSC)-ABO-DB-TST-NA-LC-IND'
+                        WHERE REPLACE(ads.campaign_name, '*', '') = '250425-100-AL-BOW-COV-(MSC)-ABO-DB-TST-NA-LC-IND'
                         AND ads.dated >= CURRENT_DATE - INTERVAL '7 days'
                         AND ads.workspace = '854e249d718e42cba341aa0559931c12'
                         GROUP BY 1, 2, 3, 4, 5, 6
@@ -216,7 +216,7 @@ class SmartQueryHandler:
                                 SUM(COALESCE(al.new_order, 0)) AS new_order,
                                 SUM(COALESCE(al.fresh_visitor, 0)) AS fresh_visitor
                             FROM horizon.ads_lastattribute al
-                            WHERE al.campaign_name = '250425-100-AL-BOW-COV-(MSC)-ABO-DB-TST-NA-LC-IND'
+                            WHERE REPLACE(al.campaign_name, '*', '') = '250425-100-AL-BOW-COV-(MSC)-ABO-DB-TST-NA-LC-IND'
                             AND al.dated >= CURRENT_DATE - INTERVAL '7 days'
                             AND al.workspace = '854e249d718e42cba341aa0559931c12'
                             GROUP BY 1, 2, 3, 4, 5
@@ -249,7 +249,7 @@ class SmartQueryHandler:
                     FROM ads_agg a
                     JOIN al_agg b ON a.adid = b.adid AND a.dated = b.dated  
                     WHERE
-                        a.campaign_name = '250425-100-AL-BOW-COV-(MSC)-ABO-DB-TST-NA-LC-IND'
+                        REPLACE(a.campaign_name, '*', '') = '250425-100-AL-BOW-COV-(MSC)-ABO-DB-TST-NA-LC-IND'
                         AND a.dated >= CURRENT_DATE - INTERVAL '7 days'
                         AND a.workspace = '854e249d718e42cba341aa0559931c12'
                     GROUP BY
