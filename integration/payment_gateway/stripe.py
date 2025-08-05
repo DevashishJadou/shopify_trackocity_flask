@@ -5,9 +5,10 @@ from datetime import datetime, timedelta
 from flask_cors import cross_origin
 from .razorpay import payment_bp
 
-from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable
+from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable, ordertable_detail
 from ...connection import db
 from sqlalchemy import MetaData
+from sqlalchemy import text
 
 
 metadata = MetaData()
@@ -27,11 +28,14 @@ def stripe_params():
         stripe_register = PlatformConfiguration(workspace=workspace, platform=platform, active=True)
         db.session.add(stripe_register)
         tablename = 'order_'+workspace
+        order_detail_tablename = 'order_detailed_'+workspace
         try:
             if not metadata.tables.get(tablename):
                 stripe_table = ordertable(tablename)
+                order_detail_table = ordertable_detail(order_detail_tablename)
                 try:
                     stripe_table.create(bind=db.engine)
+                    order_detail_table.create(bind=db.engine)
                 except:
                     pass
         except Exception as e:
@@ -49,7 +53,10 @@ def strip_webhook(workspace):
     
     account = PlatformConfiguration.query.filter_by(workspace=workspace).filter_by(platform='stripe').first()
     user = UserRegister.query.filter_by(workspace=workspace).first()
-    if not account or not account.active:
+    if not user.isactive or not account.active:
+        jsonify({'status': 'Unauthorized'}), 403
+    
+    if not user.isactive:
         jsonify({'status': 'Unauthorized'}), 403
 
     tablename = 'order_'+workspace

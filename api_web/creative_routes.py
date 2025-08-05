@@ -40,7 +40,8 @@ def get_creativetabledatafacebook():
 	result = db.session.execute(sql_query, {'workspace': userid, 'productid':user.productid, 'startdate':startdate, 'enddate':enddate, 'sort':'desc', 'campaign':campaign, 'adset':adset, 'ad':ad})
 	data = result.fetchall()
 
-	crdata = {"creative": [], "click": 0, "impression": 0, "revenue":0, "spend":0, "sales":0, "engagement":0, "roas":0, "cpa":0, "aov":0, "cpc":0, "cpm":0}
+
+	crdata = {"creative": [], "click": 0, "impression": 0, "revenue":0, "spend":0, "sales":0, "leads":0, "engagement":0, "roas":0, "cpa":0, "aov":0, "cpc":0, "cpm":0, "cpl":0}
 	for row in data:
 		creativeid = row[0];       thumbnail_id = row[1]; creativename = row[2]
 		status = row[3]	;	       adtype = row[4];         thumbnail = row[5]
@@ -49,7 +50,8 @@ def get_creativetabledatafacebook():
 		impression = int(row[12]);  click = int(row[13]);	engagement = int(row[14])
 		vv3s = int(row[15]); 	   p25 = int(row[16]);		p50 = int(row[17])
 		p100 = int(row[18]);	   sec30 = int(row[19]);	thruplay = int(row[20])
-		videolength = round(float(row[21]),2);    adcount = int(row[22]);    
+		videolength = round(float(row[21]),2);    adcount = int(row[22]);
+		lead = int(row[23])   
 
 		if adtype == 'SHARE' and vv3s>0:
 			adtype = 'VIDEO'
@@ -66,15 +68,16 @@ def get_creativetabledatafacebook():
 		completion_rate = 0 if vv3s == 0 else round(p100 / max(vv3s, 1),2)
 		cr = 0 if click == 0 else  round(orders*100 / max(click, 1),2)
 		cpnv = 0 if engagement == 0 else  round(spend / max(engagement, 1),2)
+		cpl = 0 if lead == 0 else round(spend / max(lead, 1),2)
 
 		creative_data = {
         "creativeid": creativeid, "thumbnail_id": thumbnail_id, "creativename": creativename, 
 		"status": status, "adtype": adtype,
         "thumbnail": thumbnail, "facebookfeed": facebookfeed, "preview": preview,
-        "spend": spend, "sales": orders, "revenue": rev, "impression": impression,
+        "spend": spend, "sales": orders, "leads":lead, "revenue": rev, "impression": impression,
         "click": click, "engagement": engagement, "vv3s": vv3s, "p25": p25,
         "p50": p50, "p100": p100, "sec30": sec30, "thruplay": thruplay, "videolength":videolength,
-		"adcount": adcount, "roas": roas, "cpa": cpa, "aov": aov, "cpc": cpc, "cpm": cpm, "ctr": ctr,
+		"adcount": adcount, "roas": roas, "cpa": cpa, "cpl":cpl, "aov": aov, "cpc": cpc, "cpm": cpm, "ctr": ctr,
 		"hookrate": hookrate, "holdrate": holdrate, "engage_rate":engage_rate, "cpnv": cpnv,
 		"completion_rate":completion_rate, "cr":cr, "creation_at":creation_at
     }
@@ -84,12 +87,14 @@ def get_creativetabledatafacebook():
 		crdata["impression"] += impression
 		crdata["revenue"] += rev
 		crdata["sales"] += orders
+		crdata["leads"] += lead
 		crdata["spend"] += spend
 		crdata["engagement"] += engagement
 	crdata["revenue"] = round(crdata["revenue"])
 	crdata["spend"] = round(crdata["spend"])
 	crdata["roas"] = 0 if crdata["spend"] == 0 else round(crdata["revenue"] / max(crdata["spend"], 1), 2)
 	crdata["cpa"] = 0 if crdata["sales"] == 0 else round(crdata["spend"] / max(crdata["sales"], 1))
+	crdata["cpl"] = 0 if crdata["leads"] == 0 else round(crdata["spend"] / max(crdata["leads"], 1))
 	crdata["aov"] = round(crdata["revenue"] / max(crdata["sales"], 1))
 	crdata["cpc"] = 0 if crdata["click"] == 0 else round(crdata["spend"] / max(crdata["click"], 1),2)
 	crdata["cpm"] = round(crdata["spend"]*1000 / max(crdata["impression"], 1),2)

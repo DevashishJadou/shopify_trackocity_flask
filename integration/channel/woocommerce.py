@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 import json, os
 from flask_cors import cross_origin
 
-from ...db_model.sql_models import WooCommerce, order_table_dynamic, ordertable
+from ...db_model.sql_models import WooCommerce, order_table_dynamic, ordertable, ordertable_detail
 from ...connection import db
 from ...dbrule import dup_order_rule
 # from db_model.sql_models import WooCommerce, order_table_dynamic, ordertable
@@ -36,8 +36,10 @@ def woocommerceintegration():
         try:
             if not metadata.tables.get(tablename):
                 woocommerce_table = ordertable(tablename)
+                ordertable_detail_table = ordertable_detail('order_detailed_'+workspace)
                 try:
                     woocommerce_table.create(bind=db.engine)
+                    ordertable_detail_table.create(bind=db.engine)
                     # dup_order_rule(tablename)
                 except:
                      pass

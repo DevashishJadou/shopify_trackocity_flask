@@ -3,7 +3,7 @@
 from ..connection import db
 from datetime import datetime
 import uuid, os
-from sqlalchemy import MetaData, Table, Column, Integer, String, DateTime, Text, Numeric, Date, Boolean, ForeignKey
+from sqlalchemy import MetaData, Table, Column, Integer, String, DateTime, Text, Numeric, Date, Boolean, SmallInteger
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.dialects.postgresql import BYTEA
 from sqlalchemy.sql import func
@@ -161,7 +161,7 @@ class Shopify(db.Model):
 
 class Payment(db.Model):
     __tablename__ = "payment_request"
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     completename = db.Column(db.String(32))
     email = db.Column(db.String(128))
     order_id = db.Column(db.String(32))
@@ -213,11 +213,13 @@ class ProductTable(db.Model):
     sale_price = db.Column(db.NUMERIC)
 
 
+
+
 def order_table_dynamic(tablename):
     class OrderTable(db.Model):
         __tablename__ = tablename
         __table_args__ = {'extend_existing':True}
-        id = db.Column(db.Integer, primary_key=True)
+        id = db.Column(db.Integer, primary_key=True, autoincrement=True)
         order_date = db.Column(db.DateTime)
         transcation_id = db.Column(db.String(128), unique=True)
         first_name = db.Column(db.String(128))
@@ -268,7 +270,7 @@ def ordertable(tablename):
     order_table = Table(
 			tablename,
 			metadata,
-			Column('id', Integer, primary_key=True),
+			Column('id', Integer, primary_key=True, autoincrement=True),
             Column('channel', String(32)),
 			Column('order_date', DateTime),
 			Column('transcation_id', String(128), unique=True),
@@ -289,7 +291,7 @@ def ordertable(tablename):
             Column('first_stage_date', DateTime),
             Column('second_stage_date', DateTime),
             Column('converted_date', DateTime),
-            Column('islead', Boolean, default=False),
+            Column('islead', Boolean, default=False, server_default='false'),
             Column('event_type', String(32)),
 			Column('created_at', DateTime, default=datetime.now),
 			Column('updated_at', DateTime, default=datetime.now, onupdate=datetime.now),
@@ -302,6 +304,48 @@ def ordertable(tablename):
     return order_table
 
 
+def ordertable_detail(tablename):
+    metadata = MetaData(schema='public')  
+    order_table = Table(
+        tablename,
+        metadata,
+        Column('id', Integer, primary_key=True, autoincrement=True),
+        Column('workspace', String(64), nullable=False),
+        Column('productid', String(16), nullable=False),
+        Column('order_id', Integer),
+        Column('order_date', Date, nullable=False),
+        Column('order_timestamp', DateTime, nullable=False),
+        Column('transcation_id', String(64)),
+        Column('created_at', DateTime),
+        Column('order_status', String(16)),
+        Column('total', Numeric),
+        Column('form_event_time', DateTime),
+        Column('sessionid_child', String(32)),
+        Column('localsession', String(32)),
+        Column('adsource', String(32)),
+        Column('adid', String(64)),
+        Column('event_time', DateTime),
+        Column('erank', SmallInteger),
+        Column('prank', SmallInteger),
+        Column('neworder', Integer),
+        Column('ntotal', Numeric),
+        Column('email', String(128)),
+        Column('phone', String(128)),
+        Column('first_name', String(128)),
+        Column('email_secure', String(128)),
+        Column('phone_secure', String(128)),
+        Column('islead', Boolean),
+        Column('region', String(128)),
+        Column('city', String(128)),
+        Column('keyword', String(128)),
+        Column('adsetid', String(128)),
+        Column('placement', String(128)),
+        Column('origin', String(64))
+    )
+
+    return order_table
+
+
 
 def orderlinetable(tablename):
     # Define a table with order name and columns
@@ -310,11 +354,12 @@ def orderlinetable(tablename):
 			tablename,
 			metadata,
 			Column('order_id', Integer, primary_key=True),
-			Column('shopify_productid', Integer),
-			Column('sku', String(128), unique=True),
+			Column('shopify_productid', String(64)),
+			Column('sku', String(128)),
             Column('product_name', String(255)),
 			Column('quantity', Integer),
 			Column('price', Numeric),
+            Column('title', String(255)),
 			Column('variant_title', String(128)),
             Column('cost', Numeric)
 		)
@@ -464,3 +509,4 @@ class CustomizeColumn(db.Model):
     is_custom_used = db.Column(db.Boolean, default=False)
     custom_id = db.Column(db.String(32))
     view_name = db.Column(db.String(64))
+    latest_view = db.Column(db.Boolean, default=False)
