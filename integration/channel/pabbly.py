@@ -311,11 +311,6 @@ def pabbly_webhook(workspace):
             db.session.rollback()
 
             try:
-                payment_default = str(random.randint(1, 99999999)) + '-' + str(random.randint(1, 99999999)) + '-' + str(random.randint(1, 99999999))
-                if data.get('order_number') == '001':
-                    payment_id = payment_default
-                else:
-                    payment_id = data.get('order_number', payment_default)
 
                 # Fallback to raw SQL INSERT
                 raw_sql = text("""

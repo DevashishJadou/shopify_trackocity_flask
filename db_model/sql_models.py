@@ -310,8 +310,6 @@ def ordertable_detail(tablename):
         tablename,
         metadata,
         Column('id', Integer, primary_key=True, autoincrement=True),
-        Column('workspace', String(64), nullable=False),
-        Column('productid', String(16), nullable=False),
         Column('order_id', Integer),
         Column('order_date', Date, nullable=False),
         Column('order_timestamp', DateTime, nullable=False),
