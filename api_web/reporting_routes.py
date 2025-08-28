@@ -60,7 +60,7 @@ def update_metrics(metrics, row, indexes, traffic):
     metrics["Impression"] += row[indexes["Impression"]]
     metrics["Spend"] += round(float(row[indexes["Spend"]]),1)
     metrics["Sales"] += int(row[indexes["Sales"]])
-    metrics["Leads"] += int(row[indexes["Leads"]])
+    metrics["Leads"] += int(row[indexes["Leads"]] or 0)
     metrics["Revenue"] += round(float(row[indexes["Revenue"]]),1)
     metrics["Profit"] += round((float(row[indexes["Revenue"]]) - float(row[indexes["Spend"]])),1)
     metrics["CancelOrder"] += int(row[indexes["CancelOrder"]])
@@ -71,6 +71,7 @@ def update_metrics(metrics, row, indexes, traffic):
     metrics["rRevenue"] += round(float(row[indexes["Revenue"]]) - float(row[indexes["nRevenue"]]),2)
     metrics["New Visits"] += min(int(row[indexes["New Visits"]]), row[indexes["Clicks"]])
     metrics["nvisitor"] += int(row[indexes["nvisitor"]])
+    metrics["ATC"] += int(row[indexes["ATC"]])
     metrics["visitor"] += (int(row[indexes["nvisitor"]]) + int(row[indexes["New Visits"]]))
     metrics["Reported Rev"] += round(float(row[indexes["Reported Rev"]]),0)
     metrics["Reported Sale"] += round(float(row[indexes["Reported Sale"]]),0)
@@ -81,6 +82,7 @@ def update_metrics(metrics, row, indexes, traffic):
     metrics["ROAS"] = round(metrics["Revenue"] / max(metrics["Spend"], 1),2)
     metrics["AOV"] = round(metrics["Revenue"] / max(metrics["Sales"], 1),1)
     metrics["CPA"] = 'n/a' if metrics["Sales"] == 0 else round(metrics["Spend"] / metrics["Sales"],1)
+    metrics["Cart to Sales %"] = 'n/a' if metrics["ATC"] == 0 else round((metrics["Sales"] / metrics["ATC"])*100, 2)
     metrics["CPL"] = 'n/a' if metrics["Leads"] == 0 else round(metrics["Spend"] / metrics["Leads"],1)
     metrics["CPC"] = 'n/a' if metrics["Clicks"] == 0 else round(metrics["Spend"] / metrics["Clicks"],2)
     metrics["CTR %"] = 'n/a' if metrics["Impression"] == 0 else round(metrics["Clicks"]*100 / metrics["Impression"],2)
@@ -113,9 +115,9 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
             "ad_sets": {},
             "Impression": 0, "Clicks": 0, "Spend": 0.0,
             "Sales": 0, "Leads":0, "Revenue": 0.0, "Profit":0.0, "CPM":0, "ROAS": 0.0, "AOV": 0.0,
-            "CPC": 0.0, "CPA":0.0, "CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
+            "CPC": 0.0, "CPA":0.0,"Cart to Sales %": 0.0,"CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
             "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
-            "New Visits": 0, "nvisitor": 0, "visitor": 0, "nSpend": 0.0,
+            "New Visits": 0, "nvisitor": 0,"ATC": 0,"visitor": 0, "nSpend": 0.0,
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, 
             "rSales":0, "rRevenue":0.0, "New Visits %": 0.0,
             "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0, "Reported CPA":0.0, 
@@ -129,9 +131,9 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
             "ads": [],
             "Impression": 0, "Clicks": 0, "Spend": 0.0, "Profit": 0.0,
             "Sales": 0, "Leads":0, "Revenue": 0.0, "CPM":0, "ROAS": 0.0, "AOV": 0.0,
-            "CPC": 0.0, "CPA":0.0, "CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
+            "CPC": 0.0, "CPA":0.0,"Cart to Sales %": 0.0,"CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
             "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
-            "New Visits": 0, "nvisitor": 0, "visitor": 0, "nSpend": 0.0,
+            "New Visits": 0, "nvisitor": 0,"ATC": 0,"visitor": 0, "nSpend": 0.0,
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, 
             "rRevenue":0.0, "rSales":0.0, "New Visits %": 0.0,
             "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0, "Reported CPA":0.0,
@@ -159,14 +161,15 @@ def process_ads(data, fbadsdata, row, indexes, traffic):
         "Clicks": row[indexes["Clicks"]],
         "Spend": round(float(row[indexes["Spend"]]),1),
         "Sales": int(row[indexes["Sales"]]),
-        "Leads": int(row[indexes["Leads"]]),
+        "Leads": int(row[indexes["Leads"]] or 0),
         "Revenue": round(float(row[indexes["Revenue"]]),0),
         "Profit" : round(float(row[indexes["Revenue"]]) - float(row[indexes["Spend"]]),0),
         "CPM": 'n/a' if row[indexes["Impression"]] == 0 else round(float(row[indexes["Spend"]]*1000 / row[indexes["Impression"]]),1),
         "ROAS": 'n/a' if row[indexes["Spend"]] == 0 else round(float(row[indexes["Revenue"]]) / float(row[indexes["Spend"]]),2),
         "AOV": 'n/a' if row[indexes["Sales"]] == 0 else round(float(row[indexes["Revenue"]]) / int(row[indexes["Sales"]]),1),
         "CPA": 'n/a' if row[indexes["Sales"]] == 0 else round(float(row[indexes["Spend"]]) / int(row[indexes["Sales"]]),1),
-        "CPL": 'n/a' if row[indexes["Leads"]] == 0 else round(float(row[indexes["Spend"]]) / int(row[indexes["Leads"]]),1),
+        "Cart to Sales %": 'n/a' if row[indexes["ATC"]] == 0 else round((int(row[indexes["Sales"]]) / int(row[indexes["ATC"]]))*100,2),
+        "CPL": 'n/a' if (row[indexes["Leads"]] or 0) == 0 else round(float(row[indexes["Spend"]]) / int(row[indexes["Leads"]]),1),
         "CPC": 'n/a' if row[indexes["Clicks"]] == 0 else round(float(row[indexes["Spend"]]) / int(row[indexes["Clicks"]]),2),
         "CTR %": 'n/a' if row[indexes["Impression"]] == 0 else round(float(row[indexes["Clicks"]])*100 / int(row[indexes["Impression"]]),2),
         "CR %": 'n/a' if row[indexes["Clicks"]] == 0 else round(int(row[indexes["Sales"]])*100 / int(row[indexes["Clicks"]]),2),
@@ -182,6 +185,7 @@ def process_ads(data, fbadsdata, row, indexes, traffic):
         "rSales": int(row[indexes["Sales"]]) - int(row[indexes["nSales"]]),
         "rRevenue": round(float(row[indexes["Revenue"]]) - float(row[indexes["nRevenue"]]),0),
         "nvisitor": int(row[indexes["nvisitor"]]),
+        "ATC": int(row[indexes["ATC"]]),
         "visitor": int(row[indexes["New Visits"]]) + int(row[indexes["nvisitor"]]),
         "nROAS": 'n/a' if row[indexes["Spend"]] == 0 else round(float(row[indexes["nRevenue"]]) / float(row[indexes["Spend"]]),2),
         "nAOV": 'n/a' if row[indexes["nSales"]] == 0 else round(float(row[indexes["nRevenue"]]) / int(row[indexes["nSales"]]),1),
@@ -266,9 +270,9 @@ def get_reporttabledatafacebook():
         adsdata = {
             "Impression": 0, "Clicks": 0, "Spend": 0.0, "Profit":0.0,
             "Sales": 0, "Leads":0, "Revenue": 0.0, "ROAS": 0.0, "AOV": 0.0,
-            "CPC": 0.0, "CPA":0.0, "CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
+            "CPC": 0.0, "CPA":0.0,"Cart to Sales %": 0.0,"CTR %":0.0, "CR %":0.0, "CancelOrder": 0,
             "CancelRev": 0.0, "nSales": 0, "nRevenue": 0.0, 
-            "New Visits": 0, "nvisitor":0, "visitor":0,
+            "New Visits": 0, "nvisitor":0,"ATC": 0,"visitor":0,
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, 
             "rRevenue":0, "rSales":0, "New Visits %":0.0,
             "Reported Sale":0, "Reported Rev":0.0, "Reported ROAS":0.0, "Reported CPA": 0.0,
@@ -281,8 +285,8 @@ def get_reporttabledatafacebook():
             process_ads(record, adsdata, row, {
                 "ad_name": 7, "ad_status":8, "Product Name":9, "Impression": 10, "Clicks": 11, "Spend": 12,
                 "Sales": 13, "Revenue": 14, "CancelOrder": 15, "CancelRev": 16, "nSales": 17, 
-                "nRevenue": 18, "New Visits": 19, "nvisitor":20, 
-                "Reported Sale":21, "Reported Rev":22, "Cost":23, "Cost Cancel":24, "Leads":25, "Creative":26
+                "nRevenue": 18, "New Visits": 19, "nvisitor":20,"ATC": 21, 
+                "Reported Sale":22, "Reported Rev":23, "Cost":24, "Cost Cancel":25, "Leads":26, "Creative":27
             }, traffic)
 
         # Convert ad_sets to list in campaigns
