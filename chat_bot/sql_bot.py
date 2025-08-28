@@ -247,7 +247,7 @@ class SmartQueryHandler:
                         SUM(COALESCE(a.video_watched_actions_50percent,0))/SUM(COALESCE(a.engagement,1)) AS video_watched_actions_50percent,
                         SUM(COALESCE(a.video_watched_actions_100percent,0))/SUM(COALESCE(a.engagement,1)) AS video_watched_actions_100percent
                     FROM ads_agg a
-                    JOIN al_agg b ON a.adid = b.adid AND a.dated = b.dated  
+                    FULL JOIN al_agg b ON a.adid = b.adid AND a.dated = b.dated  
                     WHERE
                         REPLACE(a.campaign_name, '*', '') = '250425-100-AL-BOW-COV-(MSC)-ABO-DB-TST-NA-LC-IND'
                         AND a.dated >= CURRENT_DATE - INTERVAL '7 days'
