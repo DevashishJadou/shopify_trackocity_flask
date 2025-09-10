@@ -248,6 +248,12 @@ def pabbly_webhook(workspace):
     
     if order_status == 'Lead':
         islead = True
+
+    if phone is None or str(phone).strip().lower() in ('none', 'null', ''):
+        phone = None
+
+    if email is None or str(email).strip().lower() in ('none', 'null', '', '@gmail.com'):
+        email = None
         
     if data.get('timezone') == 'true' or data.get('timezone') is True:
         timezone_offset = float(getattr(user, 'timezone_value', 0))
