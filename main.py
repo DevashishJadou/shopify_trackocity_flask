@@ -91,6 +91,45 @@ def handle_invalid_token_error(error):
     return jsonify({'message': 'Invalid JWT Token or Token has expired'}), 401
 
 
+@app.route('/api/orders', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET', 'OPTIONS'], headers=['Content-Type'])
+def get_orders():
+    api_key = request.args.get('api_key')
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+
+    user = UserRegister.query.filter_by(workspace=api_key).first()
+    if not user or user.isactive is False:
+        return jsonify({"message":"Non Authorized"}), 400
+    
+    ordertable = f"order_{api_key}"
+    sql_query = db.text(f"""SELECT id, order_date, transcation_id , total, first_name, email, phone  FROM {ordertable} WHERE order_date >= :start_timestamp AND order_date <= :end_timestamp""")
+    result = db.session.execute(sql_query, {'start_timestamp':start_date, 'end_timestamp':end_date})
+    order_data = result.fetchall()
+    # Return structured data instead of array
+    orders = [
+        {
+            'id': order.id,
+            'order_date': order.order_date.isoformat() if order.order_date else None,
+            'transaction_id': order.transcation_id,
+            'total': float(order.total) if order.total else 0,
+            'customer': {
+                'first_name': order.first_name,
+                'email': order.email,
+                'phone': order.phone
+            }
+        }
+        for order in order_data
+    ]
+    
+    return jsonify({
+        'success': True,
+        'count': len(orders),
+        'orders': orders
+    }), 200
+
+
+
 @app.route('/googlesheetuser', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET', 'OPTIONS'], headers=['Content-Type'])
 def googlesheet_user():
@@ -108,6 +147,7 @@ def googlesheet_user():
     return jsonify(data), 200
 
 
+
 @app.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
 @cross_origin()
@@ -122,7 +162,7 @@ def refresh():
 def before_request():
     headers = request.headers
     userid = headers.get('workspaceId', None)
-    if request.endpoint not in ('refresh', 'googlesheetuser','googlesheet_user'):
+    if request.endpoint not in ('refresh', 'googlesheetuser','googlesheet_user', 'api/orders'):
         if userid:
             verify_jwt_in_request()
             user = UserRegister.query.filter_by(workspace=userid).first()
