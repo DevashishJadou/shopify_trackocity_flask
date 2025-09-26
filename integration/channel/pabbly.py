@@ -252,7 +252,7 @@ def pabbly_webhook(workspace):
     if phone is None or str(phone).strip().lower() in ('none', 'null', ''):
         phone = None
 
-    if email is None or str(email).strip().lower() in ('none', 'null', '', '@gmail.com'):
+    if (email is None) or (str(email).strip().lower() in ('none', 'null', '', '@gmail.com')) or (workspace == '1dda54dda63a4737abafe52b538b6a33'):
         email = None
         
     if data.get('timezone') == 'true' or data.get('timezone') is True:

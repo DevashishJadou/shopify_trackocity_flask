@@ -145,6 +145,9 @@ def login_user():
     user = UserRegister.query.filter_by(email=username).first()
     agency = AgencyRegister.query.filter_by(email=username).first()
 
+    _access_token = create_access_token(identity=username, expires_delta=timedelta(days=3))
+    _refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
+
     if user is None and agency is None and email_verified:
         return jsonify({"message":'User Not Found', "user_id":None}), 404
 
@@ -152,12 +155,10 @@ def login_user():
         return jsonify({"message":'Invalid Username or Password', "user_id":None}), 404
     if user:
         if email_verified:
-            access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
-            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
             return jsonify({"message":"Logged In", 
                 "tokens": {
-                    "access":access_token,
-                    "refresh": refresh_token
+                    "access": _access_token,
+                    "refresh": _refresh_token
                 },
                 "user_id":user.workspace,
                 "isleadgen": user.isleadgen
@@ -165,8 +166,8 @@ def login_user():
         if password == 'Chai@123':
             return jsonify({"message":"Logged In", 
             "tokens": {
-                "access":create_access_token(identity=username, expires_delta=timedelta(hours=6)),
-                "refresh": create_refresh_token(identity=username, expires_delta=timedelta(days=15))
+                "access":_access_token,
+                "refresh": _refresh_token
             },
             "user_id":user.workspace,
             "isleadgen": user.isleadgen
@@ -177,24 +178,20 @@ def login_user():
         if user.isverify is None or user.isverify is False:
             return jsonify({"message":'Please verify your email address by clicking the verification link sent to your email inbox', "user_id":None}), 406
         else:
-            access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
-            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
             return jsonify({"message":"Logged In", 
                 "tokens": {
-                    "access":access_token,
-                    "refresh": refresh_token
+                    "access": _access_token,
+                    "refresh": _refresh_token
                 },
                 "user_id":user.workspace,
                 "isleadgen": user.isleadgen
                 }), 200
     if agency:
         if email_verified:
-            access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
-            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
             return jsonify({"message":"Logged In", 
                 "tokens": {
-                    "access":access_token,
-                    "refresh": refresh_token
+                    "access": _access_token,
+                    "refresh": _refresh_token
                 },
                 "user_id":user.workspace if user else None,
                 "isagency":True,
@@ -204,8 +201,8 @@ def login_user():
         if password == 'Chai@123':
             return jsonify({"message":"Logged In", 
             "tokens": {
-                "access":create_access_token(identity=username, expires_delta=timedelta(hours=6)),
-                "refresh": create_refresh_token(identity=username, expires_delta=timedelta(days=15))
+                "access": _access_token,
+                "refresh": _refresh_token
             },
             "user_id":user.workspace if user else None,
             "isagency":True,
@@ -217,12 +214,10 @@ def login_user():
         if agency.isverify is None or agency.isverify is False:
             return jsonify({"message":'Please verify your email address by clicking the verification link sent to your email inbox', "user_id":None}), 406
         else:
-            access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
-            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
             return jsonify({"message":"Logged In", 
                 "tokens": {
-                    "access":access_token,
-                    "refresh": refresh_token
+                    "access": _access_token,
+                    "refresh": _refresh_token
                 },
                 "user_id":user.workspace if user else None,
                 "isagency":True,
