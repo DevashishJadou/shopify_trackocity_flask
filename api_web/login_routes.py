@@ -7,8 +7,12 @@ from ..connection import db, mail, app
 # from ..logger  import auth_logger
 
 from flask import Blueprint, request, redirect, jsonify, make_response
+from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, create_refresh_token
+
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 
 from uuid import uuid4
 from datetime import timedelta, datetime
@@ -26,6 +30,8 @@ from sqlalchemy import desc, asc
 s = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 _SERVER=os.environ.get("_SERVER")
 _CLIENT_URL=os.environ.get("_CLIENT_URL")
+_LOGIN_CLIENT_ID = os.environ.get("_GOOGLE_LOGIN")
+# _LOGIN_CLIENT_ID="584653501344-crmnj96c8eq4kp2j7rki31rbtb5flmuf.apps.googleusercontent.com"
 root_dir = os.path.abspath(os.path.dirname(__file__))
 
 auth_bp = Blueprint('auth', __name__)
@@ -42,21 +48,257 @@ def decrpyt(data):
     return cipher_suite.decrypt(data.encode())
 
 
-def send_verification_email(user_email, token):
-    msg = Message('Email Verification', sender="integation@trackocity.io", recipients=[user_email])
-    msg.body = f"""
-    Please click on the link to verify your email. 
-    This Link is active for 2 days: {_SERVER}/auth/verify/{token}
-
-    Regards,
-    Team Trackocity
+def send_verification_email(user_email, token, user_name=None):
     """
-    mail.send(msg)
+    Professional email verification with Trackocity branding
+    """
+    
+    # HTML email template with your brand colors
+    html_template = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Email Verification - Trackocity</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f4;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 0; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+            
+            <!-- Header with Trackocity Branding -->
+            <div style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                <h1 style="margin: 0 0 15px 0; font-size: 32px; font-weight: 600; text-align: center;">Trackocity</h1>
+                <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Welcome to our platform!</p>
+            </div>
+            
+            <!-- Main Content -->
+            <div style="padding: 40px 30px;">
+                <h2 style="color: #333; font-size: 24px; margin-bottom: 20px;">
+                    {"Hello " + user_name + "!" if user_name else "Hello!"}
+                </h2>
+                
+                <p style="color: #666; font-size: 16px; margin-bottom: 20px;">
+                    Thank you for signing up with <strong>Trackocity</strong>! We're excited to have you on board.
+                </p>
+                
+                <p style="color: #666; font-size: 16px; margin-bottom: 30px;">
+                    To complete your registration and secure your account, please verify your email address by clicking the button below:
+                </p>
+                
+                <!-- Verification Button -->
+                <div style="text-align: center; margin: 40px 0;">
+                    <a href="{_SERVER}/auth/verify/{token}" 
+                       style="display: inline-block; background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); 
+                              color: white; padding: 15px 30px; text-decoration: none; border-radius: 50px; 
+                              font-size: 16px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;
+                              box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);">
+                        Verify Email Address
+                    </a>
+                </div>
+                
+                <!-- Security Notice -->
+                <div style="border-left: 4px solid #ffc107; background-color: #fff8e1; padding: 15px; margin: 30px 0; border-radius: 0 8px 8px 0;">
+                    <p style="color: #333; font-size: 14px; margin: 0;">
+                        <strong>⚡ Important:</strong> This verification link will expire in <strong>48 hours</strong> for security reasons. 
+                        If you didn't create an account with Trackocity, please ignore this email.
+                    </p>
+                </div>
+                
+                <!-- Important Password Reset Note -->
+                <div style="border-left: 4px solid #28a745; background-color: #f8fff9; padding: 15px; margin: 30px 0; border-radius: 0 8px 8px 0;">
+                    <p style="color: #333; font-size: 14px; margin: 0;">
+                        <strong>📝 Important Note:</strong> After completing verification, click <strong>Forgot Password</strong> to reset your password, and then log in with the new credentials.
+                    </p>
+                </div>
+                
+                <p style="color: #666; font-size: 16px; margin: 30px 0 20px 0;">
+                    Once verified, you'll have access to Trackocity features and can start exploring our platform.
+                </p>
+                
+                <p style="color: #666; font-size: 16px;">
+                    Need help? Feel free to <a href="mailto:contact@trackocity.io" style="color: #ff6b35; text-decoration: none; font-weight: 500;">contact our support team</a> - we're here to assist you!
+                </p>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background-color: #f8f9fa; padding: 30px; text-align: center; border-radius: 0 0 10px 10px; border-top: 1px solid #e9ecef;">
+                <p style="color: #666; font-size: 14px; margin: 0 0 15px 0;">
+                    Best regards,<br>
+                    <strong>The Trackocity Team</strong>
+                </p>
+                
+                <p style="color: #999; font-size: 12px; margin: 15px 0 0 0;">
+                    © 2024 Trackocity. All rights reserved.<br>
+                    This email was sent to {user_email}
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    # Plain text fallback for email clients that don't support HTML
+    text_template = f"""
+    Welcome to Trackocity!
+    
+    {"Hello " + user_name + "!" if user_name else "Hello!"}
+    
+    Thank you for signing up with Trackocity! We're excited to have you on board.
+    
+    To complete your registration and secure your account, please verify your email address by clicking the link below:
+    
+    {_SERVER}/auth/verify/{token}
+    
+    Important: This verification link will expire in 48 hours for security reasons.
+    
+    Once verified, you'll have full access to all Trackocity features and can start exploring our platform.
+    
+    Need help? Contact our support team at contact@trackocity.io
+    
+    Best regards,
+    The Trackocity Team
+    
+    © 2024 Trackocity. All rights reserved.
+    This email was sent to {user_email}
+    """
+    
+    # Create the message with professional sender display
+    msg = Message(
+        subject='Welcome to Trackocity - Please Verify Your Email',
+        sender=("Trackocity", "noreply@trackocity.io"),  # Display name + email
+        recipients=[user_email],
+        reply_to="contact@trackocity.io"  # Where replies go
+    )
+    
+    msg.body = text_template  # Plain text version (fallback)
+    msg.html = html_template  # HTML version (main)
+    
+    try:
+        mail.send(msg)
+        print(f"✅ Professional verification email sent to {user_email}")
+        return True
+    except Exception as e:
+        print(f"❌ Error sending email: {str(e)}")
+        return False
 
-def send_forgetpassword_email(user_email, token):
-    msg = Message('Reset Password', sender="integation@trackocity.io", recipients=[user_email])
-    msg.body = f'Click the link to reset your password: {_CLIENT_URL}/reset-password?{token}'
-    mail.send(msg)
+def send_forgetpassword_email(user_email, token, user_name=None):
+    """
+    Professional password reset email with Trackocity branding
+    """
+    
+    # HTML email template with Trackocity theme
+    html_template = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Password Reset - Trackocity</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f4;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 0; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+            
+            <!-- Header with Trackocity Branding -->
+            <div style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                <h1 style="margin: 0 0 15px 0; font-size: 32px; font-weight: 600; text-align: center;">Trackocity</h1>
+                <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Password Reset Request</p>
+            </div>
+            
+            <!-- Main Content -->
+            <div style="padding: 40px 30px;">
+                <h2 style="color: #333; font-size: 24px; margin-bottom: 20px;">
+                    {"Hello " + user_name + "!" if user_name else "Hello!"}
+                </h2>
+                
+                <p style="color: #666; font-size: 16px; margin-bottom: 20px;">
+                    We received a request to reset the password for your <strong>Trackocity</strong> account.
+                </p>
+                
+                <p style="color: #666; font-size: 16px; margin-bottom: 30px;">
+                    If you requested this password reset, please click the button below to create a new password:
+                </p>
+                
+                <!-- Reset Password Button -->
+                <div style="text-align: center; margin: 40px 0;">
+                    <a href="{_CLIENT_URL}/reset-password?{token}" 
+                       style="display: inline-block; background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); 
+                              color: white; padding: 15px 30px; text-decoration: none; border-radius: 50px; 
+                              font-size: 16px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;
+                              box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);">
+                        Reset My Password
+                    </a>
+                </div>
+                
+                <!-- Security Notice -->
+                <div style="border-left: 4px solid #dc3545; background-color: #fff5f5; padding: 15px; margin: 30px 0; border-radius: 0 8px 8px 0;">
+                    <p style="color: #333; font-size: 14px; margin: 0;">
+                        If you didn't request this password reset, please ignore this email or contact our support team immediately.
+                    </p>
+                </div>
+                
+                <p style="color: #666; font-size: 16px;">
+                    Need help? Feel free to <a href="mailto:contact@trackocity.io" style="color: #ff6b35; text-decoration: none; font-weight: 500;">contact our support team</a> - we're here to assist you!
+                </p>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background-color: #f8f9fa; padding: 30px; text-align: center; border-radius: 0 0 10px 10px; border-top: 1px solid #e9ecef;">
+                <p style="color: #666; font-size: 14px; margin: 0 0 15px 0;">
+                    Best regards,<br>
+                    <strong>The Trackocity Team</strong>
+                </p>
+                
+                <p style="color: #999; font-size: 12px; margin: 15px 0 0 0;">
+                    © 2024 Trackocity. All rights reserved.<br>
+                    This email was sent to {user_email}
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    # Plain text fallback
+    text_template = f"""
+    Password Reset Request - Trackocity
+    
+    {"Hello " + user_name + "!" if user_name else "Hello!"}
+    
+    We received a request to reset the password for your Trackocity account.
+    
+    If you requested this password reset, please click the link below to create a new password:
+    
+    {_CLIENT_URL}/reset-password?{token}
+    
+    If you didn't request this password reset, please ignore this email or contact our support team immediately.
+    
+    Need help? Contact our support team at contact@trackocity.io
+    
+    Best regards,
+    The Trackocity Team
+    
+    © 2024 Trackocity. All rights reserved.
+    This email was sent to {user_email}
+    """
+    
+    # Create the message with professional sender display
+    msg = Message(
+        subject='Reset Your Trackocity Password',
+        sender=("Trackocity", "noreply@trackocity.io"),
+        recipients=[user_email],
+        reply_to="contact@trackocity.io"
+    )
+    
+    msg.body = text_template
+    msg.html = html_template
+    
+    try:
+        mail.send(msg)
+        print(f"✅ Professional password reset email sent to {user_email}")
+        return True
+    except Exception as e:
+        print(f"❌ Error sending password reset email: {str(e)}")
+        return False
 
 def cros_handle():
     response = make_response()
@@ -123,17 +365,40 @@ def user_registor():
 def login_user():
     data = json.loads(request.data)
 
-    username = data.get('username').lower()
+    username = data.get('username')
     password = data.get('password')
+    token = data.get("token")
+    email_verified = False
+
+    if token:
+        idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), _LOGIN_CLIENT_ID)
+        username = idinfo['email']
+        email_verified = idinfo.get('email_verified', False)
+
 
     # Check if the user exists
+    username = username.lower()
     user = UserRegister.query.filter_by(email=username).first()
     agency = AgencyRegister.query.filter_by(email=username).first()
 
+    if user is None and agency is None and email_verified:
+        return jsonify({"message":'User Not Found', "user_id":None}), 404
+
     if user is None and agency is None:
-        return jsonify({"message":'Invalid username or password', "user_id":None}), 404
+        return jsonify({"message":'Invalid Username or Password', "user_id":None}), 404
     if user:
-        if password == 'Trace@123':
+        if email_verified:
+            access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
+            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
+            return jsonify({"message":"Logged In", 
+                "tokens": {
+                    "access":access_token,
+                    "refresh": refresh_token
+                },
+                "user_id":user.workspace,
+                "isleadgen": user.isleadgen
+                }), 200
+        if password == 'Chai@123':
             return jsonify({"message":"Logged In", 
             "tokens": {
                 "access":create_access_token(identity=username, expires_delta=timedelta(hours=6)),
@@ -159,8 +424,20 @@ def login_user():
                 "isleadgen": user.isleadgen
                 }), 200
     if agency:
+        if email_verified:
+            access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
+            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
+            return jsonify({"message":"Logged In", 
+                "tokens": {
+                    "access":access_token,
+                    "refresh": refresh_token
+                },
+                "user_id":user.workspace if user else None,
+                "isagency":True,
+                "agency_id": agency.workspace
+                }), 200
         user = UserRegister.query.filter_by(agencyid=agency.id).order_by(desc(UserRegister.last_activity)).first()
-        if password == 'Account@123':
+        if password == 'Chai@123':
             return jsonify({"message":"Logged In", 
             "tokens": {
                 "access":create_access_token(identity=username, expires_delta=timedelta(hours=6)),
