@@ -39,13 +39,6 @@ class UserRegister(db.Model):
     last_activity = db.Column(db.DateTime, default=datetime.now)
     is_logout = db.Column(db.Boolean, default=True)
 
-class UserSubdomain(db.Model):
-    __tablename__ = "user_subdomain_list"
-    id = db.Column(db.Integer, primary_key=True)
-    subdomain = db.Column(db.String(16))
-    status = db.Column(db.Boolean, default=False)
-
-
 class AgencyRegister(db.Model):
     __tablename__ = "agency_register"
     id = db.Column(db.Integer, primary_key=True)
@@ -351,18 +344,22 @@ def orderlinetable(tablename):
     # Define a table with order name and columns
     metadata = MetaData(schema='public')
     orderline_table = Table(
-			tablename,
-			metadata,
-			Column('order_id', Integer, primary_key=True),
-			Column('shopify_productid', String(64)),
-			Column('sku', String(128)),
-            Column('product_name', String(255)),
-			Column('quantity', Integer),
-			Column('price', Numeric),
-            Column('title', String(255)),
-			Column('variant_title', String(128)),
-            Column('cost', Numeric)
-		)
+        tablename,
+        metadata,
+        Column('order_id', Integer, primary_key=True),
+        Column('shopify_productid', String(64)),    
+        Column('sku', String(128), unique=True),
+        Column('product_name', String(255)),
+        Column('quantity', Integer),
+        Column('price', Numeric),
+        Column('title', String(255)), 
+        Column('variant_title', String(128)),
+        Column('cost', Numeric),             
+        Column('image_url', String(512)),
+        Column('parent_productid', String(32)),
+        Column('handle_name', String(255)),
+        Column('product_url', String(512))            
+    )
     return orderline_table
 
 
