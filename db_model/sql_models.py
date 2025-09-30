@@ -39,6 +39,12 @@ class UserRegister(db.Model):
     last_activity = db.Column(db.DateTime, default=datetime.now)
     is_logout = db.Column(db.Boolean, default=True)
 
+class UserSubdomain(db.Model):
+    __tablename__ = "user_subdomain_list"
+    id = db.Column(db.Integer, primary_key=True)
+    subdomain = db.Column(db.String(16))
+    status = db.Column(db.Boolean, default=False)
+    
 class AgencyRegister(db.Model):
     __tablename__ = "agency_register"
     id = db.Column(db.Integer, primary_key=True)
