@@ -129,22 +129,21 @@ class SmartQueryHandler:
             - Does it require trend analysis, forecasting, or segmentation?
             
             2. Extract essential details:
-            - Time period (last 3 days, last 7 days,or all available data).
+            - Time period (last 3 days, last 7 days, WoW, or all available data).
             - Metrics mentioned or inferred (CPA, ROAS, CTR, CR, AOV, CPC, CPM, etc.).
             - Requested breakdowns (by campaign, ad set, ad type, creative type).
             - Comparison logic (current period vs. previous period, winning vs. losing ads).
 
             3. Determine table relationships:
             - For ad platform data, join `horizon.ads`.
-            - For conversion and ad spend focus, primarily use `horizon.ads_lastattribute`.
             - For first-click attribution, join `horizon.ads_firstattribute`.
-            
+            - For conversion and ad spend focus, primarily use `horizon.ads_lastattribute`.
 
 
 
             Step 2: Constructing the Query
             1. Select primary tables based on query type:
-            - Ad performance: Use `horizon.ads_lastattribute` (final conversions) and `horizon.ads` (spend).
+            - Ad performance: Use `horizon.ads_lastattribute` (final conversions & spend).
             - First-touch attribution analysis: Use `horizon.ads_firstattribute`.
 
             2. Extract relevant metrics (based on direct request & inferred insights):
@@ -198,7 +197,7 @@ class SmartQueryHandler:
                             SUM(COALESCE(ads.video_p50_watched_actions,0)) AS video_watched_actions_50percent,
                             SUM(COALESCE(ads.video_p100_watched_actions,0)) AS video_watched_actions_100percent
                         FROM horizon.ads ads
-                        WHERE REPLACE(ads.campaign_name, '*', '') = '250425-100-AL-BOW-COV-(MSC)-ABO-DB-TST-NA-LC-IND'
+                        WHERE ads.campaign_name = '250425-100-AL-BOW-COV-(MSC)-ABO-DB-TST-NA-LC-IND'
                         AND ads.dated >= CURRENT_DATE - INTERVAL '7 days'
                         AND ads.workspace = '854e249d718e42cba341aa0559931c12'
                         GROUP BY 1, 2, 3, 4, 5, 6
@@ -216,7 +215,7 @@ class SmartQueryHandler:
                                 SUM(COALESCE(al.new_order, 0)) AS new_order,
                                 SUM(COALESCE(al.fresh_visitor, 0)) AS fresh_visitor
                             FROM horizon.ads_lastattribute al
-                            WHERE REPLACE(al.campaign_name, '*', '') = '250425-100-AL-BOW-COV-(MSC)-ABO-DB-TST-NA-LC-IND'
+                            WHERE al.campaign_name = '250425-100-AL-BOW-COV-(MSC)-ABO-DB-TST-NA-LC-IND'
                             AND al.dated >= CURRENT_DATE - INTERVAL '7 days'
                             AND al.workspace = '854e249d718e42cba341aa0559931c12'
                             GROUP BY 1, 2, 3, 4, 5
@@ -249,7 +248,7 @@ class SmartQueryHandler:
                     FROM ads_agg a
                     FULL JOIN al_agg b ON a.adid = b.adid AND a.dated = b.dated  
                     WHERE
-                        REPLACE(a.campaign_name, '*', '') = '250425-100-AL-BOW-COV-(MSC)-ABO-DB-TST-NA-LC-IND'
+                        a.campaign_name = '250425-100-AL-BOW-COV-(MSC)-ABO-DB-TST-NA-LC-IND'
                         AND a.dated >= CURRENT_DATE - INTERVAL '7 days'
                         AND a.workspace = '854e249d718e42cba341aa0559931c12'
                     GROUP BY

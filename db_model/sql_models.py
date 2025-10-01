@@ -39,12 +39,31 @@ class UserRegister(db.Model):
     last_activity = db.Column(db.DateTime, default=datetime.now)
     is_logout = db.Column(db.Boolean, default=True)
 
+class UserSubaccountRegister(db.Model):
+    __tablename__ = "user_subaccount_register"
+    id = db.Column(db.Integer,primary_key=True)
+    complete_name = db.Column(db.String(255))
+    email = db.Column(db.String(64))
+    _password = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime,default=datetime.now)
+    isverify = db.Column(db.Boolean,default=False)
+    isactive = db.Column(db.Boolean,default=False)
+    access_level = db.Column(db.String(32))
+    
+
+class UserSubaccountRelation(db.Model):
+    __tablename__ = "user_subaccount_rel"
+    user_register_id = db.Column(db.Integer , primary_key=True)
+    user_subaccount_id = db.Column(db.Integer , primary_key=True)
+
+    
 class UserSubdomain(db.Model):
     __tablename__ = "user_subdomain_list"
     id = db.Column(db.Integer, primary_key=True)
     subdomain = db.Column(db.String(16))
     status = db.Column(db.Boolean, default=False)
-    
+
+
 class AgencyRegister(db.Model):
     __tablename__ = "agency_register"
     id = db.Column(db.Integer, primary_key=True)
@@ -345,14 +364,13 @@ def ordertable_detail(tablename):
 
 
 def orderlinetable(tablename):
-    # Define a table with order name and columns
     metadata = MetaData(schema='public')
     orderline_table = Table(
         tablename,
         metadata,
         Column('order_id', Integer, primary_key=True),
         Column('shopify_productid', String(64)),    
-        Column('sku', String(128), unique=True),
+        Column('sku', String(128)),  
         Column('product_name', String(255)),
         Column('quantity', Integer),
         Column('price', Numeric),
@@ -362,7 +380,8 @@ def orderlinetable(tablename):
         Column('image_url', String(512)),
         Column('parent_productid', String(32)),
         Column('handle_name', String(255)),
-        Column('product_url', String(512))            
+        Column('product_url', String(512)),
+        UniqueConstraint('order_id', 'shopify_productid', name=f'{tablename}_orderid_productid_key')
     )
     return orderline_table
 

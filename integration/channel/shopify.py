@@ -6,7 +6,7 @@ from flask_cors import cross_origin
 
 
 from .woocommerce import channel_bp
-from ...db_model.sql_models import Shopify, order_table_dynamic, ordertable, orderlinetable, ordertable_detail
+from ...db_model.sql_models import Shopify, order_table_dynamic, ordertable, orderlinetable
 from ...connection import db
 from ...dbrule import dup_order_rule
 
@@ -38,16 +38,13 @@ def shopifyintegration():
 		db.session.add(user_make)
 		tablename = 'order_'+workspace
 		orderlinetablename = 'orderline_'+workspace
-		ordertabledetailtablename = 'order_detailed_'+workspace
 		try:
 			if not metadata.tables.get(tablename):
 				shopify_table = ordertable(tablename)
 				shopify_orderline_table= orderlinetable(orderlinetablename)
-				ordertable_detail_table = ordertable_detail(ordertabledetailtablename)
 				try:
 					shopify_table.create(bind=db.engine)
 					shopify_orderline_table.create(bind=db.engine)
-					ordertable_detail_table.create(bind=db.engine)
 				except Exception as e:
 					print(f'Error order table creation:{e.args}')
 			db.session.commit()
@@ -56,6 +53,14 @@ def shopifyintegration():
 			print(f'Shopify client secret: {e.msg}')
 			return jsonify({'error': 'Something went Wrong'}), 500
 		
+		sql_query = db.text("select * from partition_product_create (:workspace)")
+		db.session.execute(sql_query, {'workspace':workspace})
+
+		now = datetime.now()
+		current_year = now.year
+		current_month = now.month
+		sql_query = db.text("select * from partition_monthly_create(:workspace, :year, :month)")
+		db.session.execute(sql_query, {'workspace':workspace, 'year': current_year, 'month': current_month})
 		db.session.commit()
 
 	return jsonify({'message': 'success'}), 200
@@ -87,7 +92,8 @@ def shopify():
 			orders_data = response.json()
 			orders_data = orders_data['orders']
 			
-			tablename = 'order_'+userid	
+			tablename = 'order_'+userid
+			
 			orderTable = order_table_dynamic(tablename)
 			orderTable.metadata = db.Model.metadata
 			

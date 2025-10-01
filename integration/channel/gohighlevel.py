@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from flask_cors import cross_origin
 from .woocommerce import channel_bp
 
-from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable, ordertable_detail 
+from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable
 from ...connection import db
 from sqlalchemy import MetaData
 from sqlalchemy.sql import func
@@ -33,10 +33,8 @@ def gohiglevel_params():
         try:
             if not metadata.tables.get(tablename):
                 gohiglevel_table = ordertable(tablename)
-                ordertable_detail_table = ordertable_detail('order_detailed_'+workspace)
                 try:
                     gohiglevel_table.create(bind=db.engine)
-                    ordertable_detail_table.create(bind=db.engine)
                 except:
                     pass
         except Exception as e:
@@ -59,7 +57,6 @@ def gohiglevel_webhook(workspace):
     tablename = 'order_'+workspace
     orderTable = order_table_dynamic(tablename)
     orderTable.metadata = db.Model.metadata
-
 
     # The library needs to be configured with your account's secret key.
     event = None

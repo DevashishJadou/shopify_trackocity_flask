@@ -5,7 +5,7 @@ from flask_cors import cross_origin
 
 from sqlalchemy import MetaData
 
-from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable, ordertable_detail
+from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable
 from ...connection import db
 from .razorpay import payment_bp
 from sqlalchemy.sql import func
@@ -34,19 +34,25 @@ def checkout_params():
         razorpay_register = PlatformConfiguration(workspace=workspace, platform=platform, active=True)
         db.session.add(razorpay_register)
         tablename = 'order_'+workspace
-        order_detail_tablename = 'order_detailed_'+workspace
         try:
             if not metadata.tables.get(tablename):
                 razorpay_table = ordertable(tablename)
-                order_detail_table = ordertable_detail(order_detail_tablename)
                 try:
                     razorpay_table.create(bind=db.engine)
-                    order_detail_table.create(bind=db.engine)
                 except:
                     pass
         except Exception as e:
             print(f'Cashfree: {e.msg}')
             return jsonify({'error': 'Something went Wrong'}), 500
+    
+    sql_query = db.text("select * from partition_product_create (:workspace)")
+    db.session.execute(sql_query, {'workspace':workspace})
+
+    now = datetime.now()
+    current_year = now.year
+    current_month = now.month
+    sql_query = db.text("select * from partition_monthly_create(:workspace, :year, :month)")
+    db.session.execute(sql_query, {'workspace':workspace, 'year': current_year, 'month': current_month})
     
     db.session.commit()
 

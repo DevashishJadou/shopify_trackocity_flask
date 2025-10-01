@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from flask_cors import cross_origin
 from .razorpay import payment_bp
 
-from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable, ordertable_detail
+from ...db_model.sql_models import UserRegister, PlatformConfiguration, order_table_dynamic, ordertable
 from ...connection import db
 from sqlalchemy import MetaData
 
@@ -27,14 +27,11 @@ def paypal_params():
         paypal_register = PlatformConfiguration(workspace=workspace, platform=platform, active=True)
         db.session.add(paypal_register)
         tablename = 'order_'+workspace
-        order_detail_tablename = 'order_detailed_'+workspace
         try:
             if not metadata.tables.get(tablename):
                 paypal_table = ordertable(tablename)
-                order_detail_table = ordertable_detail(order_detail_tablename)
                 try:
                     paypal_table.create(bind=db.engine)
-                    order_detail_table.create(bind=db.engine)
                 except:
                     pass
         except Exception as e:

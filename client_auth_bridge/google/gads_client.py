@@ -6,7 +6,7 @@ from google.ads.googleads.errors import GoogleAdsException
 
 REFRESH_ERROR = "INVAILD REFRESH TOKEN"
 
-_VERSION = "v20"
+_VERSION = "v18"
 
 def create_client(token):
     try:
