@@ -55,8 +55,6 @@ class UserSubaccountRelation(db.Model):
     __tablename__ = "user_subaccount_rel"
     user_register_id = db.Column(db.Integer , primary_key=True)
     user_subaccount_id = db.Column(db.Integer , primary_key=True)
-    
-
 class UserSubdomain(db.Model):
     __tablename__ = "user_subdomain_list"
     id = db.Column(db.Integer, primary_key=True)
@@ -328,8 +326,6 @@ def ordertable_detail(tablename):
         tablename,
         metadata,
         Column('id', Integer, primary_key=True, autoincrement=True),
-        Column('workspace', String(64), nullable=False),
-        Column('productid', String(16), nullable=False),
         Column('order_id', Integer),
         Column('order_date', Date, nullable=False),
         Column('order_timestamp', DateTime, nullable=False),
@@ -366,14 +362,13 @@ def ordertable_detail(tablename):
 
 
 def orderlinetable(tablename):
-    # Define a table with order name and columns
     metadata = MetaData(schema='public')
     orderline_table = Table(
         tablename,
         metadata,
         Column('order_id', Integer, primary_key=True),
         Column('shopify_productid', String(64)),    
-        Column('sku', String(128), unique=True),
+        Column('sku', String(128)),  
         Column('product_name', String(255)),
         Column('quantity', Integer),
         Column('price', Numeric),
@@ -383,7 +378,8 @@ def orderlinetable(tablename):
         Column('image_url', String(512)),
         Column('parent_productid', String(32)),
         Column('handle_name', String(255)),
-        Column('product_url', String(512))            
+        Column('product_url', String(512)),
+        UniqueConstraint('order_id', 'shopify_productid', name=f'{tablename}_orderid_productid_key')
     )
     return orderline_table
 
@@ -497,7 +493,7 @@ def facebookcreative_table(tablename):
             Column('clicks', Integer),
             Column('creative_id', String(32)),
             Column('creative_name', Text),
-            Column('status', String(16)),
+            Column('status', String(32)),
             Column('created_time', DateTime),
             Column('engagement', Integer),
             Column('video_view_3s', Integer),
@@ -507,7 +503,7 @@ def facebookcreative_table(tablename):
             Column('video_30_sec_watched_actions', Integer),
             Column('video_thruplay_watched_actions', Integer),
             Column('ad_copy', Text),
-            Column('ad_type', String(16)),
+            Column('ad_type', String(32)),
             Column('thumbnail_url', Text),
             Column('preview_shareable_link', Text),
             Column('video_length', Numeric),
