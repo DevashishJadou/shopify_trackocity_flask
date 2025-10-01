@@ -39,6 +39,31 @@ class UserRegister(db.Model):
     last_activity = db.Column(db.DateTime, default=datetime.now)
     is_logout = db.Column(db.Boolean, default=True)
 
+class UserSubaccountRegister(db.Model):
+    __tablename__ = "user_subaccount_register"
+    id = db.Column(db.Integer,primary_key=True)
+    complete_name = db.Column(db.String(255))
+    email = db.Column(db.String(64))
+    _password = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime,default=datetime.now)
+    isverify = db.Column(db.Boolean,default=False)
+    isactive = db.Column(db.Boolean,default=False)
+    access_level = db.Column(db.String(32))
+    
+
+class UserSubaccountRelation(db.Model):
+    __tablename__ = "user_subaccount_rel"
+    user_register_id = db.Column(db.Integer , primary_key=True)
+    user_subaccount_id = db.Column(db.Integer , primary_key=True)
+    
+
+class UserSubdomain(db.Model):
+    __tablename__ = "user_subdomain_list"
+    id = db.Column(db.Integer, primary_key=True)
+    subdomain = db.Column(db.String(16))
+    status = db.Column(db.Boolean, default=False)
+
+
 class AgencyRegister(db.Model):
     __tablename__ = "agency_register"
     id = db.Column(db.Integer, primary_key=True)

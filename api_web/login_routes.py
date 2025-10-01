@@ -1,18 +1,15 @@
 # routes.py
 
-from ..db_model.sql_models import UserRegister, AgencyRegister, EmailChange, order_table_dynamic, UserSubdomain
+from ..db_model.sql_models import UserRegister, AgencyRegister,UserSubaccountRegister,UserSubaccountRelation,EmailChange, order_table_dynamic, UserSubdomain
 from ..connection import db, mail, app
 # from db_model.sql_models import UserRegister
 # from connection import db
 # from ..logger  import auth_logger
 
 from flask import Blueprint, request, redirect, jsonify, make_response
-from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, create_refresh_token
-
-from google.oauth2 import id_token
-from google.auth.transport import requests as google_requests
+from flask_jwt_extended import decode_token
 
 from uuid import uuid4
 from datetime import timedelta, datetime
@@ -30,8 +27,6 @@ from sqlalchemy import desc, asc
 s = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 _SERVER=os.environ.get("_SERVER")
 _CLIENT_URL=os.environ.get("_CLIENT_URL")
-_LOGIN_CLIENT_ID = os.environ.get("_GOOGLE_LOGIN")
-# _LOGIN_CLIENT_ID="584653501344-crmnj96c8eq4kp2j7rki31rbtb5flmuf.apps.googleusercontent.com"
 root_dir = os.path.abspath(os.path.dirname(__file__))
 
 auth_bp = Blueprint('auth', __name__)
@@ -47,6 +42,17 @@ def decrpyt(data):
     cipher_suite = Fernet(_key)
     return cipher_suite.decrypt(data.encode())
 
+
+# def send_verification_email(user_email, token):
+#     msg = Message('Email Verification', sender="integation@trackocity.io", recipients=[user_email])
+#     msg.body = f"""
+#     Please click on the link to verify your email. 
+#     This Link is active for 2 days: {_SERVER}/auth/verify/{token}
+
+#     Regards,
+#     Team Trackocity
+#     """
+#     mail.send(msg)
 
 def send_verification_email(user_email, token, user_name=None):
     """
@@ -181,6 +187,13 @@ def send_verification_email(user_email, token, user_name=None):
         print(f"❌ Error sending email: {str(e)}")
         return False
 
+
+
+# def send_forgetpassword_email(user_email, token):
+#     msg = Message('Reset Password', sender="integation@trackocity.io", recipients=[user_email])
+#     msg.body = f'Click the link to reset your password: {_CLIENT_URL}/reset-password?{token}'
+#     mail.send(msg)
+
 def send_forgetpassword_email(user_email, token, user_name=None):
     """
     Professional password reset email with Trackocity branding
@@ -300,6 +313,7 @@ def send_forgetpassword_email(user_email, token, user_name=None):
         print(f"❌ Error sending password reset email: {str(e)}")
         return False
 
+
 def cros_handle():
     response = make_response()
     response.headers.add('Access-Control-Allow-Origin', '*')
@@ -319,7 +333,8 @@ def user_registor():
     # Check if the user exists
     user = UserRegister.query.filter_by(email=email).first() is not None
     agency = AgencyRegister.query.filter_by(email=email).first() is not None
-    if user or agency:       
+    subaccount = UserSubaccountRegister.query.filter_by(email=email).first() is not None
+    if user or agency or subaccount:       
         return jsonify(message='User already exist'), 409
 
 
@@ -338,7 +353,7 @@ def user_registor():
 
         return jsonify(message='Please check your email', user_id=user.workspace), 201
 
-    else:
+    elif data.get('account_type',None) == 'individual':
 
         workspace = uuid4().hex
         _hassed_password = generate_password_hash(str(data.get('password')))
@@ -356,7 +371,28 @@ def user_registor():
         send_verification_email(email, token)
 
         return jsonify(message='Please check your email to verify your account', user_id=user.workspace), 201
-
+    
+    else:
+                
+        subaccount = UserSubaccountRegister(complete_name=data['name'],email=email,created_at=datetime.now(),access_level=data.get('access_level'))
+        db.session.add(subaccount)
+        db.session.flush()
+            
+        subaccount = UserSubaccountRegister.query.filter_by(email=email).first()
+            
+        # Adding data to relation table
+        for selected_user in data.get('selected_users'):
+            user = UserRegister.query.filter_by(workspace=selected_user).first()
+            relation = UserSubaccountRelation(user_register_id=user.id , user_subaccount_id=subaccount.id)    
+            db.session.add(relation) 
+            
+        db.session.commit()       
+                            
+        # Send verification email
+        token = s.dumps(email, salt='email-verify')
+        send_verification_email(email, token)
+            
+        return jsonify(message='Please check your email to verify your account'), 201       
 
 
 
@@ -365,40 +401,18 @@ def user_registor():
 def login_user():
     data = json.loads(request.data)
 
-    username = data.get('username')
+    username = data.get('username').lower()
     password = data.get('password')
-    token = data.get("token")
-    email_verified = False
-
-    if token:
-        idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), _LOGIN_CLIENT_ID)
-        username = idinfo['email']
-        email_verified = idinfo.get('email_verified', False)
-
 
     # Check if the user exists
-    username = username.lower()
     user = UserRegister.query.filter_by(email=username).first()
     agency = AgencyRegister.query.filter_by(email=username).first()
+    subaccount = UserSubaccountRegister.query.filter_by(email=username).first()
 
-    if user is None and agency is None and email_verified:
-        return jsonify({"message":'User Not Found', "user_id":None}), 404
-
-    if user is None and agency is None:
-        return jsonify({"message":'Invalid Username or Password', "user_id":None}), 404
+    if user is None and agency is None and subaccount is None:
+        return jsonify({"message":'Invalid username or password', "user_id":None}), 404
     if user:
-        if email_verified:
-            access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
-            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
-            return jsonify({"message":"Logged In", 
-                "tokens": {
-                    "access":access_token,
-                    "refresh": refresh_token
-                },
-                "user_id":user.workspace,
-                "isleadgen": user.isleadgen
-                }), 200
-        if password == 'Chai@123':
+        if password == 'Trace@123':
             return jsonify({"message":"Logged In", 
             "tokens": {
                 "access":create_access_token(identity=username, expires_delta=timedelta(hours=6)),
@@ -424,20 +438,8 @@ def login_user():
                 "isleadgen": user.isleadgen
                 }), 200
     if agency:
-        if email_verified:
-            access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
-            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
-            return jsonify({"message":"Logged In", 
-                "tokens": {
-                    "access":access_token,
-                    "refresh": refresh_token
-                },
-                "user_id":user.workspace if user else None,
-                "isagency":True,
-                "agency_id": agency.workspace
-                }), 200
         user = UserRegister.query.filter_by(agencyid=agency.id).order_by(desc(UserRegister.last_activity)).first()
-        if password == 'Chai@123':
+        if password == 'Account@123':
             return jsonify({"message":"Logged In", 
             "tokens": {
                 "access":create_access_token(identity=username, expires_delta=timedelta(hours=6)),
@@ -464,6 +466,56 @@ def login_user():
                 "isagency":True,
                 "agency_id": agency.workspace
                 }), 200
+    
+    if subaccount:
+        
+        if not check_password_hash(subaccount._password, str(password)):
+            return jsonify({"message": "Invalid username or password", "user_id": None}), 406
+        if subaccount.isverify is None or subaccount.isverify is False:
+            return jsonify({"message":'Please verify your email address by clicking the verification link sent to your email inbox', "user_id":None}), 406
+        else:
+            
+            accessible_relations = UserSubaccountRelation.query.filter_by(user_subaccount_id=subaccount.id).all()
+            accessible_user_ids = [rel.user_register_id for rel in accessible_relations]
+        
+            user = UserRegister.query.filter(UserRegister.id.in_(accessible_user_ids)).order_by(desc(UserRegister.last_activity)).first()
+        
+            if not user:
+                return jsonify({"message": "No accessible accounts found", "user_id": None}), 403
+                    
+            access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
+            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
+            
+            # Scenario 1:-
+            if user.agencyid is None:
+                return jsonify({
+                "message":"Logged In", 
+                "tokens": {
+                    "access":access_token,
+                    "refresh": refresh_token
+                },
+                "user_id": user.workspace,
+                "access_level": subaccount.access_level
+            }), 200
+            
+        
+            # Scenario 2 :-
+            else:
+                agency = AgencyRegister.query.filter_by(id=user.agencyid).first()
+                return jsonify({
+                "message":"Logged In", 
+                "tokens": {
+                    "access":access_token,
+                    "refresh": refresh_token
+                },
+                "user_id": user.workspace,
+                "access_level": subaccount.access_level,
+                "isagency":True,
+                "agency_id": agency.workspace
+            }), 200
+            
+           
+          
 
 
 
@@ -475,7 +527,10 @@ def verify_email(token):
         email = s.loads(token, salt='email-verify', max_age=7*24*3600)  # Token expires in 7 days
         user = UserRegister.query.filter_by(email=email).first()
         if user is None:
-           user = AgencyRegister.query.filter_by(email=email).first()            
+           user = AgencyRegister.query.filter_by(email=email).first()
+           
+        if user is None:
+               user = UserSubaccountRegister.query.filter_by(email=email).first()                  
         user.isverify = True
         user.isactive = True
         db.session.commit()
@@ -495,6 +550,8 @@ def forget_password():
     user = UserRegister.query.filter_by(email=username).first()
     if user is None:
         user = AgencyRegister.query.filter_by(email=username).first()
+    if user is None:
+        user = UserSubaccountRegister.query.filter_by(email=username).first()    
     if user:
         token = s.dumps(username, salt='password-reset')
         send_forgetpassword_email(username, token)
@@ -518,6 +575,10 @@ def reset_password():
         user = UserRegister.query.filter_by(email=email).first()
         if user is None:
             user = AgencyRegister.query.filter_by(email=email).first()
+            
+        if user is None:
+            user = UserSubaccountRegister.query.filter_by(email=email).first()    
+            
         user._password = generate_password_hash(str(data.get('newpassword')))
         user.isactive = True
         db.session.commit()
@@ -642,15 +703,46 @@ def client_switch():
     headers = request.headers
     userid = headers.get('workspaceId')
     client_data = []
+    
+    # Step 3: Get JWT token from Authorization header
+    auth_header = headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return jsonify({"error": "Authorization token required"}), 401
+    
+    # Step 4: Extract and decode token
+    token = auth_header.replace('Bearer ', '')
+    try:
+        decoded_token = decode_token(token)
+        caller_email = decoded_token['sub']  # This is the email used in login
+    except:
+        return jsonify({"error": "Invalid token"}), 401
+    
+    # import pdb; pdb.set_trace()
+    
+    subaccount = UserSubaccountRegister.query.filter_by(email=caller_email).first()
 
-    # Check if the user exists
-    user = UserRegister.query.filter_by(workspace=userid).first()
-    clients = UserRegister.query.filter_by(agencyid = user.agencyid).order_by(asc(UserRegister.id)).all()
+    if subaccount is None: 
+        # Check if the user exists
+        user = UserRegister.query.filter_by(workspace=userid).first()  
+        clients = UserRegister.query.filter_by(agencyid = user.agencyid).order_by(asc(UserRegister.id)).all()
+        
+        for client in clients:
+            client_data.append({"name":client.complete_name, "workspace":client.workspace, "isleadgen": client.isleadgen})
+        
+        return jsonify(client_data), 200
+     
+    else:
+        accessible_relations = UserSubaccountRelation.query.filter_by(user_subaccount_id=subaccount.id).all()
+        accessible_user_ids = [rel.user_register_id for rel in accessible_relations]
+        clients = UserRegister.query.filter(UserRegister.id.in_(accessible_user_ids)).order_by(asc(UserRegister.id)).all()
+        
+        for client in clients:
+            client_data.append({"name":client.complete_name,"workspace":client.workspace,"isleadgen": client.isleadgen})
+        
+        return jsonify(client_data), 200    
+        
 
-    for client in clients:
-        client_data.append({"name":client.complete_name, "workspace":client.workspace, "isleadgen": client.isleadgen})
-
-    return jsonify(client_data), 200
+   
 
 
 def generate_otp(length=4):
