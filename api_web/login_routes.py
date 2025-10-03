@@ -9,7 +9,7 @@ from ..connection import db, mail, app
 from flask import Blueprint, request, redirect, jsonify, make_response
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_jwt_extended import create_access_token, create_refresh_token
+from flask_jwt_extended import create_access_token, create_refresh_token, decode_token
 
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
