@@ -26,7 +26,7 @@ from .chat_bot.mongo_bot import chatbot_cd
 from .chat_bot.sql_bot import chatbot_cd
 from .payment import trackocitypayment_bp
 from .connection import create_app, jwt, db
-from .db_model.sql_models import UserRegister, Payment
+from .db_model.sql_models import UserRegister,UserSubaccountRegister,Payment
 from datetime import datetime, timedelta
 
 
@@ -162,10 +162,12 @@ def refresh():
 def before_request():
     headers = request.headers
     userid = headers.get('workspaceId', None)
+    subaccountid = headers.get('subaccountid',None)
     if request.endpoint not in ('refresh', 'googlesheetuser','googlesheet_user', 'api/orders'):
         if userid:
             verify_jwt_in_request()
             user = UserRegister.query.filter_by(workspace=userid).first()
+            subaccount = UserSubaccountRegister.query.filter_by(id=subaccountid).first() 
             if user:
                 user.last_activity = datetime.now()
                 if datetime.now() > user.plan_till or user.isactive is False:
@@ -175,6 +177,14 @@ def before_request():
                 # if datetime.now() + timedelta(days=3) > user.plan_till and user.isactive:
                 #     payment_order_creation(user.complete_name, userid, user.plan_till, user.email, user.phone, user.currency)
                 db.session.commit()
+            
+            if subaccount:
+                    subaccount.last_activity = datetime.now()
+                    if user:
+                        if datetime.now() > user.plan_till or user.isactive is False:
+                            user.isactive = False
+                            return jsonify({"message": "Subscription Expired"}), 406                                               
+                    db.session.commit()
 
 
 @app.after_request

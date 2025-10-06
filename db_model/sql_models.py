@@ -49,6 +49,7 @@ class UserSubaccountRegister(db.Model):
     isverify = db.Column(db.Boolean,default=False)
     isactive = db.Column(db.Boolean,default=False)
     access_level = db.Column(db.String(32))
+    last_activity = db.Column(db.DateTime, default=datetime.now)
     
 
 class UserSubaccountRelation(db.Model):

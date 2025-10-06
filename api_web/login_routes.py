@@ -374,14 +374,14 @@ def user_registor():
         return jsonify(message='Please check your email to verify your account', user_id=user.workspace), 201
     
     else:
-        subaccount = UserSubaccountRegister(complete_name=data['name'],email=email,created_at=datetime.now(),access_level=data.get('access_level'))
+        subaccount = UserSubaccountRegister(complete_name=data['name'],email=email,created_at=datetime.now(),access_level=data.get('role'))
         db.session.add(subaccount)
         db.session.flush()
             
         subaccount = UserSubaccountRegister.query.filter_by(email=email).first()
             
         # Adding data to relation table
-        for selected_user in data.get('selected_users'):
+        for selected_user in data.get('account access'):
             user = UserRegister.query.filter_by(workspace=selected_user).first()
             relation = UserSubaccountRelation(user_register_id=user.id , user_subaccount_id=subaccount.id)    
             db.session.add(relation) 
@@ -530,7 +530,9 @@ def login_user():
                     "refresh": refresh_token
                 },
                 "user_id": user.workspace,
-                "access_level": subaccount.access_level
+                "subaccountid":subaccount.id,
+                "issubaccount":True,
+                "role": subaccount.access_level
             }), 200
             
             # Scenario 2 :-
@@ -543,7 +545,9 @@ def login_user():
                     "refresh": refresh_token
                 },
                 "user_id": user.workspace,
-                "access_level": subaccount.access_level,
+                "subaccountid":subaccount.id,
+                "issubaccount":True,
+                "role": subaccount.access_level,
                 "isagency":True,
                 "agency_id": agency.workspace
             }), 200
@@ -610,6 +614,162 @@ def reset_password():
         db.session.commit()
         return jsonify({"message":"Your password has been reset"}),200
 
+
+@auth_bp.route('/subaccountusers', methods=['GET', 'OPTIONS'])
+@cross_origin()
+def subaccount_users():
+    headers = request.headers
+    userid = headers.get('workspaceId')
+    data = []
+    
+    user = UserRegister.query.filter_by(workspace=userid).first()
+    agency = AgencyRegister.query.filter_by(workspace=userid).first()
+    
+    if user:
+        subaccount_ids = UserSubaccountRelation.query.filter_by(user_register_id=user.id).all()
+        for subaccount_id in subaccount_ids:
+            subaccount = UserSubaccountRegister.query.filter_by(id=subaccount_id.user_subaccount_id).first()
+            data.append({
+                "email":subaccount.email,
+                "name":subaccount.complete_name,
+                "role":subaccount.access_level,
+                "status":subaccount.isactive,
+                "account access":"All Accounts",
+                "last active":subaccount.last_activity.strftime('%Y-%m-%d') if subaccount.last_activity else None
+            })
+            
+        return jsonify(data), 200
+    
+    if agency:
+        # Get all ids from user_register table that belong to that agency
+        agency_user_ids = [user.id for user in UserRegister.query.filter_by(agencyid=agency.id).all()]
+        
+        # Now , this will returns ALL rows from relation table where user_register_id 
+        subaccount_relations = UserSubaccountRelation.query.filter(UserSubaccountRelation.user_register_id.in_(agency_user_ids)).all()
+        
+        # extracts subaccount IDs
+        subaccount_ids = list(set([rel.user_subaccount_id for rel in subaccount_relations]))
+        
+        for subaccount_id in subaccount_ids:
+            
+            subaccount = UserSubaccountRegister.query.filter_by(id=subaccount_id).first()
+            
+            accessible_relations = UserSubaccountRelation.query.filter_by(user_subaccount_id=subaccount_id).filter(UserSubaccountRelation.user_register_id.in_(agency_user_ids)).all()
+            
+            accessible_users = []
+            
+            for rel in accessible_relations:
+                user = UserRegister.query.filter_by(id=rel.user_register_id).first()
+                accessible_users.append({
+                    "name":user.complete_name,
+                    "workspace":user.workspace
+                })
+                
+            data.append({
+                "email":subaccount.email,
+                "name":subaccount.complete_name,
+                "role":subaccount.access_level,
+                "status":subaccount.isactive,
+                "account access":accessible_users,
+                "last active":subaccount.last_activity.strftime('%Y-%m-%d') if subaccount.last_activity else None
+            })
+        
+        return jsonify(data), 200    
+            
+            
+    
+@auth_bp.route('/updatesubaccountusers', methods=['PUT', 'OPTIONS'])
+@cross_origin()
+def subaccount_user_change():
+    headers = request.headers
+    userid = headers.get('workspaceId')
+    subaccountid = headers.get('subaccountid')
+    data = json.loads(request.data)
+    
+    # Get subaccount
+    subaccount = UserSubaccountRegister.query.filter_by(id=subaccountid).first()
+    
+    if not subaccount:
+        return jsonify({"message": "Subaccount not found"}), 404
+    
+    # Update basic fields
+    subaccount.complete_name = data.get('name')
+    subaccount.access_level = data.get('role')
+    
+    # Check if requester is an agency
+    agency = AgencyRegister.query.filter_by(workspace=userid).first()
+    
+    if agency:
+        # Get all clients of this agency
+        agency_clients = UserRegister.query.filter_by(agencyid=agency.id).all()
+        agency_client_ids = [client.id for client in agency_clients]
+        
+        # Delete old relations (only for this agency's clients)
+        UserSubaccountRelation.query.filter(
+            UserSubaccountRelation.user_subaccount_id == subaccountid,
+            UserSubaccountRelation.user_register_id.in_(agency_client_ids)
+        ).delete(synchronize_session=False)
+        
+        # Add new relations based on accessible_accounts
+        accessible_workspaces = data.get('account access', [])
+        
+        for workspace in accessible_workspaces:
+            client = UserRegister.query.filter_by(workspace=workspace).first()
+            if client and client.agencyid == agency.id:  # Ensure client belongs to this agency
+                new_relation = UserSubaccountRelation(
+                    user_register_id=client.id,
+                    user_subaccount_id=subaccount.id
+                )
+                db.session.add(new_relation)
+    
+    db.session.commit()
+    return jsonify({"message": "Subaccount Updated"}), 200
+
+
+
+@auth_bp.route('/deletesubaccount', methods=['DELETE', 'OPTIONS'])
+@cross_origin()
+def delete_subaccount():    
+    try:
+        headers = request.headers
+        userid = headers.get('workspaceId')
+        subaccountid = headers.get('subaccountid')
+        
+        # Validation
+        if not subaccountid:
+            return jsonify({'error': 'Subaccount ID is required'}), 400
+        
+        try:                       
+            #Now,Subaccount_register table 
+            subaccount = UserSubaccountRegister.query.filter_by(id=subaccountid).first()
+            
+            if not subaccount:
+                db.session.rollback()
+                return jsonify({'error': 'Subaccount not found'}), 404
+            
+            # subaccount_rel table data deleting
+            UserSubaccountRelation.query.filter_by(user_subaccount_id=subaccountid).delete()
+            
+            db.session.delete(subaccount)
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Subaccount deleted successfully',
+                'subaccount_id': subaccountid
+            }), 200
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"Database error: {str(e)}")
+            raise e
+            
+    except Exception as e:
+        print(f"Error deleting subaccount: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': 'Failed to delete subaccount'
+        }), 500
 
 
 @auth_bp.route('/getprofile', methods=['GET', 'OPTIONS'])
