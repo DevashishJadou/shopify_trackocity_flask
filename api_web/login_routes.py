@@ -426,8 +426,8 @@ def login_user():
     
     if user:
         if email_verified:
-            access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
-            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
+            access_token = create_access_token(identity=username, expires_delta=timedelta(minutes=5))
+            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=2))
             return jsonify({"message":"Logged In", 
                 "tokens": {
                     "access":access_token,

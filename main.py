@@ -154,7 +154,7 @@ def googlesheet_user():
 def refresh():
     headers = request.headers
     userid = headers.get('workspaceId', None)
-    new_access_token = create_access_token(identity=userid, expires_delta=timedelta(hours=6))
+    new_access_token = create_access_token(identity=userid, expires_delta=timedelta(minutes=3))
     return jsonify({"tokens": {
                 "access":new_access_token}}), 200
 
