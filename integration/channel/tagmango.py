@@ -7,7 +7,7 @@ from sqlalchemy import MetaData
 import hashlib, random, time
 
 from ...db_model.sql_models import UserRegister, order_table_dynamic, ordertable, ordertable_detail 
-# from .woocommerce import channel_bp
+from .woocommerce import channel_bp
 from ...connection import db
 from ...dbrule import dup_order_rule
 from sqlalchemy.sql import func
@@ -32,7 +32,7 @@ def tagmango_sent_sign():
 
 @channel_bp.route('/tagmangocredentials', methods=['POST'])
 @cross_origin()
-def pabbly_integration():
+def tagmango_integration():
     header = request.headers
     _body = json.loads(request.get_data())
     workspace = header.get('workspaceId')
@@ -93,7 +93,7 @@ def parse_date(date_str):
 
 
 @channel_bp.route('/<workspace>/tagmangoorderendpoint', methods=['POST'])
-def pabbly_webhook(workspace):
+def tagmango_webhook(workspace):
     """
     Status Types
     The webhook will be triggered with different status values:
