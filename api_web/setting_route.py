@@ -1,4 +1,4 @@
-from ..db_model.sql_models import ProductTable, UTMSource, UserRegister, CustomizeColumn,AgencyRegister
+from ..db_model.sql_models import ProductTable, UTMSource, UserRegister,UserSubaccountRegister,CustomizeColumn,AgencyRegister
 from ..connection import db
 
 from flask import Blueprint, request, jsonify
@@ -211,6 +211,7 @@ def put_delete_utmsource():
 def page_limit_get():
     headers = request.headers
     workspace = headers.get('workspaceId')
+    subaccountid = headers.get('subaccountid',None)
     sql_query = text("""
 				select sum(value)*100.0 / page_limit
 				from mongo_metric mm 
@@ -237,7 +238,29 @@ def page_limit_get():
     user = UserRegister.query.filter_by(workspace=workspace).first()
     plan = user.plan
     is_logout = user.is_logout
-
+    
+    if subaccountid:
+        subaccount = UserSubaccountRegister.query.filter_by(id=subaccountid).first()
+        
+        if not subaccount:
+            return jsonify({"message": "Subaccount not found"}), 404
+        
+        role = subaccount.access_level
+        is_role_changed = subaccount.is_role_changed
+        
+        if is_role_changed:
+            subaccount.is_role_changed = False
+            db.session.commit()
+            
+        return jsonify({
+            "data": page_view_usage, 
+            "plan": plan, 
+            "is_logout": is_logout, 
+            "is_role_changed": is_role_changed, 
+            "role": role
+            }), 200    
+       
+       
     return jsonify({"data": page_view_usage, "plan": plan, "is_logout": is_logout}), 200
     #return jsonify({"data":page_view_usage, "plan":plan}), 200
     # return jsonify({"data":page_view_usage}), 200

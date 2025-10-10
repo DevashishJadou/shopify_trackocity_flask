@@ -630,6 +630,7 @@ def subaccount_users():
         for subaccount_id in subaccount_ids:
             subaccount = UserSubaccountRegister.query.filter_by(id=subaccount_id.user_subaccount_id).first()
             data.append({
+                "subaccountid":subaccount.id,
                 "email":subaccount.email,
                 "name":subaccount.complete_name,
                 "role":subaccount.access_level,
@@ -666,6 +667,7 @@ def subaccount_users():
                 })
                 
             data.append({
+                "subaccountid":subaccount.id,
                 "email":subaccount.email,
                 "name":subaccount.complete_name,
                 "role":subaccount.access_level,
@@ -692,6 +694,9 @@ def subaccount_user_change():
     if not subaccount:
         return jsonify({"message": "Subaccount not found"}), 404
     
+    if subaccount.access_level != data.get('role'):
+        subaccount.is_role_changed = True
+        
     # Update basic fields
     subaccount.complete_name = data.get('name')
     subaccount.access_level = data.get('role')
@@ -863,24 +868,50 @@ def profile_client_create():
 def profile_client():
     headers = request.headers
     userid = headers.get('workspaceId')
+    subaccounid = headers.get('subaccountid',None)
     client_data = []
-
-    agency = AgencyRegister.query.filter_by(workspace=userid).first()
-    clients = UserRegister.query.filter_by(agencyid = agency.id).order_by(asc(UserRegister.id)).all()
-    for user in clients:        
-        # Store the data for each client in a nested dictionary
-        client_data.append( {
-            'email': user.email,
-            'phone': user.phone,
-            'name': user.complete_name,
-            'timezone': user.timezone,
-            'company': user.company,
-            'currency': user.currency,
-            'workspace': user.workspace,
-            'isleadgen': user.isleadgen
-        })
-
-    return jsonify(client_data), 200
+    
+    if subaccounid:
+        subaccount = UserSubaccountRegister.query.filter_by(id=subaccounid).first()
+        if subaccount is None: 
+            return jsonify(client_data), 200
+        
+        accessible_relations = UserSubaccountRelation.query.filter_by(user_subaccount_id=subaccounid).all()
+        accessible_user_ids = [rel.user_register_id for rel in accessible_relations]
+        clients = UserRegister.query.filter(UserRegister.id.in_(accessible_user_ids)).order_by(asc(UserRegister.id)).all()
+        
+        for user in clients:        
+            # Store the data for each client in a nested dictionary
+            client_data.append({
+                'email': user.email,
+                'phone': user.phone,
+                'name': user.complete_name,
+                'timezone': user.timezone,
+                'company': user.company,
+                'currency': user.currency,
+                'workspace': user.workspace,
+                'isleadgen': user.isleadgen
+                })
+            
+        return jsonify(client_data), 200
+        
+    else:
+        agency = AgencyRegister.query.filter_by(workspace=userid).first()
+        clients = UserRegister.query.filter_by(agencyid = agency.id).order_by(asc(UserRegister.id)).all()
+        for user in clients:
+            # Store the data for each client in a nested dictionary
+            client_data.append({
+                'email': user.email,
+                'phone': user.phone,
+                'name': user.complete_name,
+                'timezone': user.timezone,
+                'company': user.company,
+                'currency': user.currency,
+                'workspace': user.workspace,
+                'isleadgen': user.isleadgen
+                })
+        return jsonify(client_data), 200    
+                
 
 
 @auth_bp.route('/switchclient', methods=['GET', 'OPTIONS'])

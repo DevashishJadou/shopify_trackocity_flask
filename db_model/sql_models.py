@@ -50,6 +50,7 @@ class UserSubaccountRegister(db.Model):
     isactive = db.Column(db.Boolean,default=False)
     access_level = db.Column(db.String(32))
     last_activity = db.Column(db.DateTime, default=datetime.now)
+    is_role_changed = db.Column(db.Boolean,default=False)
     
 
 class UserSubaccountRelation(db.Model):
@@ -447,6 +448,25 @@ def facebookads_table(tablename):
 		)
     return facebookads_table
 
+class FacebookAdsPlacement(db.Model):
+    __tablename__ = "facebookads_placement"
+    id = db.Column(db.Integer, primary_key=True)
+    workspace = db.Column(db.String(32))
+    dated = db.Column(db.Date)
+    account = db.Column(db.String(32))
+    account_name = db.Column(db.String(64))
+    publisher_platform = db.Column(db.String(64))
+    platform_position = db.Column(db.String(64))
+    campaignid = db.Column(db.String(32))
+    campaign_name = db.Column(db.String(128))
+    adsetid = db.Column(db.String(32))
+    adset_name = db.Column(db.String(128))
+    adid = db.Column(db.String(32))
+    ad_name = db.Column(db.String(128))
+    impression = db.Column(db.Integer)
+    clicks = db.Column(db.Integer)
+    spend = db.Column(db.Numeric)
+    purchase = db.Column(db.Integer)
 
 
 def otherads_table(tablename):
