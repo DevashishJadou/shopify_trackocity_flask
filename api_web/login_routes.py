@@ -169,7 +169,7 @@ def send_verification_email(user_email, token, user_name=None):
     Best regards,
     The Trackocity Team
     
-    © 2024 Trackocity. All rights reserved.
+    © 2025 Trackocity. All rights reserved.
     This email was sent to {user_email}
     """
     
@@ -505,6 +505,53 @@ def login_user():
                 }), 200
 
     if subaccount:
+        if email_verified:
+            accessible_relations = UserSubaccountRelation.query.filter_by(user_subaccount_id=subaccount.id).all()
+            accessible_user_ids = [rel.user_register_id for rel in accessible_relations]
+        
+            user = UserRegister.query.filter(UserRegister.id.in_(accessible_user_ids)).order_by(desc(UserRegister.last_activity)).first()
+        
+            if not user:
+                return jsonify({"message": "No accessible accounts found", "user_id": None}), 403
+                    
+            access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
+            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
+            
+            # Scenario 1:-
+            if user.agencyid is None:
+                return jsonify({
+                "message":"Logged In", 
+                "tokens": {
+                    "access":access_token,
+                    "refresh": refresh_token
+                },
+                "user_id": user.workspace,
+                "subaccountid":subaccount.id,
+                "issubaccount":True,
+                "role": subaccount.access_level
+            }), 200
+            
+            # Scenario 2 :-
+            else:
+                agency = AgencyRegister.query.filter_by(id=user.agencyid).first()
+                return jsonify({
+                "message":"Logged In", 
+                "tokens": {
+                    "access":access_token,
+                    "refresh": refresh_token
+                },
+                "user_id": user.workspace,
+                "subaccountid":subaccount.id,
+                "issubaccount":True,
+                "role": subaccount.access_level,
+                "isagency":True,
+                "agency_id": agency.workspace
+            }), 200
+                
+        if subaccount.isverify is None or subaccount.isverify is False:
+            return jsonify({"message":'Please verify your email address by clicking the verification link sent to your email inbox', "user_id":None}), 406
+        if subaccount.password is None:
+            return jsonify({"message":'Please reset your password by clicking the forget password link', "user_id":None}), 406
         if not check_password_hash(subaccount._password, str(password)):
             return jsonify({"message": "Invalid username or password", "user_id": None}), 406
         if subaccount.isverify is None or subaccount.isverify is False:
