@@ -411,6 +411,153 @@ def get_reporttablesalejourney():
 
 
 
+
+@report_bp.route('/customerprofile', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def get_customerprofile():
+
+    headers = request.headers
+    body = request.args
+    userid = headers.get('workspaceId')
+    trackid = body.get('trackid')
+    user = UserRegister.query.filter_by(workspace=userid).first()
+    order_id = int(trackid[7:])
+
+    output = []
+    if user:
+                # ✅ Assume userid = workspace, and order_id = trackid
+        table_name = f"order_{userid}"
+        detailed_table_name = f"order_detailed_{userid}"
+
+        # ✅ Query 1 - Customer summary
+        sql_query1 = db.text(f"""
+            SELECT 
+                o.first_name, 
+                o.last_name, 
+                o.email, 
+                o.phone,
+                MIN(o.order_date) AS customersince,
+                SUM(total) AS total, 
+                COUNT(*) AS orders, 
+                SUM(total)*1.0/COUNT(*) AS aov,
+                (EXTRACT(EPOCH FROM (MAX(o.order_date) - MIN(o.order_date)) / COUNT(*))::INT/3600) + 1 AS hours
+            FROM {table_name} o
+            INNER JOIN (
+                SELECT 
+                    email, 
+                    LEFT(phone, 10) AS phone 
+                FROM {table_name} 
+                WHERE id = :order_id
+            ) ol 
+            ON o.email = ol.email OR o.phone = ol.phone
+            GROUP BY 1, 2, 3, 4
+        """)
+
+        result = db.session.execute(sql_query1, {'order_id': order_id})
+        data1 = result.fetchone()
+
+
+        # ✅ Query 2 - Order history
+        sql_query2 = db.text(f"""
+            SELECT 
+                o.id, 
+                o.order_date::date, 
+                total
+            FROM {table_name} o
+            INNER JOIN (
+                SELECT email, LEFT(phone,10) phone 
+                FROM {table_name} 
+                WHERE id = :order_id
+            ) ol ON o.email = ol.email OR o.phone = ol.phone
+        """)
+
+        result = db.session.execute(sql_query2, {'order_id': order_id})
+        data2 = result.fetchall()
+
+
+        # ✅ Query 3 - Journey / Attribution
+        sql_query3 = db.text(f"""
+            WITH order_date AS (
+                SELECT MAX(o.id) id
+                FROM {table_name} o
+                INNER JOIN (
+                    SELECT email, LEFT(phone,10) phone 
+                    FROM {table_name} 
+                    WHERE id = :order_id
+                ) ol ON o.email = ol.email OR o.phone = ol.phone
+            ),
+            touchpointdata AS (
+                SELECT
+                    od.adsource,
+                    od.event_time,
+                    ROW_NUMBER() OVER (ORDER BY od.event_time ASC) AS first_touch_data,
+                    ROW_NUMBER() OVER (ORDER BY od.event_time DESC) AS last_touch_data,
+                    COUNT(*) OVER () AS touchpoints
+                FROM {detailed_table_name} od
+                INNER JOIN order_date o ON o.id = od.order_id
+            )
+            SELECT
+                MAX(CASE WHEN first_touch_data = 1 THEN adsource END) AS first_touch,
+                MAX(CASE WHEN first_touch_data = 1 THEN event_time::date END) AS first_touch_time,
+                MAX(CASE WHEN last_touch_data = 1 THEN adsource END) AS last_touch,
+                MAX(CASE WHEN last_touch_data = 1 THEN event_time::date END) AS last_touch_time,
+                MAX(touchpoints) AS total_touchpoints
+            FROM touchpointdata
+        """)
+
+        result = db.session.execute(sql_query3, {'order_id': order_id})
+        data3 = result.fetchone()
+
+        db.session.close()
+
+        # ✅ Combine all results into structured JSON (clean format)
+        response = {
+            "data": {
+                "profile": {
+                    "name": f"{data1.first_name} {data1.last_name}" if data1 else None,
+                    "email": data1.email if data1 else None,
+                    "phone": data1.phone if data1 else None,
+                    "customerSince": str(data1.customersince) if data1 else None
+                },
+                "kpis": {
+                    "ltv": float(data1.total) if data1 else 0,
+                    "totalOrders": int(data1.orders) if data1 else 0,
+                    "averageOrderValue": round(float(data1.aov), 2) if data1 else 0,
+                    "avgPurchaseFrequency": f"{data1.hours} hours" if data1 else "N/A"
+                },
+                "orders": [
+                    {
+                        "orderId": f"Id00381{row.id}",
+                        "date": str(row.order_date),
+                        "amount": f"{row.total}",
+                        "status": "Delivered",  # Placeholder
+                        "channel": "N/A"        # Placeholder
+                    }
+                    for row in data2
+                ] if data2 else [],
+                "journey": {
+                    "firstTouch": {
+                        "channel": data3.first_touch if data3 else None,
+                        "date": str(data3.first_touch_time) if data3 else None
+                    },
+                    "lastTouch": {
+                        "channel": data3.last_touch if data3 else None,
+                        "date": str(data3.last_touch_time) if data3 else None
+                    },
+                    "touchpoints": {
+                        "total": data3.total_touchpoints if data3 else 0,
+                        "description": "Across all channels"
+                    }
+                }
+            }
+        }
+
+    return jsonify(response)
+
+
+
+
+
 @report_bp.route('/tablesaleinteractions', methods=['GET', 'OPTIONS'])
 @cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
 def table_saleinteractions():
