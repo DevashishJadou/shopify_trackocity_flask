@@ -49,7 +49,8 @@ class UserSubaccountRegister(db.Model):
     isverify = db.Column(db.Boolean,default=False)
     isactive = db.Column(db.Boolean,default=False)
     access_level = db.Column(db.String(32))
-    last_activity = db.Column(db.DateTime, default=datetime.now)
+    last_activity = db.Column(db.DateTime)
+    is_role_changed = db.Column(db.Boolean,default=False)
     
 
 class UserSubaccountRelation(db.Model):
@@ -446,7 +447,6 @@ def facebookads_table(tablename):
             UniqueConstraint('dated', 'adid', name=uuid.uuid4().hex)
 		)
     return facebookads_table
-
 
 
 def otherads_table(tablename):
