@@ -425,11 +425,11 @@ def get_customerprofile():
         sql_query1 = db.text(f"""
             SELECT 
                 COALESCE(MAX(COALESCE(od.first_name, o.first_name || ' ' ||  o.last_name)), 'NA') as name, 
-                MIN(o.order_date) AS customersince,
+                MIN(o.order_date::date) AS customersince,
                 SUM(total) AS total, 
                 COUNT(*) AS orders, 
                 SUM(total)*1.0/COUNT(*) AS aov,
-                (EXTRACT(EPOCH FROM (MAX(o.order_date) - MIN(o.order_date)) / COUNT(*))::INT/(3600*24)) + 1 AS days
+                ROUND(EXTRACT(EPOCH FROM (MAX(o.order_date) - MIN(o.order_date)) / COUNT(*))/(3600*24), 0) + 1 AS days
             FROM {table_name} o
             INNER JOIN (
                 SELECT 
@@ -516,8 +516,8 @@ def get_customerprofile():
             "data": {
                 "profile": {
                     "name": f"{data1.name}" if data1 else None,
-                    "email": data2.email if data2 else None,
-                    "phone": data2.phone if data2 else None,
+                    "email": data2[0].email if data2 else None,
+                    "phone": data2[0].phone if data2 else None,
                     "customerSince": str(data1.customersince) if data1 else None
                 },
                 "kpis": {
