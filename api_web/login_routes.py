@@ -827,6 +827,7 @@ def delete_subaccount():
 @auth_bp.route('/getprofile', methods=['GET', 'OPTIONS'])
 @cross_origin()
 def profile_user():
+    isagency = False
     headers = request.headers
     userid = headers.get('workspaceId')
     data = {}
@@ -834,13 +835,14 @@ def profile_user():
     user = UserRegister.query.filter_by(workspace=userid).first()
     if user is None:
         user = AgencyRegister.query.filter_by(workspace=userid).first()
+        isagency = True
     data['email'] = user.email
     data['phone'] = user.phone
     data['name'] = user.complete_name
     data['timezone'] = user.timezone
     data['company'] = user.company
     data['currency'] = user.currency
-    data['plan_till'] = user.plan_till
+    data['plan_till'] = user.plan_till if isagency is False else None
 
     return jsonify(data), 200
 

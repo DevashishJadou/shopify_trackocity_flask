@@ -424,9 +424,7 @@ def get_customerprofile():
         # ✅ Query 1 - Customer summary
         sql_query1 = db.text(f"""
             SELECT 
-                coalesce(od.first_name, o.first_name || ' ' ||  o.last_name) as name, 
-                o.email, 
-                o.phone,
+                COALESCE(MAX(COALESCE(od.first_name, o.first_name || ' ' ||  o.last_name)), 'NA') as name, 
                 MIN(o.order_date) AS customersince,
                 SUM(total) AS total, 
                 COUNT(*) AS orders, 
@@ -451,7 +449,6 @@ def get_customerprofile():
             limit 1
             ) od
             ON o.email = od.email OR o.phone = od.phone
-            GROUP BY 1, 2, 3
         """)
 
         result = db.session.execute(sql_query1, {'order_id': order_id})
@@ -464,7 +461,9 @@ def get_customerprofile():
                 o.id, 
                 o.order_date::date, 
                 total,
-                order_status
+                order_status,
+                ol.email,
+                ol.phone
             FROM {table_name} o
             INNER JOIN (
                 SELECT email, LEFT(phone,10) phone 
@@ -517,8 +516,8 @@ def get_customerprofile():
             "data": {
                 "profile": {
                     "name": f"{data1.name}" if data1 else None,
-                    "email": data1.email if data1 else None,
-                    "phone": data1.phone if data1 else None,
+                    "email": data2.email if data2 else None,
+                    "phone": data2.phone if data2 else None,
                     "customerSince": str(data1.customersince) if data1 else None
                 },
                 "kpis": {
