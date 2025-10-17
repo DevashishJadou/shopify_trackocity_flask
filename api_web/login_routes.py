@@ -550,7 +550,7 @@ def login_user():
                 
         if subaccount.isverify is None or subaccount.isverify is False:
             return jsonify({"message":'Please verify your email address by clicking the verification link sent to your email inbox', "user_id":None}), 406
-        if subaccount.password is None:
+        if subaccount._password is None:
             return jsonify({"message":'Please reset your password by clicking the forget password link', "user_id":None}), 406
         if not check_password_hash(subaccount._password, str(password)):
             return jsonify({"message": "Invalid username or password", "user_id": None}), 406

@@ -370,7 +370,7 @@ def orderlinetable(tablename):
     orderline_table = Table(
         tablename,
         metadata,
-        Column('order_id', Integer, primary_key=True),
+        Column('order_id', Integer, nullable=False),
         Column('shopify_productid', String(64)),    
         Column('sku', String(128)),  
         Column('product_name', String(255)),

@@ -227,15 +227,7 @@ def get_reporttabledatafacebook():
     if user:
 
         sort = 'ASC' if attribute == 'first' else 'DESC'
-        if traffic == 'Facebook' and userid in ('c65209bb2dd545bd82131c0a7d040cab', '9e3bd13dee4b43dea5a98530db61780b') :
-            sql_query = text("SELECT * FROM table_facebookattribute_wo_visitorid(:workspace, :productid, :startdate, :enddate, :sort, :product_list, :click_type, :windoww) ")
-            result = db.session.execute(sql_query, {
-                'workspace': userid, 'productid': user.productid,
-                'startdate': startdate, 'enddate': enddate, 'sort': sort,
-                'product_list': product_list, 'click_type': click_type, 'windoww': window
-            })
-            data = result.fetchall()
-        elif traffic == 'Facebook':
+        if traffic == 'Facebook':
             sql_query = text("SELECT * FROM table_facebookattribute(:workspace, :productid, :startdate, :enddate, :sort, :product_list, :click_type, :windoww)")
             result = db.session.execute(sql_query, {
                 'workspace': userid, 'productid': user.productid,
@@ -432,15 +424,14 @@ def get_customerprofile():
         # ✅ Query 1 - Customer summary
         sql_query1 = db.text(f"""
             SELECT 
-                o.first_name, 
-                o.last_name, 
+                coalesce(od.first_name, o.first_name || ' ' ||  o.last_name) as name, 
                 o.email, 
                 o.phone,
                 MIN(o.order_date) AS customersince,
                 SUM(total) AS total, 
                 COUNT(*) AS orders, 
                 SUM(total)*1.0/COUNT(*) AS aov,
-                (EXTRACT(EPOCH FROM (MAX(o.order_date) - MIN(o.order_date)) / COUNT(*))::INT/3600) + 1 AS hours
+                (EXTRACT(EPOCH FROM (MAX(o.order_date) - MIN(o.order_date)) / COUNT(*))::INT/(3600*24)) + 1 AS days
             FROM {table_name} o
             INNER JOIN (
                 SELECT 
@@ -450,7 +441,17 @@ def get_customerprofile():
                 WHERE id = :order_id
             ) ol 
             ON o.email = ol.email OR o.phone = ol.phone
-            GROUP BY 1, 2, 3, 4
+            LEFT JOIN  (
+            select 
+                email,
+                LEFT(phone, 10) AS phone,
+                first_name
+            from {detailed_table_name}
+            where order_id = :order_id AND first_name <> 'NA'
+            limit 1
+            ) od
+            ON o.email = od.email OR o.phone = od.phone
+            GROUP BY 1, 2, 3
         """)
 
         result = db.session.execute(sql_query1, {'order_id': order_id})
@@ -462,7 +463,8 @@ def get_customerprofile():
             SELECT 
                 o.id, 
                 o.order_date::date, 
-                total
+                total,
+                order_status
             FROM {table_name} o
             INNER JOIN (
                 SELECT email, LEFT(phone,10) phone 
@@ -514,7 +516,7 @@ def get_customerprofile():
         response = {
             "data": {
                 "profile": {
-                    "name": f"{data1.first_name} {data1.last_name}" if data1 else None,
+                    "name": f"{data1.name}" if data1 else None,
                     "email": data1.email if data1 else None,
                     "phone": data1.phone if data1 else None,
                     "customerSince": str(data1.customersince) if data1 else None
@@ -523,15 +525,15 @@ def get_customerprofile():
                     "ltv": float(data1.total) if data1 else 0,
                     "totalOrders": int(data1.orders) if data1 else 0,
                     "averageOrderValue": round(float(data1.aov), 2) if data1 else 0,
-                    "avgPurchaseFrequency": f"{data1.hours} hours" if data1 else "N/A"
+                    "avgPurchaseFrequency": f"{data1.days} Day{'s' if data1.days != 1 else ''}" if data1 else "N/A"
                 },
                 "orders": [
                     {
                         "orderId": f"Id00381{row.id}",
                         "date": str(row.order_date),
                         "amount": f"{row.total}",
-                        "status": "Delivered",  # Placeholder
-                        "channel": "N/A"        # Placeholder
+                        "status": f'{row.order_status}' if row.order_status == 'cancelled'  else "Delivered",  
+                        "channel": "N/A"   # Placeholder
                     }
                     for row in data2
                 ] if data2 else [],
