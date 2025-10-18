@@ -29,7 +29,7 @@ from .payment import trackocitypayment_bp
 from .connection import create_app, jwt, db
 from .db_model.sql_models import UserRegister,UserSubaccountRegister,Payment
 from datetime import datetime, timedelta
-
+import psutil
 
 
 from flask_cors import CORS, cross_origin
@@ -226,19 +226,43 @@ def payment_order_creation(name, workspace, plan_till, email, phone='1212121212'
     payment = Payment.query.filter(workspace==workspace).first()
     if payment:
         return payment.link
+    
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    db.session.remove()
 
 
 tracemalloc.start()
 @app.route("/memory-stats")
-def memory_stats():
+def detailed_memory_stats():
     snapshot = tracemalloc.take_snapshot()
-    top_stats = snapshot.statistics('lineno')
-
-    result = ["Top memory usage by line:"]
-    for stat in top_stats[:10]:
-        result.append(str(stat))
-
+     # Group by filename to identify problem modules
+    top_stats = snapshot.statistics('filename')
+    sqlalchemy_stats = [stat for stat in top_stats if 'sqlalchemy' in stat.traceback.filename]
+    
+    result = [f"SQLAlchemy memory usage: {sum(s.size for s in sqlalchemy_stats) / 1024 / 1024:.1f} MB"]
+    
+    # Show line-level details for SQLAlchemy
+    line_stats = snapshot.statistics('lineno')
+    for stat in line_stats[:5]:
+        if 'sqlalchemy' in stat.traceback.filename:
+            result.append(f"{stat.traceback.filename}:{stat.traceback.lineno}: {stat.size / 1024 / 1024:.1f} MB ({stat.count} objects)")
+    
     return "<br>".join(result)
+
+
+@app.route("/cpu-stats")
+def spike_detector():
+    process = psutil.Process()
+    cpu = process.cpu_percent(interval=1)
+    memory_mb = process.memory_info().rss / 1024 / 1024
+    
+    if cpu > 50 or memory_mb > 1500:  # Spike thresholds
+        timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+        return f"SPIKE DETECTED {timestamp}: CPU={cpu:.1f}% RAM={memory_mb:.1f}MB"
+    
+    return f"Normal: CPU={cpu:.1f}% RAM={memory_mb:.1f}MB"
+
 
 if __name__ == '__main__':
     app.run(debug=False)
