@@ -150,7 +150,6 @@ def integrationed_plaform():
     paymentplatform = 0
     storeplatform = 0
 
-    import pdb; pdb.set_trace()
     onboarding = UserOnboarding.query.filter_by(user_id=workspace).first()
     output['tour_started'] = onboarding.tour_started
     output['tour_completed'] = onboarding.tour_completed
