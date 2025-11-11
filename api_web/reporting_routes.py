@@ -1,6 +1,6 @@
 # reporting_routes
 
-from ..db_model.sql_models import UserRegister, ClientFacebookredentials, ClientGoogleCredentials, MongoMetric, UTMSource
+from ..db_model.sql_models import UserRegister, ClientFacebookredentials, ClientGoogleCredentials, MongoMetric, UTMSource, UserOnboarding
 from ..db_model.mongo_models import CustomerInfo
 from ..connection import db
 
@@ -46,7 +46,12 @@ def get_all_source():
     unique_src = {record.displayname for record in src}
     src_list = list(unique_src)
 
-    return jsonify(src_list), 200
+    onboarding = UserOnboarding.query.filter_by(workspace=userid).all()
+    onboarding.onboarding_status
+
+    output = {'channels':src_list, 'onboarding_status':onboarding.onboarding_status if onboarding else None}
+
+    return jsonify(output), 200
       
 
 # Utility function to update metrics
