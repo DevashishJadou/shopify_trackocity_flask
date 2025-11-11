@@ -141,30 +141,84 @@ def integration_linkedin_account_delete():
 def integrationed_plaform():
     headers = request.headers
     workspace = headers.get('workspaceId')
+    output = {}
     integation = {}
+    integation['adplatform'] = {}
+    integation['payment'] = {}
+    integation['store'] = {}
+    adplatform = 0
+    paymentplatform = 0
+    storeplatform = 0
 
+    import pdb; pdb.set_trace()
+    onboarding = UserOnboarding.query.filter_by(user_id=workspace).first()
+    output['tour_started'] = onboarding.tour_started
+    output['tour_completed'] = onboarding.tour_completed
+    output['current_tour_step'] = onboarding.current_tour_step
+    output['tour_dismissed'] = onboarding.tour_dismissed
+    
+
+    fb = ClientFacebookredentials.query.filter_by(workspace=workspace).first()
+    integation['adplatform']['facebook'] = True if fb else False
+    adplatform +=1 if fb else 0
+
+    gg = ClientGoogleCredentials.query.filter_by(workspace=workspace).first()
+    integation['adplatform']['google'] = True if gg else False
+    adplatform +=1 if gg else 0
+
+    linkedin = ClientLinkedinCredentials.query.filter_by(workspace=workspace).first()
+    integation['adplatform']['linkedin'] = True if linkedin else False
+    adplatform +=1 if linkedin else 0
+
+    onboarding.connected_adplatform = adplatform
+
+
+
+    
     shopify = Shopify.query.filter_by(workspace=workspace).first()
-    integation['shopify'] = True if shopify else False
-
-    razorpay = RazorpayConfiguration.query.filter_by(workspace=workspace).first()
-    integation['razorpay'] = True if razorpay else False
+    integation['store']['shopify'] = True if shopify else False
+    storeplatform +=1 if shopify else 0
 
     woocommerce = WooCommerce.query.filter_by(workspace=workspace).first()
-    integation['woocommerce'] = True if woocommerce else False
+    integation['store']['woocommerce'] = True if woocommerce else False
+    storeplatform +=1 if woocommerce else 0
+    
+    razorpay = RazorpayConfiguration.query.filter_by(workspace=workspace).first()
+    integation['payment']['razorpay'] = True if razorpay else False
+    storeplatform +=1 if razorpay else 0
+
+    onboarding.connected_checkout = storeplatform
+
 
     plaform_cashfree = 'cashfree'
     cashfree = PlatformConfiguration.query.filter_by(workspace = workspace).filter_by(platform=plaform_cashfree).first()
-    integation['cashfree'] = True if cashfree else False
+    integation['payment']['cashfree'] = True if cashfree else False
+    paymentplatform +=1 if cashfree else 0
 
     plaform_stripe= 'stripe'
     stripe = PlatformConfiguration.query.filter_by(workspace = workspace).filter_by(platform=plaform_stripe).first()
-    integation['stripe'] = True if stripe else False
+    integation['payment']['stripe'] = True if stripe else False
+    paymentplatform +=1 if stripe else 0
 
     plaform_paypal= 'paypal'
     paypal = PlatformConfiguration.query.filter_by(workspace = workspace).filter_by(platform=plaform_paypal).first()
-    integation['paypal'] = True if paypal else False
+    integation['payment']['paypal'] = True if paypal else False
+    paymentplatform +=1 if paypal else 0
 
-    return jsonify(integation), 200
+    plaform_pabbly= 'pabbly'
+    pabbly = PlatformConfiguration.query.filter_by(workspace = workspace).filter_by(platform=plaform_pabbly).first()
+    integation['payment']['pabbly'] = True if pabbly else False
+    paymentplatform +=1 if pabbly else 0
+
+    onboarding.connected_payment = paymentplatform
+
+    output['connected_adplatform'] = adplatform
+    output['connected_payment'] = paymentplatform
+    output['connected_checkout'] = storeplatform
+
+    output['total_connected_platform'] = adplatform + paymentplatform + storeplatform
+
+    output['integration'] = integation
 
 
-
+    return jsonify(output), 200

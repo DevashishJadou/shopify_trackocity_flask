@@ -39,6 +39,24 @@ class UserRegister(db.Model):
     last_activity = db.Column(db.DateTime, default=datetime.now)
     is_logout = db.Column(db.Boolean, default=True)
 
+
+class UserOnboarding(db.Model):
+    __tablename__ = "user_onboarding"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, unique=True)
+    onboarding_status = db.Column(db.String(16))
+    tour_started = db.Column(db.Boolean, default=False)
+    tour_completed = db.Column(db.Boolean, default=False)
+    current_tour_step = db.Column(db.Integer, default=0)
+    tour_dismissed = db.Column(db.SmallInteger, default=0)
+    onboarding_completed_at = db.Column(db.DateTime)
+    connected_adplatform = db.Column(db.SmallInteger, default=0)
+    connected_payment = db.Column(db.SmallInteger, default=0)
+    connected_checkout = db.Column(db.SmallInteger, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
+
 class UserSubaccountRegister(db.Model):
     __tablename__ = "user_subaccount_register"
     id = db.Column(db.Integer,primary_key=True)

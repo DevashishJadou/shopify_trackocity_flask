@@ -6,7 +6,7 @@ from flask_cors import cross_origin
 from sqlalchemy import MetaData
 import hashlib, random
 
-from ...db_model.sql_models import UserRegister, order_table_dynamic, ordertable, ordertable_detail  
+from ...db_model.sql_models import UserRegister, order_table_dynamic, ordertable, ordertable_detail, PlatformConfiguration  
 from .woocommerce import channel_bp
 from ...connection import db
 from ...dbrule import dup_order_rule
@@ -48,6 +48,8 @@ def pabbly_integration():
         print(f'Pabbly integration: {e.msg}')
         return jsonify({'error': 'Something went Wrong'}), 500
 
+    pabbly_register = PlatformConfiguration(workspace=workspace, platform='pabbly', active=True)
+    db.session.add(pabbly_register)
     db.session.commit()
 
     return jsonify({'message': 'success'}), 200
