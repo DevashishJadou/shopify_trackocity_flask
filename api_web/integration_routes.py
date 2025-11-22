@@ -155,6 +155,7 @@ def integrationed_plaform():
     output['tour_completed'] = onboarding.tour_completed
     output['current_tour_step'] = onboarding.current_tour_step
     output['tour_dismissed'] = onboarding.tour_dismissed
+    output['onboarding_status'] = onboarding.onboarding_status
     
 
     fb = ClientFacebookredentials.query.filter_by(workspace=workspace).first()
