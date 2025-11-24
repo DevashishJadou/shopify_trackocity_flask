@@ -1355,7 +1355,7 @@ def get_placement_breakdown():
         db.session.close()
 
 
-    columns = ['level_type','campaignid', 'campaign_name', 'adsetid', 'adset_name','adid', 'ad_name', 'placement', 'platform','impression', 'clicks', 'spend', 'sales','revenue', 'ctr', 'cpc', 'cpa', 'roas']
+    columns = ['level_type','campaignid', 'campaign_name', 'adsetid', 'adset_name','adid', 'ad_name', 'placement','impression', 'clicks', 'spend', 'sales','revenue', 'ctr', 'cpc', 'cpa', 'roas']
     result = [dict(zip(columns, row)) for row in data]
 
     return result
