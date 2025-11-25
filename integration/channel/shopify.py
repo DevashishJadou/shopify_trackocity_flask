@@ -6,7 +6,7 @@ from flask_cors import cross_origin
 
 
 from .woocommerce import channel_bp
-from ...db_model.sql_models import Shopify, order_table_dynamic, ordertable, orderlinetable, ordertable_detail
+from ...db_model.sql_models import UserRegister, Shopify, order_table_dynamic, ordertable, orderlinetable, ordertable_detail
 from ...connection import db
 from ...dbrule import dup_order_rule
 
@@ -46,10 +46,19 @@ def shopifyintegration():
 				ordertable_detail_table = ordertable_detail(ordertabledetailtablename)
 				try:
 					shopify_table.create(bind=db.engine)
-					shopify_orderline_table.create(bind=db.engine)
-					ordertable_detail_table.create(bind=db.engine)
 				except Exception as e:
 					print(f'Error order table creation:{e.args}')
+				try:
+					shopify_orderline_table.create(bind=db.engine)
+				except Exception as e:
+					print(f'Error orderline table creation:{e.args}')
+				try:
+					ordertable_detail_table.create(bind=db.engine)
+				except Exception as e:
+					print(f'Error orderdetail table creation:{e.args}')
+
+			user = UserRegister.query.filter_by(workspace=workspace).first()
+			user.store_type = 'ecom'
 			db.session.commit()
 
 		except Exception as e:

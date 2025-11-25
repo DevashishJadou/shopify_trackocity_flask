@@ -46,7 +46,13 @@ def get_all_source():
     unique_src = {record.displayname for record in src}
     src_list = list(unique_src)
 
-    return jsonify(src_list), 200
+    # onboarding = UserOnboarding.query.filter_by(user_id=userid).first()
+    # onboarding_status = onboarding.onboarding_status if onboarding else None
+
+    # output = {'channels':src_list, 'onboarding_status': onboarding_status}
+    output = src_list
+
+    return jsonify(output), 200
       
 
 # Utility function to update metrics
@@ -1311,6 +1317,46 @@ def get_ad_breakdown():
 
     # columns = op.keys()
     columns = ['level_type', 'campaign_name', 'campaignid', 'adset_name', 'adsetid', 'ad_name', 'adid', 'dated', 'Impression', 'Clicks', 'Spend', 'Sales', 'Revenue', 'nSales', 'nRevenue', 'New Visit', 'ROAS', 'CPC', 'CPM', 'CTR', 'CR']
+    result = [dict(zip(columns, row)) for row in data]
+
+    return result
+
+
+@report_bp.route('/placement_breakdown', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def get_placement_breakdown():
+    headers = request.headers
+    _body = request.args
+    startdate = _body.get('startdate')
+    enddate = _body.get('enddate')
+    userid = headers.get('workspaceId')
+
+    attribute = _body.get('attribute')
+    channel = _body.get('channel', 'facebook')
+    product_list = _body.get('product', None)
+    islead = _body.get('islead', False)
+    click_type = _body.get('click_type', 'paid')
+    window = _body.get('window', 999)
+    campaign = _body.get('campaign', None)
+    product_list = None if product_list == '' else product_list
+    window = 999 if window == '' else window
+
+    sort = 'ASC' if attribute == 'first' else 'DESC'
+
+    user = UserRegister.query.filter_by(workspace=userid).first()
+
+    try:
+        sql_query = text("SELECT * FROM placement_breakdown(:workspace, :productid, :channel, :startdate, :enddate, :sort, :islead, :click_type, :windoww, :campaign)")
+        op = db.session.execute(sql_query, { 'workspace': userid, 'productid':user.productid, 'channel':channel, 'startdate':startdate, 'enddate':enddate, 'sort': sort, 'islead':islead, 'click_type':click_type, 'windoww':window, 'campaign':campaign })
+        data = op.fetchall()
+    except Exception as e:
+        db.session.rollback()
+        raise e
+    finally:
+        db.session.close()
+
+
+    columns = ['level_type','campaignid', 'campaign_name', 'adsetid', 'adset_name','adid', 'ad_name', 'placement','impression', 'clicks', 'spend', 'sales','revenue', 'ctr', 'cpc', 'cpa', 'roas']
     result = [dict(zip(columns, row)) for row in data]
 
     return result
