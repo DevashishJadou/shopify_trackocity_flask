@@ -46,10 +46,11 @@ def get_all_source():
     unique_src = {record.displayname for record in src}
     src_list = list(unique_src)
 
-    onboarding = UserOnboarding.query.filter_by(workspace=userid).all()
-    onboarding.onboarding_status
+    onboarding = UserOnboarding.query.filter_by(user_id=userid).first()
+    onboarding_status = onboarding.onboarding_status if onboarding else None
 
-    output = {'channels':src_list, 'onboarding_status':onboarding.onboarding_status if onboarding else None}
+    output = {'channels':src_list, 'onboarding_status': onboarding_status}
+    # output = src_list
 
     return jsonify(output), 200
       

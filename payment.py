@@ -34,9 +34,9 @@ def razorpay_params():
     return jsonify({'status': 'success'}), 200
 
 
-@trackocitypayment_bp.route('/payment_confirmation', methods=['POST'])
+@trackocitypayment_bp.route('/payment_confirmation_razorpay', methods=['POST'])
 @cross_origin()
-def razorpay_webhook():
+def razorpay_subscription_recd():
 
     request_data = request.get_data()
   
@@ -74,3 +74,50 @@ def razorpay_webhook():
 
 
     return jsonify({'status': 'success'}), 200
+
+
+
+
+@trackocitypayment_bp.route('/payment_confirmation_cashfree', methods=['POST'])
+@cross_origin()
+def cashfree_subscription_recd():
+
+    request_data = request.get_data()
+  
+    # Parse the JSON data from the request
+    data = json.loads(request_data)
+
+    payment_info = request_data.get('data', {}).get('payment', {})
+    customer_info = request_data.get('data', {}).get('customer_details', {})
+    order_info = request_data.get('data', {}).get('order', {})
+    event_time = request_data.get('event_time')
+
+    payment_id = str(payment_info.get('cf_payment_id'))
+    try:
+        amount = payment_info.get('payment_amount')
+    except:
+        amount = payment_info.get('payment_amount')
+    currency = payment_info.get('payment_currency')
+    email = customer_info.get('customer_email')
+    phone = customer_info.get('customer_phone')
+    payment_method = payment_info.get('payment_group')
+
+    try:
+        
+        event_time = datetime.strptime(event_time, '%Y-%m-%dT%H:%M:%S%z')
+        try:
+            event_time = datetime.strptime(event_time, '%Y-%m-%d %H:%M:%S%')
+        except:
+            print(f'cashfree event_time:{event_time}')
+    except:
+        print(f'cashfree event_time:{event_time}')
+
+
+    order_obj = Payment.query.filter_by(order_id=order_info).first()
+    if order_obj:
+        order_obj.transaction_id = payment_id
+        order_obj.currency = currency
+        order_obj.status = 'complete'
+    else:
+        order_make = Payment(transaction_id=payment_id, email=email, total=amount, currency=currency, status='complete')
+        db.session.add(order_make)
