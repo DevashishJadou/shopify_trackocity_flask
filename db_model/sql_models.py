@@ -401,7 +401,7 @@ def orderlinetable(tablename):
         Column('parent_productid', String(32)),
         Column('handle_name', String(255)),
         Column('product_url', String(512)),
-        UniqueConstraint('order_id', 'shopify_productid', name=f'{tablename}_orderid_productid_key')
+        UniqueConstraint('order_id', 'shopify_productid', name=f'{tablename}_orderid_key')
     )
     return orderline_table
 
@@ -549,3 +549,13 @@ class CustomizeColumn(db.Model):
     custom_id = db.Column(db.String(32))
     view_name = db.Column(db.String(64))
     latest_view = db.Column(db.Boolean, default=False)
+
+
+class Subscription(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(50), db.ForeignKey('user.workspace'))
+    subscription_id = db.Column(db.String(100), unique=True)  # From Razorpay/Cashfree
+    plan_id = db.Column(db.String(50))
+    gateway = db.Column(db.String(20))  # 'razorpay' or 'cashfree'
+    status = db.Column(db.String(20))
+    created_at = db.Column(db.DateTime, default=datetime.now)
