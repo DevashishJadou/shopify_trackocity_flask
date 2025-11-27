@@ -8,6 +8,8 @@ from sqlalchemy import MetaData
 from flask import Blueprint, request, jsonify
 from flask_cors import cross_origin
 
+import json
+
 
 intgration_cd = Blueprint('integration', __name__)
 
@@ -222,3 +224,41 @@ def integrationed_plaform():
 
 
     return jsonify(output), 200
+
+
+
+@intgration_cd.route('/update_integration', methods=['POST', 'OPTIONS'])
+@cross_origin(origins='*', methods=['POST', 'OPTIONS'], headers=['Content-Type'])
+def integration_update_plaform():
+    headers = request.headers
+    workspace = headers.get('workspaceId')
+
+    data =json.loads(request.data)
+    connected_adplatform = data.get('connected_adplatform', None)
+    connected_checkout = data.get('connected_checkout', None)
+    connected_payment = data.get('connected_payment', None)
+    current_tour_step = data.get('current_tour_step', None)
+    onboarding_status = data.get('onboarding_status', None)
+    tour_completed = data.get('tour_completed', None)
+    tour_dismissed = 1 if data.get('tour_dismissed', None) else 0
+    tour_started = data.get('tour_started', None)
+
+
+    onboarding = UserOnboarding.query.filter_by(user_id=workspace).first()
+    if onboarding:
+        onboarding.connected_adplatform = int(connected_adplatform) if connected_adplatform is not None else onboarding.connected_adplatform
+        onboarding.connected_checkout = int(connected_checkout) if connected_checkout is not None else onboarding.connected_checkout
+        onboarding.connected_payment = int(connected_payment) if connected_payment is not None else onboarding.connected_payment
+        onboarding.current_tour_step = int(current_tour_step) if current_tour_step is not None else onboarding.current_tour_step
+        onboarding.onboarding_status = onboarding_status if onboarding_status is not None else onboarding.onboarding_status
+        onboarding.total_connected_platform = onboarding.connected_adplatform + onboarding.connected_checkout + onboarding.connected_payment
+        onboarding.tour_completed = tour_completed if tour_completed is not None else onboarding.tour_completed
+        onboarding.tour_dismissed += tour_dismissed
+        onboarding.tour_started = tour_started if tour_started is not None else onboarding.tour_started
+
+
+        db.session.commit()
+
+        return jsonify({"message":"Onboarding updated successfully"}), 200
+    else:
+        return jsonify({"message":"Workspace don't found"}), 400
