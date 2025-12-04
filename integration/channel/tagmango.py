@@ -6,7 +6,7 @@ from flask_cors import cross_origin
 from sqlalchemy import MetaData
 import hashlib, random, time
 
-from ...db_model.sql_models import UserRegister, order_table_dynamic, ordertable, ordertable_detail 
+from ...db_model.sql_models import UserRegister, order_table_dynamic, ordertable, ordertable_detail ,PlatformConfiguration
 from .woocommerce import channel_bp
 from ...connection import db
 from ...dbrule import dup_order_rule
@@ -51,6 +51,8 @@ def tagmango_integration():
         print(f'Tagmango integration: {e.msg}')
         return jsonify({'error': 'Something went Wrong'}), 500
     
+    tagmango_register = PlatformConfiguration(workspace=workspace, platform='tagmango', active=True)
+    db.session.add(tagmango_register)
     db.session.commit()
 
     return jsonify({'message': 'success'}), 200
@@ -161,18 +163,17 @@ def tagmango_webhook(workspace):
     event_time = parse_date(order_date)
     islead = False
     
-    if order_status == 'Purchase':
-        islead = True
-    
     
     #timezone    
-    timezone_offset = float(getattr(user, 'timezone_value', 0))
+    timezone_value = getattr(user, 'timezone_value', 0) or 0
+    timezone_offset = float(timezone_value)
     event_time += timedelta(hours=timezone_offset)
     event_time = event_time.strftime("%Y-%m-%d %H:%M:%S")
 
     payment_id = data.get('orderId') if data.get('orderId') else str(random.randint(1, 99999999)) + '-' + str(random.randint(1, 99999999)) + '-' + str(random.randint(1, 99999999))
     
     # Check if order already exists
+    # order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
     order_obj = None
     if order_obj is None:
         try:
@@ -187,7 +188,8 @@ def tagmango_webhook(workspace):
                 'payment_method': payment_method,
                 'total': amount,
                 'order_status': order_status,
-                'islead': islead
+                'islead': islead,
+                'currency':"INR"
             }
 
             try:
@@ -226,7 +228,7 @@ def tagmango_webhook(workspace):
                 db.session.execute(raw_sql, {
                     'order_date': event_time,  'transcation_id': payment_id, 'first_name': first_name,
                     'last_name': last_name,  'email': email,  'phone': phone,  'payment_method': payment_method,
-                    'total': amount,  'order_status': order_status,  'islead': islead
+                    'total': amount,  'order_status': order_status,  'islead': islead,'currency':"INR"
                 })
                 db.session.commit()
                 return jsonify({'status': 'success', 'order_id': payment_id}), 200

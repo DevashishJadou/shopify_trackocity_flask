@@ -211,6 +211,11 @@ def integrationed_plaform():
     pabbly = PlatformConfiguration.query.filter_by(workspace = workspace).filter_by(platform=plaform_pabbly).first()
     integation['payment']['pabbly'] = True if pabbly else False
     paymentplatform +=1 if pabbly else 0
+    
+    platform_tagmango = 'tagmango'
+    tagmango = PlatformConfiguration.query.filter_by(workspace = workspace).filter_by(platform=platform_tagmango).first()
+    integation['payment']['tagmango'] = True if tagmango else False
+    paymentplatform +=1 if tagmango else 0
 
     onboarding.connected_payment = paymentplatform
 
