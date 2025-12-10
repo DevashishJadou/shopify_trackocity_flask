@@ -185,6 +185,11 @@ def integrationed_plaform():
     integation['store']['woocommerce'] = True if woocommerce else False
     storeplatform +=1 if woocommerce else 0
     
+    plaform_pabbly= 'pabbly'
+    pabbly = PlatformConfiguration.query.filter_by(workspace = workspace).filter_by(platform=plaform_pabbly).first()
+    integation['store']['pabbly'] = True if pabbly else False
+    storeplatform +=1 if pabbly else 0
+    
     razorpay = RazorpayConfiguration.query.filter_by(workspace=workspace).first()
     integation['payment']['razorpay'] = True if razorpay else False
     storeplatform +=1 if razorpay else 0
@@ -206,11 +211,6 @@ def integrationed_plaform():
     paypal = PlatformConfiguration.query.filter_by(workspace = workspace).filter_by(platform=plaform_paypal).first()
     integation['payment']['paypal'] = True if paypal else False
     paymentplatform +=1 if paypal else 0
-
-    plaform_pabbly= 'pabbly'
-    pabbly = PlatformConfiguration.query.filter_by(workspace = workspace).filter_by(platform=plaform_pabbly).first()
-    integation['payment']['pabbly'] = True if pabbly else False
-    paymentplatform +=1 if pabbly else 0
     
     platform_tagmango = 'tagmango'
     tagmango = PlatformConfiguration.query.filter_by(workspace = workspace).filter_by(platform=platform_tagmango).first()
