@@ -42,7 +42,7 @@ def get_products():
         db.session.close()
 
 
-    columns = ['product_name','impressions', 'clicks', 'add_to_cart', 'purchases','spend', 'revenue', 'units', 'roas','cpc', 'cr_percent', 'c2c_percent']
+    columns = ['product_name','image_url','impressions', 'clicks', 'add_to_cart', 'purchases','spend', 'revenue', 'units', 'roas','cpc', 'cr_percent', 'c2c_percent']
     result = [dict(zip(columns, row)) for row in data]
 
     return result
