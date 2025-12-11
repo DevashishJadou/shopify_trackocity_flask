@@ -78,7 +78,7 @@ def get_creativetabledatafacebook():
         "p50": p50, "p100": p100, "sec30": sec30, "thruplay": thruplay, "videolength":videolength,
 		"adcount": adcount, "roas": roas, "cpa": cpa, "aov": aov, "cpc": cpc, "cpm": cpm, "ctr": ctr,
 		"hookrate": hookrate, "holdrate": holdrate, "engage_rate":engage_rate, "cpnv": cpnv,
-		"completion_rate":completion_rate, "cr":cr, "creation_at":creation_at
+		"completion_rate":completion_rate, "cr":cr, "creation_at":creation_at,"cpl": cpl
     }
 
 		crdata["creative"].append(creative_data)

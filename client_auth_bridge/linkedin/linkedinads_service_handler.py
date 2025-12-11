@@ -34,7 +34,7 @@ def fetch_authenticated_user_details():
     url = 'https://api.linkedin.com/rest/adAccountUsers?q=authenticatedUser'
     headers = {
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202409',
+        'LinkedIn-Version': '202511',
         'Authorization': f'Bearer {access_token}'
     }
 
