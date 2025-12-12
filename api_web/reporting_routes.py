@@ -1331,7 +1331,7 @@ def get_ad_breakdown():
         db.session.close()
 
     # columns = op.keys()
-    columns = ['level_type', 'campaign_name', 'campaignid', 'adset_name', 'adsetid', 'ad_name', 'adid', 'dated', 'Impression', 'Clicks', 'Spend', 'Sales', 'Revenue', 'nSales', 'nRevenue', 'New Visit', 'ROAS', 'CPC', 'CPM', 'CTR', 'CR','CPA','lead','AOV','nROAS','nCPA']
+    columns = ['level_type', 'campaign_name', 'campaignid', 'adset_name', 'adsetid', 'ad_name', 'adid', 'dated', 'Impression', 'Clicks', 'Spend', 'Sales', 'Revenue', 'nSales', 'nRevenue', 'New Visit', 'ROAS', 'CPC', 'CPM', 'CTR', 'CR','CPA','Lead','AOV','nROAS','nCPA']
     result = [dict(zip(columns, row)) for row in data]
 
     return result

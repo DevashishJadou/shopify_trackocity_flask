@@ -44,7 +44,7 @@ class UserRegister(db.Model):
 class UserOnboarding(db.Model):
     __tablename__ = "user_onboarding"
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, unique=True)
+    user_id = db.Column(db.String, unique=True, nullable=False)
     onboarding_status = db.Column(db.String(16))
     tour_started = db.Column(db.Boolean, default=False)
     tour_completed = db.Column(db.Boolean, default=False)

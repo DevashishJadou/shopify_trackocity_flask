@@ -367,6 +367,11 @@ def user_registor():
         user = UserRegister(complete_name=data['name'], email=email, phone=data['phone'], _password=_hassed_password, workspace=workspace, productid=productid, plan_till=plantill, subdomain=subdomain.subdomain, isleadgen=islead)
         db.session.add(user)
         db.session.commit()
+        
+        user_onboarding = UserOnboarding(user_id=workspace,onboarding_status='not_started',created_at=datetime.now())
+        db.session.add(user_onboarding)
+        db.session.commit()
+        
 
         token = s.dumps(email, salt='email-verify')
         send_verification_email(email, token)
@@ -913,6 +918,11 @@ def profile_client_create():
     user = UserRegister(complete_name=data['name'], email=email, phone=data.get('phone',None), workspace=workspace, productid=productid, account_type='individual', agencyid=agency.id, isactive=True, plan_till=plantill, timezone=data['timezone'], company=data['company'], currency=data['currency'], subdomain=subdomain.subdomain, isleadgen=islead)
     db.session.add(user)
     db.session.commit()
+    
+    user_onboarding = UserOnboarding(user_id=workspace,onboarding_status='not_started',created_at=datetime.now())
+    db.session.add(user_onboarding)
+    db.session.commit()
+    
 
     return jsonify(message='Client Created', user_id=user.workspace), 201
 
