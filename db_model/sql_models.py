@@ -377,7 +377,9 @@ def ordertable_detail(tablename):
         Column('keyword', String(128)),
         Column('adsetid', String(128)),
         Column('placement', String(128)),
-        Column('origin', String(64))
+        Column('origin', String(64)),
+        Column('prev_order_date', DateTime, nullable=True),
+        Column('days_since_prev_order', Integer, nullable=True),
     )
 
     return order_table
