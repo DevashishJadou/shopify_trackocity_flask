@@ -78,7 +78,7 @@ def update_metrics(metrics, row, indexes, traffic):
     metrics["New Visits"] += min(int(row[indexes["New Visits"]]), row[indexes["Clicks"]])
     metrics["nvisitor"] += int(row[indexes["nvisitor"]])
     metrics["ATC"] += int(row[indexes["ATC"]])
-    metrics["visitor"] += (int(row[indexes["nvisitor"]]) + int(row[indexes["New Visits"]]))
+    metrics["visitor"] += min((int(row[indexes["nvisitor"]]) + int(row[indexes["New Visits"]])), row[indexes["Clicks"]])
     metrics["Reported Rev"] += round(float(row[indexes["Reported Rev"]]),0)
     metrics["Reported Sale"] += round(float(row[indexes["Reported Sale"]]),0)
     metrics["Cost"] += round(float(row[indexes["Cost"]]),2)
@@ -111,9 +111,10 @@ def update_metrics(metrics, row, indexes, traffic):
     metrics["Creative"] = row[indexes["Creative"]]
     metrics["appears_in_orders"] += float(row[indexes["appears_in_orders"]])
     metrics["solo_orders"] += float(row[indexes["solo_orders"]])
-    metrics["first_touch_pct"] += float(row[indexes["first_touch_pct"]])
-    metrics["middle_touch_count"] += float(row[indexes["middle_touch_count"]])
-    metrics["avg_touches_per_order"] += float(row[indexes["avg_touches_per_order"]])
+    metrics["first_touch"] += float(row[indexes["first_touch"]])
+    metrics["first_touch_pct"] = 'n/a' if metrics["appears_in_orders"] == 0 else metrics["first_touch"] *100 / max(metrics["appears_in_orders"],1)
+    metrics["total_touch_count"] += float(row[indexes["total_touch_count"]])
+    metrics["avg_touches_per_order"] = 'n/a' if metrics["appears_in_orders"] == 0 else metrics["total_touch_count"] / metrics["appears_in_orders"]
 
 
 # Utility function to initialize campaign and ad set
@@ -133,8 +134,8 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
             "rSales":0, "rRevenue":0.0, "New Visits %": 0.0,
             "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0, "Reported CPA":0.0, 
             "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name": None, "Creative": None,
-            "appears_in_orders": 0.0, "solo_orders": 0.0, "first_touch_pct": 0.0, 
-            "middle_touch_count": 0.0, "avg_touches_per_order": 0.0
+            "appears_in_orders": 0.0, "solo_orders": 0.0, "first_touch":0, "first_touch_pct": 0.0, 
+            "total_touch_count": 0.0, "avg_touches_per_order": 0.0
         }
     if ad_set_id not in data[campaign_id]["ad_sets"]:
         data[campaign_id]["ad_sets"][ad_set_id] = {
@@ -151,8 +152,8 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
             "rRevenue":0.0, "rSales":0.0, "New Visits %": 0.0,
             "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0, "Reported CPA":0.0,
             "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name":None, "Creative": None,
-            "appears_in_orders": 0.0, "solo_orders": 0.0, "first_touch_pct": 0.0, 
-            "middle_touch_count": 0.0, "avg_touches_per_order": 0.0
+            "appears_in_orders": 0.0, "solo_orders": 0.0, "first_touch":0, "first_touch_pct": 0.0, 
+            "total_touch_count": 0.0, "avg_touches_per_order": 0.0
         }
 
 # Utility function to process ads
@@ -216,9 +217,9 @@ def process_ads(data, fbadsdata, row, indexes, traffic):
         "Creative": row[indexes["Creative"]],
         "appears_in_orders": float(row[indexes["appears_in_orders"]]),
         "solo_orders": float(row[indexes["solo_orders"]]),
-        "first_touch_pct": float(row[indexes["first_touch_pct"]]),
-        "middle_touch_count": float(row[indexes["middle_touch_count"]]),
-        "avg_touches_per_order": float(row[indexes["avg_touches_per_order"]])
+        "first_touch_pct": 'n/a' if (row[indexes["appears_in_orders"]]) == 0 else float(row[indexes["first_touch"]])*100 / float(row[indexes["appears_in_orders"]]),
+        "total_touch_count": float(row[indexes["total_touch_count"]]),
+        "avg_touches_per_order": 'n/a' if (row[indexes["appears_in_orders"]]) == 0 else float(row[indexes["total_touch_count"]]) / float(row[indexes["appears_in_orders"]])
     })
     
     # Update metrics for campaign, ad set, and overall
@@ -292,7 +293,8 @@ def get_reporttabledatafacebook():
             "rRevenue":0, "rSales":0, "New Visits %":0.0,
             "Reported Sale":0, "Reported Rev":0.0, "Reported ROAS":0.0, "Reported CPA": 0.0,
             "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name":None, 
-            "Creative": None, "appears_in_orders":0.0, "solo_orders":0.0, "first_touch_pct":0.0, "middle_touch_count":0.0, "avg_touches_per_order":0.0
+            "Creative": None, "appears_in_orders":0.0, "solo_orders":0.0, "first_touch":0.0, 
+            "first_touch_pct":0.0, "total_touch_count":0.0, "avg_touches_per_order":0.0
         }
 
         # Process each row of data
@@ -302,7 +304,7 @@ def get_reporttabledatafacebook():
                 "Sales": 13, "Revenue": 14, "CancelOrder": 15, "CancelRev": 16, "nSales": 17, 
                 "nRevenue": 18, "New Visits": 19, "nvisitor":20,"ATC": 21, 
                 "Reported Sale":22, "Reported Rev":23, "Cost":24, "Cost Cancel":25, "Leads":26, "Creative":27,
-                "appears_in_orders":28, "solo_orders":29, "first_touch_pct":30, "middle_touch_count":31, "avg_touches_per_order":32
+                "appears_in_orders":28, "solo_orders":29, "first_touch":30, "total_touch_count":31
             }, traffic)
 
         # Convert ad_sets to list in campaigns
