@@ -23,6 +23,7 @@ from .api_web.creative_routes import creative_bp
 from .api_web.behaviour_routes import behaviour_bp
 from .api_web.dashboard_routes import dashboard_bp
 from .api_web.integration_routes import intgration_cd
+from .api_web.product_routes import product_bp
 from .chat_bot.mongo_bot import chatbot_cd
 from .chat_bot.sql_bot import chatbot_cd
 from .payment import trackocitypayment_bp
@@ -64,6 +65,7 @@ app.register_blueprint(payment_bp, url_prefix='/clientpayment')
 app.register_blueprint(channel_bp, url_prefix='/clientchannel')
 app.register_blueprint(chatbot_cd, url_prefix='/chatbot')
 app.register_blueprint(trackocitypayment_bp, url_prefix='/trackocitypayment')
+app.register_blueprint(product_bp, url_prefix='/product')
 
 # health-check
 @app.route('/health')

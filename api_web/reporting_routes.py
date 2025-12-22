@@ -1,6 +1,6 @@
 # reporting_routes
 
-from ..db_model.sql_models import UserRegister, ClientFacebookredentials, ClientGoogleCredentials, MongoMetric, UTMSource
+from ..db_model.sql_models import UserRegister, ClientFacebookredentials, ClientGoogleCredentials, MongoMetric, UTMSource, UserOnboarding
 from ..db_model.mongo_models import CustomerInfo
 from ..connection import db
 
@@ -46,11 +46,11 @@ def get_all_source():
     unique_src = {record.displayname for record in src}
     src_list = list(unique_src)
 
-    # onboarding = UserOnboarding.query.filter_by(user_id=userid).first()
-    # onboarding_status = onboarding.onboarding_status if onboarding else None
+    onboarding = UserOnboarding.query.filter_by(user_id=userid).first()
+    onboarding_status = onboarding.onboarding_status if onboarding else None
 
-    # output = {'channels':src_list, 'onboarding_status': onboarding_status}
-    output = src_list
+    output = {'channels':src_list, 'onboarding_status': onboarding_status}
+    # output = src_list
 
     return jsonify(output), 200
       
@@ -78,7 +78,7 @@ def update_metrics(metrics, row, indexes, traffic):
     metrics["New Visits"] += min(int(row[indexes["New Visits"]]), row[indexes["Clicks"]])
     metrics["nvisitor"] += int(row[indexes["nvisitor"]])
     metrics["ATC"] += int(row[indexes["ATC"]])
-    metrics["visitor"] += (int(row[indexes["nvisitor"]]) + int(row[indexes["New Visits"]]))
+    metrics["visitor"] += min((int(row[indexes["nvisitor"]]) + int(row[indexes["New Visits"]])), row[indexes["Clicks"]])
     metrics["Reported Rev"] += round(float(row[indexes["Reported Rev"]]),0)
     metrics["Reported Sale"] += round(float(row[indexes["Reported Sale"]]),0)
     metrics["Cost"] += round(float(row[indexes["Cost"]]),2)
@@ -109,6 +109,12 @@ def update_metrics(metrics, row, indexes, traffic):
     metrics["Gross Profit"] = round((metrics["Revenue"]  - (metrics["Spend"]+metrics["Cost"])),0)
     metrics["Product Name"] = row[indexes["Product Name"]]
     metrics["Creative"] = row[indexes["Creative"]]
+    metrics["appears_in_orders"] += float(row[indexes["appears_in_orders"]])
+    metrics["solo_orders"] += float(row[indexes["solo_orders"]])
+    metrics["first_touch"] += float(row[indexes["first_touch"]])
+    metrics["first_touch_pct"] = 'n/a' if metrics["appears_in_orders"] == 0 else metrics["first_touch"] *100 / max(metrics["appears_in_orders"],1)
+    metrics["total_touch_count"] += float(row[indexes["total_touch_count"]])
+    metrics["avg_touches_per_order"] = 'n/a' if metrics["appears_in_orders"] == 0 else metrics["total_touch_count"] / metrics["appears_in_orders"]
 
 
 # Utility function to initialize campaign and ad set
@@ -127,7 +133,9 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, 
             "rSales":0, "rRevenue":0.0, "New Visits %": 0.0,
             "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0, "Reported CPA":0.0, 
-            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name": None, "Creative": None
+            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name": None, "Creative": None,
+            "appears_in_orders": 0.0, "solo_orders": 0.0, "first_touch":0, "first_touch_pct": 0.0, 
+            "total_touch_count": 0.0, "avg_touches_per_order": 0.0
         }
     if ad_set_id not in data[campaign_id]["ad_sets"]:
         data[campaign_id]["ad_sets"][ad_set_id] = {
@@ -143,7 +151,9 @@ def initialize_campaign_and_ad_set(data, campaign_id, row, ad_set_id):
             "nROAS": 0.0, "nAOV": 0.0, "nCPA": 0.0, "nCPC": 0.0, "nCR %": 0.0, 
             "rRevenue":0.0, "rSales":0.0, "New Visits %": 0.0,
             "eCPNV": 0.0, "Reported Rev":0.0, "Reported Sale":0, "Reported ROAS":0.0, "Reported CPA":0.0,
-            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name":None, "Creative": None
+            "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name":None, "Creative": None,
+            "appears_in_orders": 0.0, "solo_orders": 0.0, "first_touch":0, "first_touch_pct": 0.0, 
+            "total_touch_count": 0.0, "avg_touches_per_order": 0.0
         }
 
 # Utility function to process ads
@@ -204,7 +214,12 @@ def process_ads(data, fbadsdata, row, indexes, traffic):
         "Gross Margin %": 'n/a' if (row[indexes["Revenue"]]) == 0 else round((row[indexes["Revenue"]] - (row[indexes["Spend"]]+row[indexes["Cost"]]))*100 / row[indexes["Revenue"]] ,1),
         "Gross Profit": round((row[indexes["Revenue"]] - (row[indexes["Spend"]]+row[indexes["Cost"]])),1),
         "Product Name": row[indexes["Product Name"]],
-        "Creative": row[indexes["Creative"]]
+        "Creative": row[indexes["Creative"]],
+        "appears_in_orders": float(row[indexes["appears_in_orders"]]),
+        "solo_orders": float(row[indexes["solo_orders"]]),
+        "first_touch_pct": 'n/a' if (row[indexes["appears_in_orders"]]) == 0 else float(row[indexes["first_touch"]])*100 / float(row[indexes["appears_in_orders"]]),
+        "total_touch_count": float(row[indexes["total_touch_count"]]),
+        "avg_touches_per_order": 'n/a' if (row[indexes["appears_in_orders"]]) == 0 else float(row[indexes["total_touch_count"]]) / float(row[indexes["appears_in_orders"]])
     })
     
     # Update metrics for campaign, ad set, and overall
@@ -278,7 +293,8 @@ def get_reporttabledatafacebook():
             "rRevenue":0, "rSales":0, "New Visits %":0.0,
             "Reported Sale":0, "Reported Rev":0.0, "Reported ROAS":0.0, "Reported CPA": 0.0,
             "Cost":0.0, "Gross Margin %":0.0, "Gross Profit":0.0, "Product Name":None, 
-            "Creative": None
+            "Creative": None, "appears_in_orders":0.0, "solo_orders":0.0, "first_touch":0.0, 
+            "first_touch_pct":0.0, "total_touch_count":0.0, "avg_touches_per_order":0.0
         }
 
         # Process each row of data
@@ -287,7 +303,8 @@ def get_reporttabledatafacebook():
                 "ad_name": 7, "ad_status":8, "Product Name":9, "Impression": 10, "Clicks": 11, "Spend": 12,
                 "Sales": 13, "Revenue": 14, "CancelOrder": 15, "CancelRev": 16, "nSales": 17, 
                 "nRevenue": 18, "New Visits": 19, "nvisitor":20,"ATC": 21, 
-                "Reported Sale":22, "Reported Rev":23, "Cost":24, "Cost Cancel":25, "Leads":26, "Creative":27
+                "Reported Sale":22, "Reported Rev":23, "Cost":24, "Cost Cancel":25, "Leads":26, "Creative":27,
+                "appears_in_orders":28, "solo_orders":29, "first_touch":30, "total_touch_count":31
             }, traffic)
 
         # Convert ad_sets to list in campaigns
@@ -1316,7 +1333,7 @@ def get_ad_breakdown():
         db.session.close()
 
     # columns = op.keys()
-    columns = ['level_type', 'campaign_name', 'campaignid', 'adset_name', 'adsetid', 'ad_name', 'adid', 'dated', 'Impression', 'Clicks', 'Spend', 'Sales', 'Revenue', 'nSales', 'nRevenue', 'New Visit', 'ROAS', 'CPC', 'CPM', 'CTR', 'CR']
+     columns = ['level_type', 'campaign_name', 'campaignid', 'adset_name', 'adsetid', 'ad_name', 'adid', 'dated', 'Impression', 'Clicks', 'Spend', 'Sales', 'Revenue', 'nSales', 'nRevenue', 'New Visit', 'ROAS', 'CPC', 'CPM', 'CTR', 'CR','CPA','Lead','AOV','nROAS','nCPA']
     result = [dict(zip(columns, row)) for row in data]
 
     return result

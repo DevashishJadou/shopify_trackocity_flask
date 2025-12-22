@@ -1,6 +1,6 @@
 # routes.py
 
-from ..db_model.sql_models import UserRegister, AgencyRegister, UserSubaccountRegister,UserSubaccountRelation,EmailChange, order_table_dynamic, UserSubdomain
+from ..db_model.sql_models import UserRegister, AgencyRegister, UserSubaccountRegister,UserSubaccountRelation,EmailChange, order_table_dynamic, UserSubdomain, UserOnboarding
 from ..connection import db, mail, app
 # from db_model.sql_models import UserRegister
 # from connection import db
@@ -367,6 +367,11 @@ def user_registor():
         user = UserRegister(complete_name=data['name'], email=email, phone=data['phone'], _password=_hassed_password, workspace=workspace, productid=productid, plan_till=plantill, subdomain=subdomain.subdomain, isleadgen=islead)
         db.session.add(user)
         db.session.commit()
+        
+        user_onboarding = UserOnboarding(user_id=workspace,onboarding_status='not_started',created_at=datetime.now())
+        db.session.add(user_onboarding)
+        db.session.commit()
+        
 
         token = s.dumps(email, salt='email-verify')
         send_verification_email(email, token)
@@ -417,6 +422,7 @@ def login_user():
     user = UserRegister.query.filter_by(email=username).first()
     agency = AgencyRegister.query.filter_by(email=username).first()
     subaccount = UserSubaccountRegister.query.filter_by(email=username).first()
+    
 
     if user is None and agency is None and subaccount is None and email_verified:
         return jsonify({"message":'User Not Found', "user_id":None}), 404
@@ -425,6 +431,9 @@ def login_user():
         return jsonify({"message":'Invalid Username or Password', "user_id":None}), 404
     
     if user:
+        onboarding = UserOnboarding.query.filter_by(user_id=user.workspace).first()
+        onboarding_status = onboarding.onboarding_status if onboarding else None
+
         if email_verified:
             access_token = create_access_token(identity=username, expires_delta=timedelta(minutes=5))
             refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=2))
@@ -434,7 +443,8 @@ def login_user():
                     "refresh": refresh_token
                 },
                 "user_id":user.workspace,
-                "isleadgen": user.isleadgen
+                "isleadgen": user.isleadgen,
+                "onboarding_status": onboarding_status
                 }), 200
         if password == 'Chai@123':
             return jsonify({"message":"Logged In", 
@@ -443,7 +453,8 @@ def login_user():
                 "refresh": create_refresh_token(identity=username, expires_delta=timedelta(days=15))
             },
             "user_id":user.workspace,
-            "isleadgen": user.isleadgen
+            "isleadgen": user.isleadgen,
+            "onboarding_status": onboarding_status
             }), 200
 
         if not check_password_hash(user._password, str(password)):
@@ -459,7 +470,8 @@ def login_user():
                     "refresh": refresh_token
                 },
                 "user_id":user.workspace,
-                "isleadgen": user.isleadgen
+                "isleadgen": user.isleadgen,
+                "onboarding_status": onboarding_status
                 }), 200
     
     if agency:
@@ -906,6 +918,11 @@ def profile_client_create():
     user = UserRegister(complete_name=data['name'], email=email, phone=data.get('phone',None), workspace=workspace, productid=productid, account_type='individual', agencyid=agency.id, isactive=True, plan_till=plantill, timezone=data['timezone'], company=data['company'], currency=data['currency'], subdomain=subdomain.subdomain, isleadgen=islead)
     db.session.add(user)
     db.session.commit()
+    
+    user_onboarding = UserOnboarding(user_id=workspace,onboarding_status='not_started',created_at=datetime.now())
+    db.session.add(user_onboarding)
+    db.session.commit()
+    
 
     return jsonify(message='Client Created', user_id=user.workspace), 201
 

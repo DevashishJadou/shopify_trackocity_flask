@@ -1,4 +1,4 @@
-from ..db_model.sql_models import ProductTable, UTMSource, UserRegister,UserSubaccountRegister,CustomizeColumn,AgencyRegister
+from ..db_model.sql_models import ProductTable, UTMSource, UserRegister,UserSubaccountRegister,CustomizeColumn,AgencyRegister,UserOnboarding
 from ..connection import db
 
 from flask import Blueprint, request, jsonify
@@ -238,6 +238,10 @@ def page_limit_get():
     user = UserRegister.query.filter_by(workspace=workspace).first()
     plan = user.plan
     is_logout = user.is_logout
+    store_type = user.store_type if user.store_type else 'other'
+
+    onboarding = UserOnboarding.query.filter_by(user_id=workspace).first()
+    onboarding_status = onboarding.onboarding_status if onboarding else None
     
     if subaccountid:
         subaccount = UserSubaccountRegister.query.filter_by(id=subaccountid).first()
@@ -261,7 +265,7 @@ def page_limit_get():
             }), 200    
        
        
-    return jsonify({"data": page_view_usage, "plan": plan, "is_logout": is_logout}), 200
+    return jsonify({"data": page_view_usage, "plan": plan, "is_logout": is_logout, 'store':store_type, 'onboarding_status': onboarding_status}), 200
     #return jsonify({"data":page_view_usage, "plan":plan}), 200
     # return jsonify({"data":page_view_usage}), 200
     

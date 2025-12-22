@@ -34,10 +34,29 @@ class UserRegister(db.Model):
     tax_rate = db.Column(db.Numeric)
     tax_on = db.Column(db.Boolean, default=False)
     tag = db.Column(db.String(16))
+    store_type = db.Column(db.String(8))
     plan = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.now)
     last_activity = db.Column(db.DateTime, default=datetime.now)
     is_logout = db.Column(db.Boolean, default=True)
+
+
+class UserOnboarding(db.Model):
+    __tablename__ = "user_onboarding"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String, unique=True, nullable=False)
+    onboarding_status = db.Column(db.String(16))
+    tour_started = db.Column(db.Boolean, default=False)
+    tour_completed = db.Column(db.Boolean, default=False)
+    current_tour_step = db.Column(db.Integer, default=0)
+    tour_dismissed = db.Column(db.SmallInteger, default=0)
+    onboarding_completed_at = db.Column(db.DateTime)
+    connected_adplatform = db.Column(db.SmallInteger, default=0)
+    connected_payment = db.Column(db.SmallInteger, default=0)
+    connected_checkout = db.Column(db.SmallInteger, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
 
 class UserSubaccountRegister(db.Model):
     __tablename__ = "user_subaccount_register"
@@ -358,7 +377,9 @@ def ordertable_detail(tablename):
         Column('keyword', String(128)),
         Column('adsetid', String(128)),
         Column('placement', String(128)),
-        Column('origin', String(64))
+        Column('origin', String(64)),
+        Column('prev_order_date', DateTime, nullable=True),
+        Column('days_since_prev_order', Integer, nullable=True),
     )
 
     return order_table
@@ -383,7 +404,7 @@ def orderlinetable(tablename):
         Column('parent_productid', String(32)),
         Column('handle_name', String(255)),
         Column('product_url', String(512)),
-        UniqueConstraint('order_id', 'shopify_productid', name=f'{tablename}_orderid_productid_key')
+        UniqueConstraint('order_id', 'shopify_productid', name=f'{tablename}_orderid_key')
     )
     return orderline_table
 
@@ -531,3 +552,13 @@ class CustomizeColumn(db.Model):
     custom_id = db.Column(db.String(32))
     view_name = db.Column(db.String(64))
     latest_view = db.Column(db.Boolean, default=False)
+
+
+class Subscription(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(50), db.ForeignKey('user.workspace'))
+    subscription_id = db.Column(db.String(100), unique=True)  # From Razorpay/Cashfree
+    plan_id = db.Column(db.String(50))
+    gateway = db.Column(db.String(20))  # 'razorpay' or 'cashfree'
+    status = db.Column(db.String(20))
+    created_at = db.Column(db.DateTime, default=datetime.now)

@@ -1,4 +1,4 @@
-from flask import Blueprint, request, session, redirect
+from flask import Blueprint, request, session, redirect,jsonify
 import os
 
 from flask_cors import cross_origin
@@ -71,10 +71,37 @@ def clientaccount():
     except:
         id = None
     accounts = request.args.get("customerId")
-    for acc in accounts.split(','):
-        account = (acc.split('/')[-1]).strip()
-        accname = (acc.split('/')[-2]).strip()
-        accname = accname[:32]
-        status = clientaccount_googleads(userid, account, accname, token, id)
-    return status
+    try:
+        for acc in accounts.split(','):
+            account = (acc.split('/')[-1]).strip()
+            accname = (acc.split('/')[-2]).strip()
+            accname = accname[:32]
+            status = clientaccount_googleads(userid, account, accname, token, id)
+        return status
+    
+    except Exception as e:
+        error_message = str(e)  
+       
+        # Create structured error response
+        error_response = {
+            "message": error_message,
+            "error_type": type(e).__name__
+        }
+    
+        # Check if it's a Google Ads specific error
+        if "authorization_error" in error_message.lower():
+            error_response["error_type"] = "AUTHORIZATION_ERROR"
+            error_response["message"] = "Authorization failed. Please check your credentials."
+        elif "customer_not_enabled" in error_message.lower():
+            error_response["error_type"] = "CUSTOMER_NOT_ENABLED"
+            error_response["message"] = "The customer account can't be accessed because it is not yet enabled or has been deactivated."
+        else:
+            error_response["error_code"] = "UNKNOWN_ERROR"
+        
+    
+        return jsonify(error_response), 500
+        
+        
+        
+    
 

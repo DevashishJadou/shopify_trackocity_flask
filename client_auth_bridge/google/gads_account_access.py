@@ -92,6 +92,21 @@ def clientaccount_googleads(userid, account, accname, token, id):
             return jsonify({'status': 'id not exist'}), 404
 
     else:
+        # Check if account already exists
+        existing_user = ClientGoogleCredentials.query.filter_by(
+        workspace=userid, 
+        account_name=account
+        ).first()
+        
+        if existing_user:
+            existing_user._token = token
+            db.session.commit()
+            return jsonify({
+            'status': 'success', 
+            'message': 'Account updated',
+            'action': 'updated'
+            }), 200
+        
         user = ClientGoogleCredentials(workspace=userid, _token=token, account_name=account, account=accname, manager_account=manager_id)
         tablename = 'googleads_'+userid
         try:
