@@ -101,11 +101,7 @@ def clientaccount_googleads(userid, account, accname, token, id):
         if existing_user:
             existing_user._token = token
             db.session.commit()
-            return jsonify({
-            'status': 'success', 
-            'message': 'Account updated',
-            'action': 'updated'
-            }), 200
+            return jsonify({'status': 'Account Already Exists'}), 200
         
         user = ClientGoogleCredentials(workspace=userid, _token=token, account_name=account, account=accname, manager_account=manager_id)
         tablename = 'googleads_'+userid
