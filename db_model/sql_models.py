@@ -197,6 +197,8 @@ class Shopify(db.Model):
     active = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    client_id = db.Column(db.String(128))
+    client_secret = db.Column(db.String(256))
 
 class Payment(db.Model):
     __tablename__ = "payment_request"

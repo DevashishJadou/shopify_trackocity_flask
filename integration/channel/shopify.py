@@ -17,109 +17,143 @@ metadata = MetaData()
 
 # channel_bp = Blueprint('clientchannel', __name__)
 
+def generate_initial_access_token(base_url, client_id, client_secret):
+    """Generate access token when user first connects Shopify"""
+    # Extract shop name and construct Shopify admin URL
+    shop_name = base_url.replace('https://', '').replace('http://', '').rstrip('/').split('/')[0].split('.')[0]
+    shopify_admin_url = f"https://{shop_name}.myshopify.com"
+    token_url = f"{shopify_admin_url}/admin/oauth/access_token"
+    
+    try:
+        response = requests.post(
+            token_url,
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+            data={
+                'grant_type': 'client_credentials',
+                'client_id': client_id,
+                'client_secret': client_secret
+            },
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            return data.get('access_token')
+        else:
+            print(f"Failed to get token. Status: {response.status_code}, Response: {response.text}")
+            return None
+    except Exception as e:
+        print(f"Error getting token: {str(e)}")
+        return None
+
 @channel_bp.route('/shopifyintegration', methods=['POST'])
 @cross_origin()
 def shopifyintegration():
-	data = json.loads(request.get_data().decode("utf-8"))
-	base_url = data['site_url']
-	access_token = data['access_token']
-	workspace = request.headers.get('workspaceId')
+    data = json.loads(request.get_data().decode("utf-8"))
+    base_url = data['site_url']
+    client_id = data['client_id']
+    client_secret = data['secret_key']
+    workspace = request.headers.get('workspaceId')
+    
+    access_token = generate_initial_access_token(base_url, client_id, client_secret)
+    if not access_token:
+        return jsonify({'error': 'Something went wrong. Please verify your credentials and try again.'}), 400
 
-	user = Shopify.query.filter_by(workspace=workspace).first()
-	if user:
-		user.base_url = base_url
-		user.access_token = access_token
+    user = Shopify.query.filter_by(workspace=workspace).first()
+    if user:
+        user.base_url = base_url
+        user.access_key = access_token
 
-		db.session.commit()
-		return jsonify({'message': 'Inforamtion Updated Succesfully'}), 200
+        db.session.commit()
+        return jsonify({'message': 'Information Updated Succesfully'}), 200
 
-	else:
-		user_make = Shopify(base_url=base_url, access_key=access_token, workspace=workspace, active=True)
-		db.session.add(user_make)
-		tablename = 'order_'+workspace
-		orderlinetablename = 'orderline_'+workspace
-		ordertabledetailtablename = 'order_detailed_'+workspace
-		try:
-			if not metadata.tables.get(tablename):
-				shopify_table = ordertable(tablename)
-				shopify_orderline_table= orderlinetable(orderlinetablename)
-				ordertable_detail_table = ordertable_detail(ordertabledetailtablename)
-				try:
-					shopify_table.create(bind=db.engine)
-				except Exception as e:
-					print(f'Error order table creation:{e.args}')
-				try:
-					shopify_orderline_table.create(bind=db.engine)
-				except Exception as e:
-					print(f'Error orderline table creation:{e.args}')
-				try:
-					ordertable_detail_table.create(bind=db.engine)
-				except Exception as e:
-					print(f'Error orderdetail table creation:{e.args}')
+    else:
+        user_make = Shopify(base_url=base_url,access_key=access_token,client_id=client_id,client_secret=client_secret, workspace=workspace, active=True)
+        db.session.add(user_make)
+        tablename = 'order_'+workspace
+        orderlinetablename = 'orderline_'+workspace
+        ordertabledetailtablename = 'order_detailed_'+workspace
+        try:
+            if not metadata.tables.get(tablename):
+                shopify_table = ordertable(tablename)
+                shopify_orderline_table= orderlinetable(orderlinetablename)
+                ordertable_detail_table = ordertable_detail(ordertabledetailtablename)
+                try:
+                    shopify_table.create(bind=db.engine)
+                except Exception as e:
+                    print(f'Error order table creation:{e.args}')
+                try:
+                    shopify_orderline_table.create(bind=db.engine)
+                except Exception as e:
+                    print(f'Error orderline table creation:{e.args}')
+                try:
+                    ordertable_detail_table.create(bind=db.engine)
+                except Exception as e:
+                    print(f'Error orderdetail table creation:{e.args}')
 
-			user = UserRegister.query.filter_by(workspace=workspace).first()
-			user.store_type = 'ecom'
-			db.session.commit()
+            user = UserRegister.query.filter_by(workspace=workspace).first()
+            user.store_type = 'ecom'
+            db.session.commit()
 
-		except Exception as e:
-			print(f'Shopify client secret: {e.msg}')
-			return jsonify({'error': 'Something went Wrong'}), 500
-		
-		db.session.commit()
+        except Exception as e:
+            print(f'Shopify client secret: {e.msg}')
+            return jsonify({'error': 'Something went Wrong'}), 500
+        
+        db.session.commit()
 
-	return jsonify({'message': 'success'}), 200
+    return jsonify({'message': 'success'}), 200
 
 
 
 
 @channel_bp.route('/shopifyorders', methods=['POST'])
 def shopify():
-	header =  request.headers
-	userid = header.get("workSpaceId")
-	orders = Shopify.query.filter_by(workspace=userid).filter_by(active=True).all()
+    header =  request.headers
+    userid = header.get("workSpaceId")
+    orders = Shopify.query.filter_by(workspace=userid).filter_by(active=True).all()
 
-	
-	for order in orders:
-		# Use the access token to make requests to the Shopify Admin API
-		# orders_endpoint = f'https://www.usemeworks.com/admin/api/2023-10/orders.json'
-		# access_token = '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'
-		orders_endpoint = order.base_url
-		access_token = order.access_key
-		headers = {
-			'Content-Type': 'application/json',
-			'X-Shopify-Access-Token': access_token,
-		}
+    
+    for order in orders:
+        # Use the access token to make requests to the Shopify Admin API
+        # orders_endpoint = f'https://www.usemeworks.com/admin/api/2023-10/orders.json'
+        # access_token = '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'
+        orders_endpoint = order.base_url
+        access_token = order.access_key
+        headers = {
+            'Content-Type': 'application/json',
+            'X-Shopify-Access-Token': access_token,
+        }
 
-		response = requests.get(orders_endpoint, headers=headers)
+        response = requests.get(orders_endpoint, headers=headers)
 
-		if response.status_code == 200:
-			orders_data = response.json()
-			orders_data = orders_data['orders']
-			
-			tablename = 'order_'+userid
-			
-			orderTable = order_table_dynamic(tablename)
-			orderTable.metadata = db.Model.metadata
-			
-			for data in orders_data:
-				customer_ip = data['browser_ip']
-				customer_user_agent = data['client_details']['user_agent']
-				order_date = datetime.strptime(data['created_at'], "%Y-%m-%dT%H:%M:%S%z").strftime("%Y-%m-%d %H:%M:%S")
-				transcation_id = str(data['order_number'])
-				total = float(data['total_price'])
-				first_name = data['customer']['first_name']
-				last_name = data['customer']['last_name']
-				email = data['customer']['email']
-				payment_method = str(data['payment_gateway_names'])
+        if response.status_code == 200:
+            orders_data = response.json()
+            orders_data = orders_data['orders']
+            
+            tablename = 'order_'+userid
+            
+            orderTable = order_table_dynamic(tablename)
+            orderTable.metadata = db.Model.metadata
+            
+            for data in orders_data:
+                customer_ip = data['browser_ip']
+                customer_user_agent = data['client_details']['user_agent']
+                order_date = datetime.strptime(data['created_at'], "%Y-%m-%dT%H:%M:%S%z").strftime("%Y-%m-%d %H:%M:%S")
+                transcation_id = str(data['order_number'])
+                total = float(data['total_price'])
+                first_name = data['customer']['first_name']
+                last_name = data['customer']['last_name']
+                email = data['customer']['email']
+                payment_method = str(data['payment_gateway_names'])
 
-				order = orderTable.query.filter_by(transcation_id=transcation_id).first()
-				if not order:
-					order_make = orderTable(order_date=order_date, total=total, transcation_id=transcation_id, first_name=first_name, last_name=last_name, email=email, payment_method=payment_method, customer_ip=customer_ip, customer_user_agent=customer_user_agent)
-					db.session.add(order_make)
+                order = orderTable.query.filter_by(transcation_id=transcation_id).first()
+                if not order:
+                    order_make = orderTable(order_date=order_date, total=total, transcation_id=transcation_id, first_name=first_name, last_name=last_name, email=email, payment_method=payment_method, customer_ip=customer_ip, customer_user_agent=customer_user_agent)
+                    db.session.add(order_make)
 
-			db.session.commit()
+            db.session.commit()
 
-		else:
-			print(f"Failed to retrieve orders. Status code: {response.status_code}, Response: {response.text}")
-			return jsonify({'status': 'success'}), 400
-	return jsonify({'status': 'success'}), 200
+        else:
+            print(f"Failed to retrieve orders. Status code: {response.status_code}, Response: {response.text}")
+            return jsonify({'status': 'success'}), 400
+    return jsonify({'status': 'success'}), 200
