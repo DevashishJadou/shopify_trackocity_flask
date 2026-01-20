@@ -17,12 +17,10 @@ metadata = MetaData()
 
 # channel_bp = Blueprint('clientchannel', __name__)
 
-def generate_initial_access_token(base_url, client_id, client_secret):
+def generate_initial_access_token(domain, client_id, client_secret):
     """Generate access token when user first connects Shopify"""
-    # Extract shop name and construct Shopify admin URL
-    shop_name = base_url.replace('https://', '').replace('http://', '').rstrip('/').split('/')[0].split('.')[0]
-    shopify_admin_url = f"https://{shop_name}.myshopify.com"
-    token_url = f"{shopify_admin_url}/admin/oauth/access_token"
+    
+    token_url = f"{domain}/admin/oauth/access_token"
     
     try:
         response = requests.post(
@@ -51,11 +49,18 @@ def generate_initial_access_token(base_url, client_id, client_secret):
 def shopifyintegration():
     data = json.loads(request.get_data().decode("utf-8"))
     base_url = data['site_url']
+    domain = data['domain']
     client_id = data['client_id']
     client_secret = data['secret_key']
     workspace = request.headers.get('workspaceId')
     
-    access_token = generate_initial_access_token(base_url, client_id, client_secret)
+    if not domain.startswith('http'):
+        domain = 'https://' + domain
+    
+    if not domain.endswith('.myshopify.com'):
+        domain = domain + '.myshopify.com'    
+    
+    access_token = generate_initial_access_token(domain, client_id, client_secret)
     if not access_token:
         return jsonify({'error': 'Something went wrong. Please verify your credentials and try again.'}), 400
 
@@ -63,12 +68,15 @@ def shopifyintegration():
     if user:
         user.base_url = base_url
         user.access_key = access_token
+        user.domain = domain
+        user.client_id = client_id
+        user.client_secret = client_secret
 
         db.session.commit()
         return jsonify({'message': 'Information Updated Succesfully'}), 200
 
     else:
-        user_make = Shopify(base_url=base_url,access_key=access_token,client_id=client_id,client_secret=client_secret, workspace=workspace, active=True)
+        user_make = Shopify(base_url=base_url,domain=domain,access_key=access_token,client_id=client_id,client_secret=client_secret, workspace=workspace, active=True)
         db.session.add(user_make)
         tablename = 'order_'+workspace
         orderlinetablename = 'orderline_'+workspace

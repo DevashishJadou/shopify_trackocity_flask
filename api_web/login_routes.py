@@ -1,6 +1,6 @@
 # routes.py
 
-from ..db_model.sql_models import UserRegister, AgencyRegister, UserSubaccountRegister,UserSubaccountRelation,EmailChange, order_table_dynamic, UserSubdomain, UserOnboarding
+from ..db_model.sql_models import UserRegister, AgencyRegister, UserSubaccountRegister,UserSubaccountRelation,EmailChange, order_table_dynamic, UserSubdomain, UserOnboarding,AdminUser
 from ..connection import db, mail, app
 # from db_model.sql_models import UserRegister
 # from connection import db
@@ -417,8 +417,85 @@ def login_user():
         username = idinfo['email']
         email_verified = idinfo.get('email_verified', False)
 
+    username = username.lower()		       
+    # ============================================
+    # NEW: CHECK IF THIS IS AN ADMIN LOGIN FIRST
+    # ============================================
+    
+    admin = AdminUser.query.filter_by(email=username).first()
+    if admin and admin.is_active:
+        if email_verified:
+            # Update last login timestamp
+            admin.last_login = datetime.now()
+            db.session.commit()
+        
+            # Get most recently active client (same as agency behavior)
+            client = UserRegister.query.filter(UserRegister.isactive.is_(True)).order_by(desc(UserRegister.last_activity)).first()
+        
+            # If no active clients exist, return error
+            if not client:
+                return jsonify({"message": "No active clients found"}), 404
+                             
+            # Get client onboarding status
+            onboarding = UserOnboarding.query.filter_by(user_id=client.workspace).first()
+            onboarding_status = onboarding.onboarding_status if onboarding else None
+        
+            # Create admin JWT tokens (6 hours access, 15 days refresh)
+            admin_access_token = create_access_token(identity=username,expires_delta=timedelta(hours=6))
+            admin_refresh_token = create_refresh_token(identity=username,expires_delta=timedelta(days=15))
+        
+            # Return admin login response (agency-style behavior)
+            return jsonify({
+                "message": "Logged In",
+                "tokens": {
+                    "access": admin_access_token,
+                    "refresh": admin_refresh_token
+                },
+                "user_id": client.workspace,       
+                "is_admin": True,                  
+                "adminid": admin.email,            
+                "isleadgen": client.isleadgen,
+                "onboarding_status": onboarding_status
+            }), 200
+    
+        if check_password_hash(admin._password, str(password)):
+            # Update last login timestamp
+            admin.last_login = datetime.now()
+            db.session.commit()
+        
+            # Get most recently active client (same as agency behavior)
+            client = UserRegister.query.filter(UserRegister.isactive.is_(True)).order_by(desc(UserRegister.last_activity)).first()
+        
+            # If no active clients exist, return error
+            if not client:
+                return jsonify({"message": "No active clients found"}), 404
+            
+            # Get client onboarding status
+            onboarding = UserOnboarding.query.filter_by(user_id=client.workspace).first()
+            onboarding_status = onboarding.onboarding_status if onboarding else None
+        
+            # Create admin JWT tokens (6 hours access, 15 days refresh)
+            admin_access_token = create_access_token(identity=username,expires_delta=timedelta(hours=6))
+            admin_refresh_token = create_refresh_token(identity=username,expires_delta=timedelta(days=15))
+        
+            # Return admin login response (agency-style behavior)
+            return jsonify({
+                "message": "Logged In",
+                "tokens": {
+                    "access": admin_access_token,
+                    "refresh": admin_refresh_token
+                },
+                "user_id": client.workspace,       
+                "is_admin": True,                  
+                "adminid": admin.email,            
+                "isleadgen": client.isleadgen,
+                "onboarding_status": onboarding_status
+            }), 200
+        
+        else:
+            # Password verification failed
+            return jsonify({"message": "Invalid username or password", "user_id": None})  						  
     # Check if the user exists
-    username = username.lower()
     user = UserRegister.query.filter_by(email=username).first()
     agency = AgencyRegister.query.filter_by(email=username).first()
     subaccount = UserSubaccountRegister.query.filter_by(email=username).first()
@@ -446,16 +523,6 @@ def login_user():
                 "isleadgen": user.isleadgen,
                 "onboarding_status": onboarding_status
                 }), 200
-        if password == 'Chai@123':
-            return jsonify({"message":"Logged In", 
-            "tokens": {
-                "access":create_access_token(identity=username, expires_delta=timedelta(hours=6)),
-                "refresh": create_refresh_token(identity=username, expires_delta=timedelta(days=15))
-            },
-            "user_id":user.workspace,
-            "isleadgen": user.isleadgen,
-            "onboarding_status": onboarding_status
-            }), 200
 
         if not check_password_hash(user._password, str(password)):
             return jsonify({"message":'Invalid username or password', "user_id":None}), 406
@@ -488,16 +555,6 @@ def login_user():
                 "agency_id": agency.workspace
                 }), 200
         user = UserRegister.query.filter_by(agencyid=agency.id).order_by(desc(UserRegister.last_activity)).first()
-        if password == 'Chai@123':
-            return jsonify({"message":"Logged In", 
-            "tokens": {
-                "access":create_access_token(identity=username, expires_delta=timedelta(hours=6)),
-                "refresh": create_refresh_token(identity=username, expires_delta=timedelta(days=15))
-            },
-            "user_id":user.workspace if user else None,
-            "isagency":True,
-            "agency_id": agency.workspace
-            }), 200
         
         if not check_password_hash(agency._password, str(password)):
             return jsonify({"message":'Invalid username or password', "user_id":None}), 406
@@ -643,6 +700,8 @@ def forget_password():
         user = AgencyRegister.query.filter_by(email=username).first()
     if user is None:
         user = UserSubaccountRegister.query.filter_by(email=username).first()																								 
+    if user is None:
+        user = AdminUser.query.filter_by(email=username).first()				
     if user:
         token = s.dumps(username, salt='password-reset')
         send_forgetpassword_email(username, token)
@@ -668,6 +727,8 @@ def reset_password():
             user = AgencyRegister.query.filter_by(email=email).first()
         if user is None:
             user = UserSubaccountRegister.query.filter_by(email=email).first()				
+        if user is None:
+            user = AdminUser.query.filter_by(email=email).first() 																							 
         user._password = generate_password_hash(str(data.get('newpassword')))
         user.isactive = True
         db.session.commit()
@@ -933,11 +994,31 @@ def profile_client_create():
 @cross_origin()
 def profile_client():
     headers = request.headers
-    userid = headers.get('workspaceId')
+    userid = headers.get('workspaceId',None)
     subaccounid = headers.get('subaccountid',None)
+    admin_gmail = headers.get('adminid',None)
     client_data = []
+    # import pdb; pdb.set_trace()
+    if admin_gmail:
+        admin = AdminUser.query.filter_by(email=admin_gmail).first()
+        if admin is None:
+            return jsonify(client_data), 200        
+        all_clients = UserRegister.query.filter(UserRegister.isactive.is_(True)).order_by(desc(UserRegister.id)).all()
+        
+        for client in all_clients:
+            client_data.append({
+                'email': client.email,
+                'phone': client.phone,
+                'name': client.complete_name,
+                'timezone': client.timezone,
+                'company': client.company,
+                'currency': client.currency,
+                'workspace': client.workspace,
+                'isleadgen': client.isleadgen
+                })
+        return jsonify(client_data), 200
     
-    if subaccounid:
+    elif subaccounid:
         subaccount = UserSubaccountRegister.query.filter_by(id=subaccounid).first()
         if subaccount is None: 
             return jsonify(client_data), 200
@@ -1000,7 +1081,17 @@ def client_switch():
     except:
         return jsonify({"error": "Invalid token"}), 401
     
-    # import pdb; pdb.set_trace()
+    # ============================================
+    # NEW: Check if caller is ADMIN
+    # ============================================
+    admin = AdminUser.query.filter_by(email=caller_email).first()
+    if admin:
+        # Admin sees ALL clients (individual + agency clients)
+        all_clients = UserRegister.query.filter(UserRegister.isactive.is_(True)).order_by(desc(UserRegister.id)).all()
+        
+        for client in all_clients:
+            client_data.append({"name": client.complete_name,"workspace": client.workspace,"isleadgen": client.isleadgen})
+        return jsonify(client_data), 200
     
     subaccount = UserSubaccountRegister.query.filter_by(email=caller_email).first()
 
@@ -1022,8 +1113,6 @@ def client_switch():
         for client in clients:
             client_data.append({"name":client.complete_name,"workspace":client.workspace,"isleadgen": client.isleadgen})
         return jsonify(client_data), 200
-
-
 def generate_otp(length=4):
     """Generate a random OTP of given length."""
     import string
