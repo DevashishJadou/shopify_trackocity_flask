@@ -54,6 +54,12 @@ def shopifyintegration():
     client_secret = data['secret_key']
     workspace = request.headers.get('workspaceId')
     
+    if not base_url.startswith('https://') and not base_url.startswith('http://'):
+        base_url = 'https://' + base_url
+    
+    if not base_url.endswith('/'):
+        base_url = base_url + '/'
+    
     if not domain.startswith('http'):
         domain = 'https://' + domain
     
