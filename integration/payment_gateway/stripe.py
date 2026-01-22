@@ -87,11 +87,16 @@ def strip_webhook(workspace):
             if user.currency == 'USD':
                 amount = amount * 1.24
                 currency = 'USD'
-        if charge.get('metadata', {}).get('email') is not None or charge.get('metadata', {}).get('email') != 'None':
-            email = charge.get('metadata', {}).get('email')
-        else:
+        # if charge.get('metadata', {}).get('email') is not None or charge.get('metadata', {}).get('email') != 'None':
+        #     email = charge.get('metadata', {}).get('email')
+        # else:
+        #     email = charge.get('receipt_email')
+        email = charge.get('metadata', {}).get('email')
+        if not email:
             email = charge.get('receipt_email')
         phone = charge.get('receipt_number')
+        if not phone:
+            phone = charge.get('billing_details', {}).get('phone')
         first_name = charge.get('billing_details', {}).get('name')
         event_time = datetime.fromtimestamp(charge.get('created')) + timedelta(hours=float(user.timezone_value))
         order_obj = orderTable.query.filter_by(transcation_id=payment_id).first()
