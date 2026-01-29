@@ -347,6 +347,96 @@ def get_reportgraphdata():
 
     return jsonify(sale_data), 200
 
+@report_bp.route('/graphsalesmetrics', methods=['GET', 'OPTIONS'])
+@cross_origin(origins='*', methods=['GET'], headers=['Content-Type'])
+def get_graphsalesmetrics():
+    
+    headers = request.headers
+    body = request.args
+    startdate = body.get('startdate')
+    enddate = body.get('enddate')
+    userid = headers.get('workspaceId')
+
+    try:
+        sql_query = db.text("select * from dashboard_graphsales(:workspace, :startdate, :enddate)")
+        result = db.session.execute(sql_query, {'workspace': userid, 'startdate':startdate, 'enddate':enddate})
+        data = result.fetchall()
+    except Exception as e:
+        db.session.rollback()
+        raise e
+    finally:
+        db.session.close()
+
+    # Initialize metrics
+    metrics = {
+        'average_roas': {"value": 0.0, "compare": 0.0},
+        'total_revenue': {"value": 0.0, "compare": 0.0},
+        'total_sales': {"value": 0, "compare": 0.0},
+        'roi': {"value": 0.0, "compare": 0.0}
+    }
+    
+    total_revenue = 0.0
+    total_sales = 0
+    total_spend = 0.0
+    total_roi = 0.0
+    count = 0
+
+    for row in data:
+        revenue = round(float(row[1]), 2)
+        sales = int(row[2])
+        spend = round(float(row[3]), 2)
+        roi = round(float(row[4]), 2)
+
+        total_revenue += revenue
+        total_sales += sales
+        total_spend += spend
+        total_roi += roi
+        count += 1
+
+    # Calculate current period values
+    metrics['total_revenue']['value'] = round(total_revenue, 2)
+    metrics['total_sales']['value'] = total_sales
+    metrics['roi']['value'] = round(total_roi / max(count, 1), 2)
+    metrics['average_roas']['value'] = round(total_revenue / max(total_spend, 1), 2)
+
+    # Get previous period data for comparison
+    sql_prevquery = db.text("select * from dashboard_graphprev_sales(:workspace, :startdate, :enddate)")
+    try:
+        startdate_dt = datetime.strptime(startdate, '%b %d %Y')
+        enddate_dt = datetime.strptime(enddate, '%b %d %Y')
+    except:
+        startdate_dt = datetime.strptime(startdate, '%b %d, %Y')
+        enddate_dt = datetime.strptime(enddate, '%b %d, %Y')
+    
+    difference = enddate_dt - startdate_dt
+    prev_enddate = (startdate_dt - timedelta(days=1)).strftime('%Y-%m-%d')
+    prev_startdate = (startdate_dt - difference - timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    try:
+        result = db.session.execute(sql_prevquery, {'workspace': userid, 'startdate': prev_startdate, 'enddate': prev_enddate})
+        prev_data = result.fetchall()
+    except Exception as e:
+        db.session.rollback()
+        raise e
+    finally:
+        db.session.close()
+
+    # Calculate comparison percentages
+    for row in prev_data:
+        prev_revenue = round(float(row[0]), 2)
+        prev_sales = round(float(row[1]), 2)
+        prev_spend = round(float(row[2]), 2)
+        prev_roi = round(float(row[3]), 2)
+        
+        # Calculate ROAS for previous period
+        prev_roas = prev_revenue / max(prev_spend, 1)
+        
+        metrics['total_revenue']['compare'] = round((100.0 * (metrics['total_revenue']['value'] - prev_revenue) / prev_revenue), 1) if prev_revenue != 0 else 0.0
+        metrics['total_sales']['compare'] = round((100.0 * (metrics['total_sales']['value'] - prev_sales) / prev_sales), 1) if prev_sales != 0 else 0.0
+        metrics['roi']['compare'] = round((100.0 * (metrics['roi']['value'] - prev_roi) / prev_roi), 1) if prev_roi != 0 else 0.0
+        metrics['average_roas']['compare'] = round((100.0 * (metrics['average_roas']['value'] - prev_roas) / prev_roas), 1) if prev_roas != 0 else 0.0
+
+    return jsonify(metrics), 200
 
 
 @report_bp.route('/tablesaledata', methods=['GET', 'OPTIONS'])
