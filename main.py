@@ -18,6 +18,7 @@ from .integration.channel.woocommerce import channel_bp
 from .integration.channel.tagmango import channel_bp
 from .integration.channel.shopify import channel_bp
 from .integration.channel.pabbly import channel_bp
+from .integration.channel.zoho import channel_bp
 from .api_web.reporting_routes import report_bp
 from .api_web.creative_routes import creative_bp
 from .api_web.behaviour_routes import behaviour_bp

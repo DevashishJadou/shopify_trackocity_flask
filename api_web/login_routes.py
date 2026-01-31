@@ -359,12 +359,12 @@ def user_registor():
         workspace = uuid4().hex
         _hassed_password = generate_password_hash(str(data.get('password')))
         productid = random.randint(100000000, 999999999)
-        plantill = datetime.now() + timedelta(days=14)
+        plantill = datetime.now() + timedelta(months=1)
 
         subdomain = UserSubdomain.query.filter_by(status=False).first()
         subdomain.status = True
 
-        user = UserRegister(complete_name=data['name'], email=email, phone=data['phone'], _password=_hassed_password, workspace=workspace, productid=productid, plan_till=plantill, subdomain=subdomain.subdomain, isleadgen=islead)
+        user = UserRegister(complete_name=data['name'], email=email, phone=data['phone'], _password=_hassed_password, workspace=workspace, productid=productid, plan_till=plantill, subdomain=subdomain.subdomain, isleadgen=islead,timezone_value=5.5,product_type=100,plan=3)
         db.session.add(user)
         db.session.commit()
         
@@ -442,7 +442,7 @@ def login_user():
         
             # Create admin JWT tokens (6 hours access, 15 days refresh)
             admin_access_token = create_access_token(identity=username,expires_delta=timedelta(hours=6))
-            admin_refresh_token = create_refresh_token(identity=username,expires_delta=timedelta(days=15))
+            admin_refresh_token = create_refresh_token(identity=username,expires_delta=timedelta(days=7))
         
             # Return admin login response (agency-style behavior)
             return jsonify({
@@ -476,7 +476,7 @@ def login_user():
         
             # Create admin JWT tokens (6 hours access, 15 days refresh)
             admin_access_token = create_access_token(identity=username,expires_delta=timedelta(hours=6))
-            admin_refresh_token = create_refresh_token(identity=username,expires_delta=timedelta(days=15))
+            admin_refresh_token = create_refresh_token(identity=username,expires_delta=timedelta(days=7))
         
             # Return admin login response (agency-style behavior)
             return jsonify({
@@ -512,8 +512,8 @@ def login_user():
         onboarding_status = onboarding.onboarding_status if onboarding else None
 
         if email_verified:
-            access_token = create_access_token(identity=username, expires_delta=timedelta(minutes=5))
-            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=2))
+            access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
+            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=7))
             return jsonify({"message":"Logged In", 
                 "tokens": {
                     "access":access_token,
@@ -530,7 +530,7 @@ def login_user():
             return jsonify({"message":'Please verify your email address by clicking the verification link sent to your email inbox', "user_id":None}), 406
         else:
             access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
-            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
+            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=7))
             return jsonify({"message":"Logged In", 
                 "tokens": {
                     "access":access_token,
@@ -544,7 +544,7 @@ def login_user():
     if agency:
         if email_verified:
             access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
-            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
+            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=7))
             return jsonify({"message":"Logged In", 
                 "tokens": {
                     "access":access_token,
@@ -562,7 +562,7 @@ def login_user():
             return jsonify({"message":'Please verify your email address by clicking the verification link sent to your email inbox', "user_id":None}), 406
         else:
             access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
-            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
+            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=7))
             return jsonify({"message":"Logged In", 
                 "tokens": {
                     "access":access_token,
@@ -584,7 +584,7 @@ def login_user():
                 return jsonify({"message": "No accessible accounts found", "user_id": None}), 403
                     
             access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
-            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
+            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=7))
             
             # Scenario 1:-
             if user.agencyid is None:
@@ -635,7 +635,7 @@ def login_user():
                 return jsonify({"message": "No accessible accounts found", "user_id": None}), 403
                     
             access_token = create_access_token(identity=username, expires_delta=timedelta(hours=6))
-            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=15))
+            refresh_token = create_refresh_token(identity=username, expires_delta=timedelta(days=7))
             
             # Scenario 1:-
             if user.agencyid is None:
@@ -970,13 +970,13 @@ def profile_client_create():
       
     workspace = uuid4().hex
     productid = random.randint(100000000, 999999999)
-    plantill = datetime.now() + timedelta(days=4)
+    plantill = datetime.now() + timedelta(months=1)
     if not email:
         email = workspace + "@client.com"
     agency = AgencyRegister.query.filter_by(workspace=userid).first()
     subdomain = UserSubdomain.query.filter_by(status=False).first()
     subdomain.status = True
-    user = UserRegister(complete_name=data['name'], email=email, phone=data.get('phone',None), workspace=workspace, productid=productid, account_type='individual', agencyid=agency.id, isactive=True, plan_till=plantill, timezone=data['timezone'], company=data['company'], currency=data['currency'], subdomain=subdomain.subdomain, isleadgen=islead)
+    user = UserRegister(complete_name=data['name'], email=email, phone=data.get('phone',None), workspace=workspace, productid=productid, account_type='individual', agencyid=agency.id, isactive=True, plan_till=plantill, timezone=data['timezone'], company=data['company'], currency=data['currency'], subdomain=subdomain.subdomain, isleadgen=islead,timezone_value=5.5,product_type=100,plan=3)
     db.session.add(user)
     db.session.commit()
     
