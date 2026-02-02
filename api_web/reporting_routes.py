@@ -369,10 +369,10 @@ def get_graphsalesmetrics():
 
     # Initialize metrics
     metrics = {
-        'average_roas': {"value": 0.0, "compare": 0.0},
-        'total_revenue': {"value": 0.0, "compare": 0.0},
+        'roi': {"value": 0.0, "compare": 0.0},
+        'total_revenue': {"value": 0, "compare": 0.0},
         'total_sales': {"value": 0, "compare": 0.0},
-        'roi': {"value": 0.0, "compare": 0.0}
+        'aov': {"value": 0.0, "compare": 0.0},
     }
     
     total_revenue = 0.0
@@ -382,10 +382,11 @@ def get_graphsalesmetrics():
     count = 0
 
     for row in data:
-        revenue = round(float(row[1]), 2)
+        revenue = int(row[1])
         sales = int(row[2])
         spend = round(float(row[3]), 2)
-        roi = round(float(row[4]), 2)
+        roi = float(row[4])
+        aov = round(float(row[5]), 2)
 
         total_revenue += revenue
         total_sales += sales
@@ -394,10 +395,10 @@ def get_graphsalesmetrics():
         count += 1
 
     # Calculate current period values
-    metrics['total_revenue']['value'] = round(total_revenue, 2)
+    metrics['total_revenue']['value'] = int(total_revenue)
     metrics['total_sales']['value'] = total_sales
-    metrics['roi']['value'] = round(total_roi / max(count, 1), 2)
-    metrics['average_roas']['value'] = round(total_revenue / max(total_spend, 1), 2)
+    metrics['roi']['value'] = round(float(total_roi / max(count, 1)), 2)
+    metrics['aov']['value'] = round(total_revenue / max(total_sales, 1), 2)
 
     # Get previous period data for comparison
     sql_prevquery = db.text("select * from dashboard_graphprev_sales(:workspace, :startdate, :enddate)")
@@ -423,10 +424,11 @@ def get_graphsalesmetrics():
 
     # Calculate comparison percentages
     for row in prev_data:
-        prev_revenue = round(float(row[0]), 2)
-        prev_sales = round(float(row[1]), 2)
+        prev_revenue = int(row[0]) 
+        prev_sales = int(row[1])
         prev_spend = round(float(row[2]), 2)
         prev_roi = round(float(row[3]), 2)
+        prev_aov = round(float(row[4]), 2)
         
         # Calculate ROAS for previous period
         prev_roas = prev_revenue / max(prev_spend, 1)
@@ -434,7 +436,7 @@ def get_graphsalesmetrics():
         metrics['total_revenue']['compare'] = round((100.0 * (metrics['total_revenue']['value'] - prev_revenue) / prev_revenue), 1) if prev_revenue != 0 else 0.0
         metrics['total_sales']['compare'] = round((100.0 * (metrics['total_sales']['value'] - prev_sales) / prev_sales), 1) if prev_sales != 0 else 0.0
         metrics['roi']['compare'] = round((100.0 * (metrics['roi']['value'] - prev_roi) / prev_roi), 1) if prev_roi != 0 else 0.0
-        metrics['average_roas']['compare'] = round((100.0 * (metrics['average_roas']['value'] - prev_roas) / prev_roas), 1) if prev_roas != 0 else 0.0
+        metrics['aov']['compare'] = round((100.0 * (metrics['aov']['value'] - prev_aov) / prev_aov), 1) if prev_aov != 0 else 0.0  
 
     return jsonify(metrics), 200
 
