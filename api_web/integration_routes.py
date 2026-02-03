@@ -190,6 +190,11 @@ def integrationed_plaform():
     integation['store']['pabbly'] = True if pabbly else False
     storeplatform +=1 if pabbly else 0
     
+    platform_zohocrm = 'zoho_crm'
+    zohocrm = PlatformConfiguration.query.filter_by(workspace = workspace).filter_by(platform=platform_zohocrm).first()
+    integation['store']['zoho_crm'] = True if zohocrm else False
+    storeplatform +=1 if zohocrm else 0
+    
     razorpay = RazorpayConfiguration.query.filter_by(workspace=workspace).first()
     integation['payment']['razorpay'] = True if razorpay else False
     storeplatform +=1 if razorpay else 0
