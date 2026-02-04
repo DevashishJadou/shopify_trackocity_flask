@@ -359,7 +359,7 @@ def user_registor():
         workspace = uuid4().hex
         _hassed_password = generate_password_hash(str(data.get('password')))
         productid = random.randint(100000000, 999999999)
-        plantill = datetime.now() + timedelta(months=1)
+        plantill = datetime.now() + timedelta(days=30)
 
         subdomain = UserSubdomain.query.filter_by(status=False).first()
         subdomain.status = True
@@ -970,7 +970,7 @@ def profile_client_create():
       
     workspace = uuid4().hex
     productid = random.randint(100000000, 999999999)
-    plantill = datetime.now() + timedelta(months=1)
+    plantill = datetime.now() + timedelta(days=30)
     if not email:
         email = workspace + "@client.com"
     agency = AgencyRegister.query.filter_by(workspace=userid).first()
